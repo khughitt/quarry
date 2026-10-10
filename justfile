@@ -119,6 +119,10 @@ gate: check test
 docs:
     {{tt}} docs -- python3 tools/ops-docs write
 
+# Refresh the pinned Bioregistry snapshot from one exact release (PyPI version).
+bioregistry-vendor version:
+    {{tt}} bioregistry-vendor -- uv run --no-project --with "bioregistry=={{version}}" python tools/vendor_bioregistry.py
+
 # Ask work-link to put the named generated directories (.venv, target; never
 # node_modules) off the synced tree behind in-tree links. Absent command: this machine
 # has no dotfiles, entries stay in-tree, exit 0. Present: its own exit status,

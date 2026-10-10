@@ -1,0 +1,5 @@
+[bioregistry]
+version = "0.15.3"
+vendored = "2026-10-10"
+file = "bioregistry.json"
+sha256 = "5e37b760a1ca7f65ab02b5f3f7402a4961b7a162687678a718453d5c6de9fe01"
