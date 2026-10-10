@@ -6,6 +6,7 @@ from click.testing import CliRunner
 
 from quarry import context
 from quarry.cli import main
+from quarry.errors import QuarryError
 from tests.fake_adapter import Fake
 
 FAKE = """
@@ -67,6 +68,7 @@ def test_allow_partial_records_the_failure_and_exits_zero(catalog):
     report = json.loads(out.stdout)
     assert out.exit_code == 0
     assert report["coverage"][0]["complete"] == "failed" and report["coverage"][0]["error"]["kind"] == "upstream_failed"
+    assert report["coverage"][0]["native"] is None and report["coverage"][0]["match"] == "exact"
     assert report["warnings"] == ["alpha failed: alpha is down"]
 
 
@@ -158,3 +160,28 @@ def test_relative_date_outside_supported_range_is_a_usage_error(text):
     out = invoke("search", "--since", text, "x")
     assert out.exit_code == 2 and out.stdout == ""
     assert "Invalid value for '--since'" in out.stderr
+
+
+@pytest.mark.parametrize("organism", ["", " ", "\t"])
+@pytest.mark.parametrize("query_args", [["x"], ["--in", "alpha", "--native", "q"]])
+def test_blank_organism_is_a_usage_error_before_catalog(monkeypatch, organism, query_args):
+    monkeypatch.setattr(context, "open_env", lambda: pytest.fail("invalid organism reached the catalog"))
+    out = invoke("search", "--organism", organism, *query_args)
+    assert out.exit_code == 2 and out.stdout == ""
+
+
+@pytest.mark.parametrize("resource", ["alpha", "expanding"])
+def test_partial_native_failure_preserves_query_and_match(catalog, monkeypatch, resource):
+    def fail_search(self, client, query):
+        raise QuarryError("upstream_failed", "service is down")
+
+    monkeypatch.setattr(Fake, "search", fail_search)
+    out = invoke("search", "--domain", "biology", "--in", resource,
+                 "--native", "cancer[Title]", "--allow-partial")
+    assert out.exit_code == 0 and out.stderr == ""
+    report = json.loads(out.stdout)
+    assert report["coverage"] == [{"resource": resource, "native": "cancer[Title]", "match": "native",
+                                   "total": None, "returned": 0, "complete": "failed",
+                                   "error": {"kind": "upstream_failed", "detail": "service is down"}}]
+    assert report["results"] == []
+    assert report["warnings"] == [f"{resource} failed: service is down"]

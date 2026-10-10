@@ -48,7 +48,8 @@ def run(*, catalog: Catalog, client: Client, query: Query, resource_ids: list[st
         except QuarryError as error:
             if not allow_partial:
                 raise
-            coverage.append(Coverage(adapter.resource.id, None, adapter.match, None, 0, "failed",
+            coverage.append(Coverage(adapter.resource.id, query.native,
+                                     "native" if query.native is not None else adapter.match, None, 0, "failed",
                                      {"kind": error.kind, "detail": error.detail}))
             warnings.append(f"{adapter.resource.id} failed: {error.detail}")
             continue
