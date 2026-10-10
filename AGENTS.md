@@ -23,12 +23,21 @@ Use the just recipes so tools/tt records each run; never call pytest directly.
 
 ## Layout
 
-- `src/quarry/`: the Python package, with catalog/ planned inside it.
-- `tests/`: tests, with fixtures planned under tests/fixtures/<resource>/.
+- `src/quarry/`: the Python package.
+- `src/quarry/catalog/`: resources, domains, and the pinned Bioregistry snapshot.
+- `src/quarry/adapters/`: one module per supported resource.
+- `tests/`: tests; `tests/fixtures/` holds recorded resource responses.
+- `tests/recordings/`: scenarios that `just record <resource>` captures.
 - `tools/`: timing and gate tools vendored from ops.
 
 ## Rules
 
-Tests never reach the network: they replay tests/fixtures/ (planned), refreshed only by
+Tests never reach the network: they replay `tests/fixtures/`, refreshed only by
 `just record <resource>`. A live call in a test makes the suite depend on services
 that fail (ENA's count endpoint returned 500 during the myeloma survey).
+
+A new command or option is a row in ops `cli.toml` first, then `vendored adopt cli.toml`;
+the conformance test fails on any difference.
+
+Catalog owned prefixes must use Bioregistry's canonical spelling. Local-prefix
+declarations must be lowercase so validation and owner routing agree.

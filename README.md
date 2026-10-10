@@ -15,15 +15,30 @@ uv, and just are required.
 uv run quarry --version
 uv run quarry --help
 uv run quarry help
+uv run quarry resources list --domain biology
+uv run quarry search --domain biology --organism ncbitaxon:9606 myeloma
+uv run quarry show bioproject:PRJNA1065887
 ```
 
 The root command accepts `--json` and `--pretty` to choose output mode.
 `QUARRY_FORMAT` sets the default to `json` or `pretty`.
 
+The foundation supports catalog and domain inspection, identifier checking,
+normalization and resolution, and ENA study search and metadata display. ENA is the
+only implemented repository adapter. Other repositories, file listing and
+acquisition, ontology term commands, and agent skills are subsequent milestones.
+
+Searches report the native query and coverage for each resource. A listing shorter
+than the reported total fails; `-n` explicitly limits results. Quarry does not
+download files or write governed records.
+
 ## Layout
 
-- `src/quarry/`: the Python package; resource catalogues are planned in catalog/.
-- `tests/`: tests, with recorded resource responses planned under tests/fixtures/<resource>/.
+- `src/quarry/`: the Python package.
+- `src/quarry/catalog/`: resources, domains, and the pinned Bioregistry snapshot.
+- `src/quarry/adapters/`: resource adapters, currently ENA.
+- `tests/fixtures/`: recorded resource responses for offline tests.
+- `tests/recordings/`: live recording scenarios, refreshed with `just record ena`.
 - `tools/`: gate and timing tools vendored from ops.
 - `tasks/`: project task records.
 
