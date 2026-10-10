@@ -372,3 +372,53 @@ def test_same_origin_literal_echo_is_scrubbed_without_reencoding_other_parameter
     c.request(keyed(key_param='api_key'), 'GET', 'start')
     assert 'echo=k+ey/with=odd%20space' in str(seen[1].url)
     assert all('k+ey' not in line for line in lines)
+
+
+@pytest.mark.parametrize('header_only', [False, True])
+@pytest.mark.parametrize('sentinel,echo', [
+    ('SENTINEL-7f3a', '%53ENTINEL-7f3a'),
+    ('SENTINEL-7f3a', 'SENTINEL-%37f%33a'),
+    ('k+ey/with=odd space', 'k%2bey/with%3dodd+space'),
+])
+def test_partially_escaped_foreign_credential_is_refused(header_only, sentinel, echo):
+    seen = []
+    def hop(request):
+        seen.append(request)
+        return httpx.Response(302, headers={'Location': f'https://foreign.example/x?echo={echo}&keep=a%2Fb'})
+    auth = {'key_header': 'X-Api-Key'} if header_only else {'key_param': 'api_key'}
+    with pytest.raises(UpstreamError, match='credential'):
+        client(hop, environ={'TEST_KEY': sentinel}).request(keyed(**auth), 'GET', 'start')
+    assert len(seen) == 1
+
+
+def test_partially_escaped_credentials_are_scrubbed_in_trace_and_error():
+    lines = []
+    c = client(statuses(404), trace=lines.append, environ={'TEST_KEY': 'SENTINEL-7f3a'})
+    with pytest.raises(UpstreamError) as caught:
+        c.request(keyed(key_header='X-Api-Key'), 'GET', '%53ENTINEL-7f3a/start')
+    assert '%53ENTINEL-7f3a' not in caught.value.detail
+    assert 'REDACTED/start' in caught.value.detail
+    assert lines == ['GET https://eutils.example/entrez/REDACTED/start -> 404']
+
+
+def test_partially_escaped_credentials_are_scrubbed_in_recorded_text_and_location():
+    sentinel = 'SENTINEL-7f3a'
+    location = 'https://eutils.example/entrez/done?echo=%53ENTINEL-7f3a&keep=a%2Fb+z'
+    recorder = RecordingTransport(frozenset({'api_key'}), [sentinel], inner=mock(
+        lambda r: httpx.Response(200, headers={'Location': location}, text='echo=%53ENTINEL-7f3a; keep=a%2Fb+z')))
+    c = Client(transport=recorder, throttle=Throttle(FakeClock()), environ={'TEST_KEY': sentinel})
+    c.request(keyed(key_param='api_key'), 'GET', 'start')
+    recorded = recorder.exchanges[0]['response']
+    assert recorded['body'] == 'echo=REDACTED; keep=a%2Fb+z'
+    assert recorded['headers']['location'] == 'https://eutils.example/entrez/done?echo=REDACTED&keep=a%2Fb+z'
+
+
+def test_replay_distinguishes_encoded_path_separator_before_consuming_exchange():
+    ex = exchange('GET', 'https://h.example/a%2Fb', body='escaped path')
+    transport = ReplayTransport([ex])
+    with httpx.Client(transport=transport) as c:
+        with pytest.raises(LookupError, match='no recorded exchange'):
+            c.get('https://h.example/a/b')
+        assert transport.pending == [ex]
+        assert c.get('https://h.example/a%2Fb').text == 'escaped path'
+        assert transport.pending == []

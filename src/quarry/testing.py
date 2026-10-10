@@ -42,8 +42,9 @@ def exchange_key(request: httpx.Request, secrets: frozenset[str]) -> dict:
     url = request.url
     query = sorted([k, v] for k, v in url.params.multi_items() if k not in secrets)
     body = request.content.decode() if request.content else None
+    path = url.raw_path.split(b"?", 1)[0].decode("ascii")
     # shortcut: catalog routes use default ports; include the port when one needs otherwise.
-    return {"method": request.method, "url": f"{url.scheme}://{url.host}{url.path}", "query": query, "body": body}
+    return {"method": request.method, "url": f"{url.scheme}://{url.host}{path}", "query": query, "body": body}
 
 
 def exchange(method: str, url: str, params: dict | None = None, *, status: int = 200, body: str = "",

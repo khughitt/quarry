@@ -11,7 +11,7 @@ import re
 import time
 from collections.abc import Callable, Iterable, Mapping
 from datetime import datetime, timezone
-from urllib.parse import quote, quote_plus, unquote_plus
+from urllib.parse import unquote_plus
 
 import httpx
 
@@ -83,11 +83,17 @@ def _with_key_param(url: httpx.URL, name: str, value: str | None) -> httpx.URL:
 
 
 def _credential_pattern(secrets: Iterable[str]) -> re.Pattern:
-    spellings = {spelling for value in secrets if value
-                 for spelling in (value, quote(value, safe=""), quote(value), quote_plus(value),
-                                  quote(value, safe=":/?#[]@!$&'()*+,;="))}
-    patterns = [re.sub(r"%[0-9A-Fa-f]{2}", lambda m: f"(?i:{m[0]})", re.escape(spelling))
-                for spelling in sorted(spellings, key=len, reverse=True)]
+    """Match any mixture of literal and percent-encoded credential characters."""
+    patterns = []
+    for value in sorted({value for value in secrets if value}, key=len, reverse=True):
+        parts = []
+        for char in value:
+            encoded = "".join(f"(?i:%{byte:02X})" for byte in char.encode("utf-8"))
+            alternatives = [encoded, re.escape(char)]
+            if char == " ":
+                alternatives.append(r"\+")
+            parts.append("(?:" + "|".join(alternatives) + ")")
+        patterns.append("".join(parts))
     return re.compile("|".join(patterns) if patterns else r"(?!)")
 
 
