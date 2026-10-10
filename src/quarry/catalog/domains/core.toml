@@ -1,0 +1,4 @@
+id = "core"
+summary = "Resources every science shares: general repositories, literature, identifiers"
+resources = []
+search_default = []
