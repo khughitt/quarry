@@ -1,0 +1,16 @@
+# What this project is. `tools/ops-docs write` renders it into the identity region of
+# README.md and AGENTS.md; `tools/ops-docs check` refuses a commit while they differ.
+# Design: ops docs/specs/2026-09-22-project-guides-design.md §3.
+name = "quarry"
+aliases = []
+# At most 80 characters: this line sits in every agent session in every project.
+purpose = "One CLI and skills over scientific resources, with domains as lenses"
+# One to three sentences, at most 400 characters: what it does and for whom.
+abstract = """
+quarry gives people and agents one interface to scientific repositories, knowledgebases, \
+identifiers and ontologies, with each resource's pitfalls handled once. Domains (core, \
+biology, later chemistry, physics, astronomy) select what is searched; the commands and \
+their options stay the same in every domain.
+"""
+authority = []
+subsystems = []
