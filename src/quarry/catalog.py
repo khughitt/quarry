@@ -214,13 +214,17 @@ def _resource(t: dict, where: str) -> Resource:
             raise CatalogError(w, "must be a table")
         _only(body, w, {"pattern", "uri_format", "why"})
         locals_[prefix] = LocalPrefix(_get(body, w, "pattern", str), _get(body, w, "uri_format", str), _get(body, w, "why", str))
+    pitfalls = _get(t, where, "pitfalls", list, [])
+    for i, pitfall in enumerate(pitfalls):
+        if type(pitfall) is not dict:
+            raise CatalogError(f"{where} pitfalls[{i}]", "must be a table")
     return Resource(
         id=_get(t, where, "id", str), name=_get(t, where, "name", str), roles=_strs(t, where, "roles", True),
         adapter=_get(t, where, "adapter", str),
         routes=tuple(_route(r, f"{where} routes[{i}]") for i, r in enumerate(routes)),
         prefixes=_strs(t, where, "prefixes"), local_prefixes=locals_,
         fairsharing=_get(t, where, "fairsharing", str, None),
-        pitfalls=tuple(_pitfall(p, f"{where} pitfalls[{i}]") for i, p in enumerate(_get(t, where, "pitfalls", list, []))))
+        pitfalls=tuple(_pitfall(p, f"{where} pitfalls[{i}]") for i, p in enumerate(pitfalls)))
 
 
 def _domain(t: dict, where: str) -> Domain:

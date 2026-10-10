@@ -127,6 +127,15 @@ def test_loader_refuses_malformed_files(tmp_path, text, detail):
     assert caught.value.kind == "catalog_invalid" and detail in caught.value.detail
 
 
+def test_loader_refuses_scalar_pitfall(tmp_path):
+    malformed = ENA[:ENA.index("[[pitfalls]]")].replace("[[routes]]", "pitfalls = [1]\n\n[[routes]]")
+    root = write(tmp_path, {"ena": malformed}, {"core": CORE})
+    with pytest.raises(CatalogError) as caught:
+        catalog.load(root)
+    assert caught.value.kind == "catalog_invalid"
+    assert "pitfalls[0]" in caught.value.detail and "table" in caught.value.detail
+
+
 def test_file_name_must_match_id(tmp_path):
     root = write(tmp_path, {"other": ENA}, {"core": CORE})
     with pytest.raises(CatalogError, match="differs from the file name"):
