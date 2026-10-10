@@ -10,10 +10,13 @@ import click
 
 from quarry import context
 from quarry import ids as idmod
+from quarry import search as search_mod
+from quarry.adapters import base as adapter_base
 from quarry.catalog import DATA_ROLES, ROLES, ROUTE_KINDS, CatalogError, Finding
 from quarry.errors import QuarryError
 from quarry.lens import resolve_domain
 from quarry.output import CONTEXT, emit, fail, output_options
+from quarry.query import WHEN, Query
 
 
 GLOBAL_VALUED = frozenset({"-C", "--config"})
@@ -22,7 +25,8 @@ GLOBAL_FLAGS = frozenset({"--trace"})
 
 def hoist_globals(args: list[str]) -> list[str]:
     """Move root-only global options to the front, wherever they were written. `--` ends the
-    options: nothing after it moves."""
+    options: nothing after it moves. Local option values remain with their options."""
+    command = main
     front, rest, i = [], [], 0
     while i < len(args):
         word = args[i]
@@ -37,6 +41,13 @@ def hoist_globals(args: list[str]) -> list[str]:
             i += 1
         else:
             rest.append(word)
+            option = next((p for p in command.params if isinstance(p, click.Option)
+                           and word in p.opts and not p.is_flag and not p.count), None)
+            if option is not None:
+                rest += args[i + 1:i + 1 + option.nargs]
+                i += option.nargs
+            elif isinstance(command, click.Group) and word in command.commands:
+                command = command.commands[word]
         i += 1
     return front + rest
 
@@ -247,6 +258,70 @@ def check_command(ctx: click.Context) -> None:
         _findings(ctx, [Finding("catalog_invalid", "catalog", error.detail)])
         return
     _findings(ctx, catalog_mod.check(env.catalog, env.registry))
+
+
+def _pretty_search(report: dict) -> str:
+    lines = [f"{r['id']}\t{r.get('date', '-')}\t{r['title']}" for r in report["results"]]
+    lines += [f"# {c['resource']}: {c['returned']} of {c['total'] if c['total'] is not None else '?'} ({c['complete']}, {c['match']})"
+              for c in report["coverage"]]
+    lines += [f"warning: {w}" for w in report["warnings"]]
+    return "\n".join(lines)
+
+
+@main.command("search", context_settings=CONTEXT)
+@output_options
+@click.argument("phrases", nargs=-1)
+@click.option("--in", "in_", multiple=True, help="Search this resource; repeatable. Replaces the domain's default set.")
+@click.option("--domain", help="Search this domain's default resources (also QUARRY_DOMAIN).")
+@click.option("--organism", help="Biology: a taxon name or an ncbitaxon: CURIE.")
+@click.option("--exact", is_flag=True, help="Require exact phrase matching from every resource searched.")
+@click.option("--native", help="One resource's own query, sent unchanged; needs exactly one --in.")
+@click.option("--allow-partial", is_flag=True, help="Report a failed resource in coverage instead of failing.")
+@click.option("--since", type=WHEN, help="Records released on or after this date (YYYY-MM-DD, <n>d, <n>w).")
+@click.option("--until", type=WHEN, help="Records released on or before this date.")
+@click.option("-n", "--limit", type=int, help="At most this many records from each resource.")
+@click.pass_context
+@reports_errors
+def search_command(ctx, phrases, in_, domain, organism, exact, native, allow_partial, since, until, limit):
+    """Search records across data-holding resources."""
+    if native is not None and len(in_) != 1:
+        raise click.UsageError("--native needs exactly one --in", ctx)
+    try:
+        query = Query(phrases=tuple(phrases), filters={"organism": organism} if organism else {}, since=since,
+                      until=until, limit=limit, exact=exact, native=native)
+    except ValueError as error:
+        raise click.UsageError(str(error), ctx) from None
+    env = context.open_env()
+    chosen = resolve_domain(domain, os.environ, state(ctx).config, Path.cwd(), env.catalog)
+    for name in query.filters:
+        if name not in env.catalog.domain_filters(chosen):
+            raise QuarryError("unsupported_filter", f"--{name} is not a filter of the {chosen} domain")
+    resource_ids = list(in_) or env.catalog.search_set(chosen)
+    if not resource_ids:
+        raise QuarryError("nothing_to_search", f"the {chosen} domain searches nothing by default; name resources with --in")
+    with context.make_client(state(ctx).trace) as client:
+        report = search_mod.run(catalog=env.catalog, client=client, query=query, resource_ids=resource_ids,
+                                domain=chosen, allow_partial=allow_partial)
+    emit(ctx, report, _pretty_search(report))
+
+
+@main.command("show", context_settings=CONTEXT)
+@output_options
+@click.argument("curie")
+@click.pass_context
+@reports_errors
+def show_command(ctx: click.Context, curie: str) -> None:
+    """Show one record."""
+    env = context.open_env()
+    parsed = idmod.parse(curie, env.registry)
+    owner = env.catalog.owner(parsed.prefix)
+    if owner is None:
+        raise QuarryError("no_owner", f"no catalog resource owns {parsed.prefix}: ids under it are cross-references only")
+    if not set(owner.roles) & DATA_ROLES:
+        raise QuarryError("unsupported_role", f"{owner.id} holds no records to show")
+    with context.make_client(state(ctx).trace) as client:
+        result = adapter_base.make(owner).show(client, parsed)
+    emit(ctx, result.as_dict(), f"{result.id}\t{result.date or '-'}\t{result.title}")
 
 
 if __name__ == "__main__":

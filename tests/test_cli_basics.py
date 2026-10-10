@@ -32,3 +32,10 @@ def test_module_execution_registers_catalog_and_id_commands():
     out = run('id', 'normalize', '--json', 'GEO:GSE24080')
     assert out.returncode == 0
     assert json.loads(out.stdout) == {'id': 'geo:GSE24080'}
+
+
+def test_module_execution_registers_search_and_show():
+    for command in ("search", "show"):
+        out = run(command, "--help")
+        assert out.returncode == 0
+        assert f"quarry {command}" in out.stdout

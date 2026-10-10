@@ -156,3 +156,25 @@ def test_check_reports_malformed_catalog(make_catalog):
     out = invoke('--json', 'domains', 'list')
     assert out.exit_code == 1 and out.stdout == ''
     assert json.loads(out.stderr)['error']['kind'] == 'catalog_invalid'
+
+
+@pytest.mark.parametrize("place", ["root", "group", "leaf"])
+def test_trace_in_every_position(place):
+    args = {"root": ["--trace", "resources", "list"],
+            "group": ["resources", "--trace", "list"],
+            "leaf": ["resources", "list", "--trace"]}[place]
+    out = invoke("--json", *args)
+    assert out.exit_code == 0, out.stderr
+    assert json.loads(out.stdout)["domain"] == "core"
+
+
+@pytest.mark.parametrize("place", ["root", "group", "leaf"])
+def test_chdir_in_every_position(tmp_path, monkeypatch, place):
+    monkeypatch.chdir(os.getcwd())
+    (tmp_path / "quarry.toml").write_text('domain = "biology"\n')
+    args = {"root": ["-C", str(tmp_path), "resources", "list"],
+            "group": ["resources", "-C", str(tmp_path), "list"],
+            "leaf": ["resources", "list", "-C", str(tmp_path)]}[place]
+    out = invoke("--json", *args)
+    assert out.exit_code == 0, out.stderr
+    assert json.loads(out.stdout)["domain"] == "biology"

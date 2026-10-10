@@ -1,0 +1,160 @@
+"""search and show over fake adapters, through the CLI in-process."""
+import json
+
+import pytest
+from click.testing import CliRunner
+
+from quarry import context
+from quarry.cli import main
+from tests.fake_adapter import Fake
+
+FAKE = """
+id = "{id}"
+name = "{id}"
+roles = ["{role}"]
+prefixes = [{prefixes}]
+adapter = "tests.fake_adapter"
+[[routes]]
+kind = "rest"
+url = "https://{id}.example"
+min_interval = 0
+service = "{id}"
+auth = "none"
+reports_total = true
+"""
+
+
+@pytest.fixture
+def catalog(make_catalog):
+    fakes = {rid: FAKE.format(id=rid, role=role, prefixes=prefixes)
+             for rid, role, prefixes in (("alpha", "repository", '"geo"'), ("beta", "repository", ""),
+                                         ("expanding", "repository", ""), ("onto", "ontology", '"go"'))}
+    return make_catalog(fakes, ["alpha", "beta", "expanding", "onto"], ["alpha", "beta"])
+
+
+def invoke(*args):
+    return CliRunner().invoke(main, ["--json", *args], catch_exceptions=False)
+
+
+def test_search_covers_the_domain_default_set(catalog):
+    out = invoke("search", "--domain", "biology", "myeloma", "plasmacytoma")
+    assert out.exit_code == 0, out.stderr
+    report = json.loads(out.stdout)
+    assert report["domain"] == "biology"
+    assert [c["resource"] for c in report["coverage"]] == ["alpha", "beta"]
+    assert report["coverage"][0] == {"resource": "alpha", "native": "myeloma OR plasmacytoma", "match": "exact",
+                                     "total": 3, "returned": 3, "complete": "total"}
+    assert len(report["results"]) == 6 and report["warnings"] == []
+
+
+def test_limit_caps_each_resource(catalog):
+    report = json.loads(invoke("search", "--domain", "biology", "-n", "2", "x").stdout)
+    assert [c["complete"] for c in report["coverage"]] == ["limited", "limited"] and len(report["results"]) == 4
+
+
+def test_in_overrides_the_default_set(catalog):
+    report = json.loads(invoke("search", "--domain", "biology", "--in", "beta", "x").stdout)
+    assert [c["resource"] for c in report["coverage"]] == ["beta"]
+
+
+def test_one_failure_fails_the_command(catalog):
+    out = invoke("search", "--domain", "biology", "fail")
+    assert out.exit_code == 1 and out.stdout == "" and json.loads(out.stderr)["error"]["kind"] == "upstream_failed"
+
+
+def test_allow_partial_records_the_failure_and_exits_zero(catalog):
+    out = CliRunner().invoke(main, ["--json", "search", "--domain", "biology", "--in", "alpha", "--allow-partial", "fail"])
+    report = json.loads(out.stdout)
+    assert out.exit_code == 0
+    assert report["coverage"][0]["complete"] == "failed" and report["coverage"][0]["error"]["kind"] == "upstream_failed"
+    assert report["warnings"] == ["alpha failed: alpha is down"]
+
+
+@pytest.mark.parametrize("args, kind", [
+    (["--in", "expanding", "--exact", "x"], "unsupported_filter"),
+    (["--in", "expanding", "--organism", "ncbitaxon:9606", "x"], "unsupported_filter"),
+    (["--in", "onto", "x"], "unsupported_role"),
+    (["--in", "nope", "x"], "unknown_resource"),
+])
+def test_refusals_happen_before_any_request(catalog, monkeypatch, args, kind):
+    def unexpected_search(*args):
+        pytest.fail("a refused search must not start any adapter")
+
+    monkeypatch.setattr(Fake, "search", unexpected_search)
+    out = invoke("search", "--domain", "biology", "--in", "alpha", *args)
+    assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == kind
+
+
+def test_domain_filter_outside_its_domain(catalog, monkeypatch):
+    monkeypatch.setattr(Fake, "search", lambda *args: pytest.fail("a refused search must not start an adapter"))
+    out = invoke("search", "--domain", "core", "--in", "alpha", "--organism", "ncbitaxon:9606", "x")
+    assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == "unsupported_filter"
+
+
+@pytest.mark.parametrize("args", [
+    ["--native", "q"],                                   # no --in
+    ["--in", "alpha", "--in", "beta", "--native", "q"],  # two --in
+    ["--in", "alpha", "--native", "q", "x"],             # phrases beside --native
+    ["--in", "alpha", "--native", "q", "--since", "2020-01-01"],
+    ["--since", "2021-01-01", "--until", "2020-01-01", "x"],
+    [],
+])
+def test_usage_errors_exit_two(catalog, args):
+    assert invoke("search", "--domain", "biology", *args).exit_code == 2
+
+
+def test_native_with_limit(catalog):
+    report = json.loads(invoke("search", "--domain", "biology", "--in", "alpha", "--native", "q", "-n", "1").stdout)
+    assert report["coverage"][0]["native"] == "q" and report["coverage"][0]["complete"] == "limited"
+    assert report["coverage"][0]["match"] == "native"
+
+
+def test_show_routes_by_prefix_owner(catalog):
+    out = invoke("show", "GEO:GSE5")
+    assert out.exit_code == 0 and json.loads(out.stdout)["id"] == "geo:GSE5"
+
+
+@pytest.mark.parametrize("curie, kind", [("pubmed:1", "no_owner"), ("go:0008150", "unsupported_role"), ("GSE5", "ambiguous_id")])
+def test_show_refusals(catalog, curie, kind):
+    out = invoke("show", curie)
+    assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == kind
+
+
+@pytest.mark.parametrize("native", ["--trace", "-Cexample", "--config", "--config=q.toml"])
+def test_native_option_values_survive_global_hoisting(catalog, native):
+    out = invoke("search", "--domain", "biology", "--in", "alpha", "--native", native)
+    assert out.exit_code == 0, out.stderr
+    assert json.loads(out.stdout)["coverage"][0]["native"] == native
+
+
+def test_double_dash_preserves_phrase_that_looks_global(catalog):
+    out = invoke("search", "--domain", "biology", "--in", "alpha", "--", "--trace", "-Cexample")
+    assert out.exit_code == 0, out.stderr
+    assert json.loads(out.stdout)["coverage"][0]["native"] == "--trace OR -Cexample"
+
+
+def test_search_usage_error_does_not_open_catalog(monkeypatch):
+    monkeypatch.setattr(context, "open_env", lambda: pytest.fail("usage must be checked before opening the catalog"))
+    assert invoke("search", "--native", "q").exit_code == 2
+
+
+def test_core_without_explicit_resources_fails(catalog):
+    out = invoke("search", "x")
+    assert out.exit_code == 1 and out.stdout == ""
+    assert json.loads(out.stderr)["error"]["kind"] == "nothing_to_search"
+
+
+def test_search_pretty_reports_rows_coverage_and_warnings(catalog):
+    out = CliRunner().invoke(main, ["search", "--domain", "biology", "--in", "alpha", "-n", "1", "x"])
+    assert out.exit_code == 0
+    assert out.stdout == "geo:GSE1\t-\trow 1\n# alpha: 1 of 3 (limited, exact)\n"
+    out = CliRunner().invoke(main, ["search", "--domain", "biology", "--in", "alpha", "--allow-partial", "fail"])
+    assert out.exit_code == 0
+    assert "warning: alpha failed: alpha is down" in out.stdout
+
+
+@pytest.mark.parametrize("text", ["999999d", "999999999999d"])
+def test_relative_date_outside_supported_range_is_a_usage_error(text):
+    out = invoke("search", "--since", text, "x")
+    assert out.exit_code == 2 and out.stdout == ""
+    assert "Invalid value for '--since'" in out.stderr
