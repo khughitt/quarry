@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib
+from collections.abc import Callable
 from typing import Protocol
 
 from quarry.catalog import Resource
@@ -16,7 +17,13 @@ class Adapter(Protocol):
     match: str                 # "exact" or "expanded": how phrases match (spec §8.2)
     filters: frozenset[str]    # the domain filters this adapter can express
 
-    def search(self, client: Client, query: Query) -> tuple[Coverage, list[Result]]: ...
+    def prepare(self, query: Query) -> Callable[[Client], tuple[Coverage, list[Result]]]:
+        """Compile and refuse unsupported queries without I/O; return their execution."""
+        ...
+
+    def search(self, client: Client, query: Query) -> tuple[Coverage, list[Result]]:
+        """Prepare then execute a single-resource search."""
+        ...
 
     def show(self, client: Client, curie: Curie) -> Result: ...
 

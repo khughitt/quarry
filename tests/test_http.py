@@ -123,6 +123,32 @@ def test_transport_errors_retry_then_fail():
     assert clock.slept == [1, 2, 4, 8]
 
 
+def test_decoding_error_retries_and_keeps_credential_out_of_diagnostics():
+    clock, lines, seen = FakeClock(), [], []
+    sentinel = "SYNTHETIC-DECODING-KEY"
+
+    def malformed(request):
+        seen.append(request)
+        raise httpx.DecodingError(f"bad bytes {sentinel}", request=request)
+
+    with client(malformed, clock, trace=lines.append, environ={"TEST_KEY": sentinel}) as c:
+        with pytest.raises(UpstreamError) as caught:
+            c.request(keyed(key_param="api_key"), "GET", "x")
+    assert len(seen) == 5 and clock.slept == [1, 2, 4, 8]
+    assert sentinel not in caught.value.detail + "\n".join(lines)
+
+
+@pytest.mark.parametrize("error_type", [LookupError, TypeError])
+def test_request_does_not_swallow_replay_or_programming_errors(error_type):
+    def broken(request):
+        raise error_type("intentional test failure")
+
+    clock = FakeClock()
+    with client(broken, clock) as c, pytest.raises(error_type, match="intentional test failure"):
+        c.request(route(), "GET", "x")
+    assert clock.slept == []
+
+
 def test_redirects_keep_credentials_on_their_origin_only():
     sentinel, seen = "SENTINEL-7f3a", []
 
@@ -422,3 +448,41 @@ def test_replay_distinguishes_encoded_path_separator_before_consuming_exchange()
         assert transport.pending == [ex]
         assert c.get('https://h.example/a%2Fb').text == 'escaped path'
         assert transport.pending == []
+
+
+@pytest.mark.parametrize("sentinel, encoded", [
+    ("review/key", r'"review\/key"'),
+    (r"review\key", r'"review\\key"'),
+    ('review"key', r'"review\"key"'),
+    ("review/key", r'"\u0072eview\u002fkey"'),
+    ("réview/🔑", r'"r\u00e9view\/\ud83d\udd11"'),
+    ("review\nkey", r'"review\nkey"'),
+])
+def test_recorded_json_escapes_cannot_recover_credentials_and_replay(tmp_path, sentinel, encoded):
+    body = '{ "echo": ' + encoded + ', ' + encoded + ': {"nested": [' + encoded + ']}, "keep": "a\\\\b" }'
+    scrubbed = body.replace(encoded, '"REDACTED"')
+    recorder = RecordingTransport(frozenset(), [sentinel], inner=mock(lambda r: httpx.Response(200, text=body)))
+    with httpx.Client(transport=recorder) as c:
+        response = c.post("https://h.example/json", content=body, headers={"Content-Type": "application/json"})
+        assert response.text == body and response.json()["echo"] == sentinel
+    path = tmp_path / "json.json"
+    RecordingTransport.save(recorder.take(), path)
+    saved = json.loads(path.read_text())[0]
+    for side in ("request", "response"):
+        assert json.loads(saved[side]["body"]) == {
+            "echo": "REDACTED", "REDACTED": {"nested": ["REDACTED"]}, "keep": "a\\b"}
+        assert saved[side]["body"] == scrubbed
+    replay = ReplayTransport.from_files([path])
+    with httpx.Client(transport=replay) as c:
+        assert c.post("https://h.example/json", content=scrubbed).json()["echo"] == "REDACTED"
+    assert replay.pending == []
+
+
+@pytest.mark.parametrize("sentinel", ["123456", "1.23456e+5", "true"])
+def test_json_body_redaction_keeps_unquoted_credential_echoes_safe_and_valid(sentinel):
+    body = '{"echo":' + sentinel + ',"keep":7}'
+    recorder = RecordingTransport(frozenset(), [sentinel], inner=mock(lambda r: httpx.Response(200, text=body)))
+    with httpx.Client(transport=recorder) as c:
+        c.post("https://h.example/json", content=body)
+    for side in ("request", "response"):
+        assert json.loads(recorder.exchanges[0][side]["body"]) == {"echo": "REDACTED", "keep": 7}

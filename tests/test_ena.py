@@ -1,8 +1,10 @@
 """ENA: query compilation, recorded searches, and the listing guard (spec §8.2, §8.3)."""
 import json
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 
+import httpx
 import pytest
 from click.testing import CliRunner
 
@@ -11,9 +13,11 @@ from quarry import context, search
 from quarry.adapters import ena
 from quarry.cli import main
 from quarry.errors import QuarryError
+from quarry.http import Client, Throttle
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.testing import ReplayTransport, exchange, replay_client
+from quarry.results import Coverage
+from quarry.testing import ReplayTransport, VirtualClock, exchange, replay_client
 from tests.recordings.ena import HYPHEN, MYELOMA
 
 FX = Path(__file__).parent / "fixtures" / "ena"
@@ -223,3 +227,149 @@ def test_show_empty_body_is_not_found():
     with replay_client(transport) as client, pytest.raises(QuarryError) as caught:
         ENA.show(client, Curie("bioproject", "PRJNA1"))
     assert caught.value.kind == "not_found"
+
+
+@pytest.mark.parametrize("allow_partial", [False, True])
+def test_malformed_compressed_response_is_a_cli_upstream_error(monkeypatch, allow_partial):
+    seen = []
+
+    def malformed(request):
+        seen.append(request)
+        return httpx.Response(200, headers={"Content-Encoding": "gzip"}, stream=httpx.ByteStream(b"not gzip"))
+
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(httpx.MockTransport(malformed)))
+    args = ["--json", "search", "--in", "ena", "x"] + (["--allow-partial"] if allow_partial else [])
+    out = CliRunner().invoke(main, args, catch_exceptions=False)
+    assert len(seen) == 5
+    if allow_partial:
+        assert out.exit_code == 0 and out.stderr == ""
+        report = json.loads(out.stdout)
+        assert report["results"] == [] and report["warnings"]
+        assert report["coverage"][0]["complete"] == "failed"
+        error = report["coverage"][0]["error"]
+    else:
+        assert out.exit_code == 1 and out.stdout == ""
+        error = json.loads(out.stderr)["error"]
+    assert error["kind"] == "upstream_failed"
+    assert "DecodingError after 5 attempts" in error["detail"]
+
+
+@pytest.mark.parametrize("allow_partial", [False, True])
+@pytest.mark.parametrize("malformed", ["count", "json", "accession", "text", "taxon"])
+def test_parser_diagnostics_never_echo_keys_through_cli(monkeypatch, allow_partial, malformed):
+    sentinel = "PRJ-SYNTHETIC-PARSER-KEY"
+    route = replace(ENA.route, auth="optional-key", key_env="TEST_KEY", key_param="api_key")
+    monkeypatch.setattr(ena, "make", lambda resource: ena.Ena(replace(resource, routes=(route,))))
+    count, listing = "count\n1", json.dumps([STUDY])
+    if malformed == "count":
+        count = f"upstream error echoed {sentinel}"
+    elif malformed == "json":
+        listing = f"upstream error echoed {sentinel}"
+    else:
+        row = {**STUDY, "study_accession": sentinel}
+        row.update({"accession": {"study_accession": f"invalid-{sentinel}"},
+                    "text": {"study_title": [sentinel]}, "taxon": {"tax_id": sentinel}}[malformed])
+        listing = json.dumps([row])
+
+    def echo(request):
+        assert request.url.params["api_key"] == sentinel
+        return httpx.Response(200, text=count if request.url.path.endswith("/count") else listing)
+
+    monkeypatch.setattr(context, "make_client", lambda trace: Client(
+        transport=httpx.MockTransport(echo), throttle=Throttle(VirtualClock()), environ={"TEST_KEY": sentinel}))
+    args = ["--json", "search", "--in", "ena", "x"] + (["--allow-partial"] if allow_partial else [])
+    out = CliRunner().invoke(main, args, catch_exceptions=False)
+    assert sentinel not in out.stdout + out.stderr
+    if allow_partial:
+        assert out.exit_code == 0 and out.stderr == ""
+        report = json.loads(out.stdout)
+        assert report["results"] == [] and report["warnings"]
+        assert report["coverage"][0]["error"]["kind"] == "upstream_failed"
+    else:
+        assert out.exit_code == 1 and out.stdout == ""
+        assert json.loads(out.stderr)["error"]["kind"] == "upstream_failed"
+
+
+def test_successful_scientific_content_is_not_scrubbed():
+    title = "PRJ-SYNTHETIC-PARSER-KEY"
+    route = replace(ENA.route, auth="optional-key", key_env="TEST_KEY", key_param="api_key")
+    adapter = ena.Ena(replace(ENA.resource, routes=(route,)))
+
+    def found(request):
+        assert request.url.params["api_key"] == title
+        return httpx.Response(200, text="count\n1" if request.url.path.endswith("/count") else
+                              json.dumps([{**STUDY, "study_title": title}]))
+
+    with Client(transport=httpx.MockTransport(found), throttle=Throttle(VirtualClock()),
+                environ={"TEST_KEY": title}) as client:
+        _, rows = adapter.search(client, Query(phrases=("x",)))
+    assert rows[0].title == title
+
+
+@pytest.mark.parametrize("organism", ["", " ", "\t\n"])
+def test_library_blank_organism_is_refused_before_any_request(organism):
+    seen = []
+
+    def empty(request):
+        seen.append(request)
+        return httpx.Response(200, text="count\n0" if request.url.path.endswith("/count") else "[]")
+
+    with replay_client(httpx.MockTransport(empty)) as client, pytest.raises(ValueError, match="organism"):
+        ENA.search(client, Query(phrases=("x",), filters={"organism": organism}))
+    assert seen == []
+
+
+@pytest.mark.parametrize("allow_partial", [False, True])
+@pytest.mark.parametrize("phrase", ['the "MM" cohort', "ARP1*"])
+def test_later_ena_compilation_refusal_prevents_earlier_accepting_adapter_http(allow_partial, phrase):
+    first = replace(CAT.resources["ena"], id="accepting")
+    catalog = replace(CAT, resources={**CAT.resources, first.id: first})
+    seen = []
+
+    class Accepting:
+        resource = first
+        match = "exact"
+        filters = frozenset()
+
+        def prepare(self, query):
+            def execute(client):
+                client.request(first.routes[0], "GET", "accepted")
+                return Coverage(first.id, phrase, "exact", 0, 0, "total"), []
+            return execute
+
+        def search(self, client, query):
+            return self.prepare(query)(client)
+
+    def ok(request):
+        seen.append(request)
+        return httpx.Response(200)
+
+    with replay_client(httpx.MockTransport(ok)) as client, pytest.raises(QuarryError) as caught:
+        search.run(catalog=catalog, client=client, query=Query(phrases=(phrase,)),
+                   resource_ids=[first.id, "ena"], domain="biology", allow_partial=allow_partial,
+                   make=lambda resource: ena.make(resource) if resource.id == "ena" else Accepting())
+    assert caught.value.kind == "unsupported_filter"
+    assert seen == []
+
+
+def test_ena_prepare_compiles_once_without_http_and_executes_the_compiled_query(monkeypatch):
+    compiled, seen = [], []
+    original = ena.compile_query
+
+    def compile_once(query):
+        compiled.append(query)
+        assert len(compiled) == 1
+        return original(query)
+
+    def empty(request):
+        seen.append(request)
+        assert request.url.params["query"] == '(study_title="x" OR study_description="x")'
+        return httpx.Response(200, text="count\n0" if request.url.path.endswith("/count") else "[]")
+
+    monkeypatch.setattr(ena, "compile_query", compile_once)
+    query = Query(phrases=("x",))
+    prepared = ENA.prepare(query)
+    assert compiled == [query] and seen == []
+    with replay_client(httpx.MockTransport(empty)) as client:
+        cov, rows = prepared(client)
+    assert len(seen) == 2 and rows == [] and cov.complete == "total"

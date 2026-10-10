@@ -176,7 +176,7 @@ class Client:
             request = self._http.build_request(method, full, params=params, json=json, data=data, headers=headers)
             try:
                 response = self._send(route, request, shown, key, interval, headers)
-            except httpx.TransportError as error:
+            except (httpx.TransportError, httpx.DecodingError) as error:
                 self._log(f"{method} {shown} -> {type(error).__name__}")
                 if attempt == MAX_ATTEMPTS:
                     raise UpstreamError(f"{method} {shown}: {type(error).__name__} after {attempt} attempts") from None

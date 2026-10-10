@@ -5,6 +5,7 @@ transport that scrubs credentials before saving."""
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -95,6 +96,20 @@ class RecordingTransport(httpx.BaseTransport):
             return [self._scrub_request(v) for v in value]
         return self._scrub(value) if isinstance(value, str) else value
 
+    def _scrub_body(self, text: str) -> str:
+        try:
+            json.loads(text)
+        except ValueError:
+            return self._scrub(text)
+
+        def scrub_token(match):
+            value = json.loads(match[0]) if match[0].startswith('"') else match[0]
+            scrubbed = self._scrub(value)
+            return json.dumps(scrubbed) if scrubbed != value else match[0]
+
+        # Decode tokens, preserving whitespace and untouched escapes for exact replay.
+        return re.sub(r'"(?:[^"\\]|\\.)*"|[^{}\[\],:\s]+', scrub_token, text)
+
     def _scrub_url(self, text: str) -> str:
         url = httpx.URL(text)
         for name in self.secrets & set(url.params):
@@ -104,12 +119,15 @@ class RecordingTransport(httpx.BaseTransport):
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         response = self.inner.handle_request(request)
         content = response.read()
+        recorded_request = self._scrub_request(exchange_key(request, self.secrets))
+        if request.content:
+            recorded_request["body"] = self._scrub_body(request.content.decode())
         self.exchanges.append({
-            "request": self._scrub_request(exchange_key(request, self.secrets)),
+            "request": recorded_request,
             "response": {"status": response.status_code,
                          "headers": {h: (self._scrub_url if h == "location" else self._scrub)(response.headers[h])
                                      for h in KEPT_HEADERS if h in response.headers},
-                         "body": self._scrub(content.decode(errors="replace"))},
+                         "body": self._scrub_body(content.decode(errors="replace"))},
         })
         return httpx.Response(response.status_code, headers=response.headers, content=content, request=request)
 

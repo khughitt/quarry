@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 
 from quarry.catalog import Resource
 from quarry.errors import QuarryError
@@ -53,12 +54,12 @@ OPTIONAL_TEXT = ("secondary_study_accession", "study_alias", "study_title", "stu
 def _valid(d: dict) -> dict:
     """The fields _row reads, checked: a malformed value is the upstream's fault, never a crash."""
     if type(d.get("study_accession")) is not str or not d["study_accession"].startswith("PRJ"):
-        raise UpstreamError(f"ena search: a study without a PRJ accession: {str(d)[:120]}")
+        raise UpstreamError("ena search: study_accession must be text starting with PRJ")
     for name in OPTIONAL_TEXT:
         if d.get(name) is not None and type(d[name]) is not str:
-            raise UpstreamError(f"ena search: {name} of {d['study_accession']} is not text")
+            raise UpstreamError(f"ena search: {name} is not text")
     if d.get("tax_id") and not re.fullmatch(r"[0-9]+", d["tax_id"]):
-        raise UpstreamError(f"ena search: tax_id of {d['study_accession']} is not a number")
+        raise UpstreamError("ena search: tax_id is not a number")
     return d
 
 
@@ -82,11 +83,11 @@ def _count(text: str) -> int:
     """The count endpoint answers `count\\n<n>`."""
     words = text.split()
     if len(words) != 2 or words[0] != "count" or not re.fullmatch(r"[0-9]+", words[1]):
-        raise UpstreamError(f"ena count: expected 'count <n>', got {text[:80]!r}")
+        raise UpstreamError("ena count: expected 'count <n>'")
     try:
         return int(words[1])
     except ValueError:
-        raise UpstreamError(f"ena count: count is too large: {text[:80]!r}") from None
+        raise UpstreamError("ena count: count is too large") from None
 
 
 def _rows(text: str) -> list[dict]:
@@ -95,7 +96,7 @@ def _rows(text: str) -> list[dict]:
     try:
         data = json.loads(text)
     except ValueError:
-        raise UpstreamError(f"ena search: not JSON: {text[:80]!r}") from None
+        raise UpstreamError("ena search: not JSON") from None
     if type(data) is not list or any(type(d) is not dict for d in data):
         raise UpstreamError("ena search: expected a list of studies")
     return data
@@ -110,14 +111,21 @@ class Ena:
         self.route = resource.routes[0]
 
     def search(self, client: Client, query: Query) -> tuple[Coverage, list[Result]]:
+        return self.prepare(query)(client)
+
+    def prepare(self, query: Query) -> Callable[[Client], tuple[Coverage, list[Result]]]:
         q = compile_query(query)
-        total = _count(client.request(self.route, "GET", "count", params={"result": "study", "query": q}).text)
-        listing = client.request(self.route, "GET", "search", params={
-            "result": "study", "query": q, "fields": FIELDS, "format": "json", "limit": query.limit or 0}).text
-        rows = [_row(d) for d in _rows(listing)]
-        complete = completeness(total=total, returned=len(rows), limit=query.limit, short_page=False)
-        match = "native" if query.native is not None else self.match
-        return Coverage(self.resource.id, q, match, total, len(rows), complete), rows
+
+        def execute(client: Client) -> tuple[Coverage, list[Result]]:
+            total = _count(client.request(self.route, "GET", "count", params={"result": "study", "query": q}).text)
+            listing = client.request(self.route, "GET", "search", params={
+                "result": "study", "query": q, "fields": FIELDS, "format": "json", "limit": query.limit or 0}).text
+            rows = [_row(d) for d in _rows(listing)]
+            complete = completeness(total=total, returned=len(rows), limit=query.limit, short_page=False)
+            match = "native" if query.native is not None else self.match
+            return Coverage(self.resource.id, q, match, total, len(rows), complete), rows
+
+        return execute
 
     def show(self, client: Client, curie: Curie) -> Result:
         field = SHOW_FIELD[curie.prefix]

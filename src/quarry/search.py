@@ -40,11 +40,11 @@ def run(*, catalog: Catalog, client: Client, query: Query, resource_ids: list[st
             raise QuarryError("unsupported_filter", f"{rid} cannot filter by {', '.join(sorted(missing))}")
         if query.exact and adapter.match != "exact":
             raise QuarryError("unsupported_filter", f"{rid} expands phrases and cannot match exactly; leave it out with --in")
-        adapters.append(adapter)
+        adapters.append((adapter, adapter.prepare(query)))
     coverage, results, warnings = [], [], []
-    for adapter in adapters:
+    for adapter, execute in adapters:
         try:
-            cov, rows = adapter.search(client, query)
+            cov, rows = execute(client)
         except QuarryError as error:
             if not allow_partial:
                 raise

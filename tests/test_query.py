@@ -13,6 +13,13 @@ def test_valid_queries():
     Query(native="cancer[Title]", limit=10)          # -n stays allowed beside --native
 
 
+@pytest.mark.parametrize("name", ["organism", "other"])
+@pytest.mark.parametrize("value", ["", " ", "\t\n"])
+def test_blank_filters_are_refused_at_the_shared_query_boundary(name, value):
+    with pytest.raises(ValueError, match=f"--{name} must not be empty"):
+        Query(phrases=("x",), filters={name: value})
+
+
 @pytest.mark.parametrize("kwargs, message", [
     ({}, "needs phrases or --native"),
     ({"native": "x", "phrases": ("a",)}, "--native replaces phrases"),

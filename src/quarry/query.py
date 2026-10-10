@@ -32,6 +32,9 @@ class Query:
             raise ValueError("search needs phrases or --native")
         if any(not p.strip() for p in self.phrases):
             raise ValueError("a phrase is empty")
+        for name, value in self.filters.items():
+            if not value.strip():
+                raise ValueError(f"--{name} must not be empty")
         if self.limit is not None and self.limit < 1:
             raise ValueError("-n must be at least 1")
         if self.since and self.until and self.since > self.until:

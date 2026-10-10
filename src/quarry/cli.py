@@ -286,8 +286,6 @@ def search_command(ctx, phrases, in_, domain, organism, exact, native, allow_par
     """Search records across data-holding resources."""
     if native is not None and len(in_) != 1:
         raise click.UsageError("--native needs exactly one --in", ctx)
-    if organism is not None and not organism.strip():
-        raise click.UsageError("--organism must not be empty", ctx)
     try:
         query = Query(phrases=tuple(phrases), filters={"organism": organism} if organism is not None else {}, since=since,
                       until=until, limit=limit, exact=exact, native=native)

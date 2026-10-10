@@ -82,13 +82,13 @@ def test_refusals_happen_before_any_request(catalog, monkeypatch, args, kind):
     def unexpected_search(*args):
         pytest.fail("a refused search must not start any adapter")
 
-    monkeypatch.setattr(Fake, "search", unexpected_search)
+    monkeypatch.setattr(Fake, "prepare", lambda *args: unexpected_search)
     out = invoke("search", "--domain", "biology", "--in", "alpha", *args)
     assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == kind
 
 
 def test_domain_filter_outside_its_domain(catalog, monkeypatch):
-    monkeypatch.setattr(Fake, "search", lambda *args: pytest.fail("a refused search must not start an adapter"))
+    monkeypatch.setattr(Fake, "prepare", lambda *args: pytest.fail("a refused search must not start an adapter"))
     out = invoke("search", "--domain", "core", "--in", "alpha", "--organism", "ncbitaxon:9606", "x")
     assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == "unsupported_filter"
 
@@ -172,10 +172,10 @@ def test_blank_organism_is_a_usage_error_before_catalog(monkeypatch, organism, q
 
 @pytest.mark.parametrize("resource", ["alpha", "expanding"])
 def test_partial_native_failure_preserves_query_and_match(catalog, monkeypatch, resource):
-    def fail_search(self, client, query):
+    def fail_search(client):
         raise QuarryError("upstream_failed", "service is down")
 
-    monkeypatch.setattr(Fake, "search", fail_search)
+    monkeypatch.setattr(Fake, "prepare", lambda *args: fail_search)
     out = invoke("search", "--domain", "biology", "--in", resource,
                  "--native", "cancer[Title]", "--allow-partial")
     assert out.exit_code == 0 and out.stderr == ""
