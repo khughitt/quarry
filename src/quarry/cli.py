@@ -29,7 +29,8 @@ def hoist_globals(args: list[str]) -> list[str]:
         if word == "--":
             rest += args[i:]
             break
-        if word in GLOBAL_FLAGS or word.split("=", 1)[0] == "--config" and "=" in word:
+        if (word in GLOBAL_FLAGS or word.startswith("--config=")
+                or word.startswith("-C") and word != "-C"):
             front.append(word)
         elif word in GLOBAL_VALUED:
             front += args[i:i + 2]

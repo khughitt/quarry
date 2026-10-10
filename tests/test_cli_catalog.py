@@ -107,6 +107,23 @@ def test_chdir_after_the_command(tmp_path, monkeypatch):
     assert json.loads(out.stdout)["domain"] == "biology"
 
 
+def test_attached_chdir_after_the_command(tmp_path, monkeypatch):
+    monkeypatch.chdir(os.getcwd())
+    (tmp_path / 'quarry.toml').write_text('domain = "biology"\n')
+    out = invoke('--json', 'resources', 'list', f'-C{tmp_path}')
+    assert out.exit_code == 0 and json.loads(out.stdout)['domain'] == 'biology'
+    assert hoist_globals(['resources', 'show', '--', '-Cdata']) == \
+        ['resources', 'show', '--', '-Cdata']
+
+
+def test_invalid_config_encoding_is_a_json_error(tmp_path):
+    cfg = tmp_path / 'q.toml'
+    cfg.write_bytes(b'\xff')
+    out = invoke('--json', '--config', str(cfg), 'resources', 'list')
+    assert out.exit_code == 1 and out.stdout == ''
+    assert json.loads(out.stderr)['error']['kind'] == 'config_invalid'
+
+
 def test_output_flags_on_a_group():
     assert json.loads(invoke("domains", "--json", "list").stdout)["domains"]
 

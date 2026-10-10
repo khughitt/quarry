@@ -1,4 +1,6 @@
 """Which domain a command uses: flag, then QUARRY_DOMAIN, then quarry.toml, then core (spec §8.1)."""
+from pathlib import Path
+
 import pytest
 
 from quarry import catalog, lens
@@ -61,3 +63,16 @@ def test_nearest_config_wins(tmp_path):
     child.mkdir()
     (child / 'quarry.toml').write_text('domain = "core"\n')
     assert lens.resolve_domain(None, {}, None, child, CAT) == 'core'
+
+
+def test_config_read_error_is_typed(tmp_path, monkeypatch):
+    path = tmp_path / 'q.toml'
+    path.write_text('domain = "biology"\n')
+
+    def unreadable(self, *args, **kwargs):
+        raise PermissionError('config read denied')
+
+    monkeypatch.setattr(Path, 'read_text', unreadable)
+    with pytest.raises(QuarryError) as caught:
+        lens.resolve_domain(None, {}, path, tmp_path, CAT)
+    assert caught.value.kind == 'config_invalid'

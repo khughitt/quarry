@@ -22,9 +22,11 @@ def find_config(start: Path) -> Path | None:
 
 def _read(path: Path) -> dict:
     try:
-        doc = tomllib.loads(path.read_text())
+        doc = tomllib.loads(path.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as error:
         raise QuarryError("config_invalid", f"{path}: not valid TOML: {error}") from error
+    except (UnicodeDecodeError, OSError) as error:
+        raise QuarryError("config_invalid", f"{path}: cannot read config: {error}") from error
     extra = set(doc) - CONFIG_KEYS
     if extra:
         raise QuarryError("config_invalid", f"{path}: unknown keys {sorted(extra)}")
