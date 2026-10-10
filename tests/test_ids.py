@@ -125,3 +125,26 @@ def test_local_prefix_is_canonicalized_without_replacing_an_alias():
     assert str(ids.parse("CUSTOM:1", reg)) == "custom:1"
     assert reg.is_local("Custom") and reg.is_local("custom")
     assert str(reg.with_local(Catalog({"x": resource}, {})).scheme("custom").prefix) == "custom"
+
+
+@pytest.mark.parametrize("declarations, expected", [
+    (("Custom",), ["noncanonical_prefix"]),
+    (("Custom", "custom"), ["noncanonical_prefix"]),
+    (("custom", "custom"), ["prefix_owned_twice"]),
+    (("custom",), []),
+])
+def test_local_declarations_agree_with_canonical_owner(declarations, expected):
+    route = Route("rest", "https://x.example", 0.5, "x", "none", False)
+    resources = {
+        str(i): Resource(str(i), f"Owner {i}", ("repository",), "quarry.adapters", (route,),
+                         local_prefixes={prefix: LocalPrefix(r"^\d+$", "https://x.example/$1", "test")})
+        for i, prefix in enumerate(declarations)
+    }
+    cat = Catalog(resources, {})
+    reg = REG.with_local(cat)
+    findings = catalog.check(cat, reg, modules=[])
+    assert [f.kind for f in findings] == expected
+    if not findings:
+        curie = ids.parse("CUSTOM:1", reg)
+        assert str(curie) == "custom:1"
+        assert cat.owner(curie.prefix) is resources["0"]

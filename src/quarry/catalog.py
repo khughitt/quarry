@@ -304,6 +304,8 @@ def check(catalog: Catalog, registry: PrefixLookup, modules: list[str] | None = 
             if not registry.is_local(p):
                 add("local_prefix_in_bioregistry", where,
                     f"{p!r} is a Bioregistry prefix or synonym ({registry.canonical(p)}); list it under prefixes")
+            elif registry.canonical(p) != p:
+                add("noncanonical_prefix", where, f"{p!r} must be declared as {registry.canonical(p)!r}")
         for p in r.owned_prefixes():
             if p in owners:
                 add("prefix_owned_twice", where, f"{p!r} is already owned by {owners[p]}")
