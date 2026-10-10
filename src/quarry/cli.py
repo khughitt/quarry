@@ -1,21 +1,55 @@
 """The `quarry` command."""
+import dataclasses
+import functools
 import importlib.metadata
+import os
 import sys
+from pathlib import Path
 
 import click
 
-from quarry.output import CONTEXT, output_options
+from quarry import context
+from quarry import ids as idmod
+from quarry.catalog import DATA_ROLES, ROLES, ROUTE_KINDS, CatalogError, Finding
+from quarry.errors import QuarryError
+from quarry.lens import resolve_domain
+from quarry.output import CONTEXT, emit, fail, output_options
+
+
+GLOBAL_VALUED = frozenset({"-C", "--config"})
+GLOBAL_FLAGS = frozenset({"--trace"})
+
+
+def hoist_globals(args: list[str]) -> list[str]:
+    """Move root-only global options to the front, wherever they were written. `--` ends the
+    options: nothing after it moves."""
+    front, rest, i = [], [], 0
+    while i < len(args):
+        word = args[i]
+        if word == "--":
+            rest += args[i:]
+            break
+        if word in GLOBAL_FLAGS or word.split("=", 1)[0] == "--config" and "=" in word:
+            front.append(word)
+        elif word in GLOBAL_VALUED:
+            front += args[i:i + 2]
+            i += 1
+        else:
+            rest.append(word)
+        i += 1
+    return front + rest
 
 
 class Cli(click.Group):
-    """A usage error prints one line naming the problem and one pointing at --help, per the
-    CLI vocabulary's exit-code and error contract."""
+    """Global options are accepted before and after the command; a usage error prints one line
+    naming the problem and one pointing at --help (the CLI vocabulary's exit-code contract)."""
 
-    def main(self, *args, **kwargs):
+    def main(self, args=None, **kwargs):
         kwargs.setdefault("prog_name", "quarry")
         kwargs.pop("standalone_mode", None)
+        args = hoist_globals(list(sys.argv[1:] if args is None else args))
         try:
-            rv = super().main(*args, standalone_mode=False, **kwargs)
+            rv = super().main(args, standalone_mode=False, **kwargs)
         except click.UsageError as error:
             prog = error.ctx.command_path if error.ctx else kwargs["prog_name"]
             click.echo(f"{prog}: {error.format_message()}", err=True)
@@ -30,12 +64,42 @@ class Cli(click.Group):
         sys.exit(rv or 0)
 
 
+@dataclasses.dataclass(frozen=True)
+class State:
+    config: Path | None
+    trace: bool
+
+
+def reports_errors(f):
+    """A QuarryError becomes the error object (json) or one line (pretty), exit 1."""
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except QuarryError as error:
+            fail(click.get_current_context(), error.kind, error.detail)
+    return wrapper
+
+
+def state(ctx: click.Context) -> State:
+    return ctx.find_object(State)
+
+
 @click.group(cls=Cli, context_settings=CONTEXT)
 @click.version_option(importlib.metadata.version("quarry"), "-V", "--version", prog_name="quarry",
                       message="%(prog)s %(version)s")
 @output_options
-def main() -> None:
+@click.option("-C", "chdir", type=click.Path(file_okay=False, exists=True, path_type=Path),
+              help="Run as if started in that directory.")
+@click.option("--config", type=click.Path(dir_okay=False, path_type=Path),
+              help="Read this file instead of the nearest quarry.toml.")
+@click.option("--trace", is_flag=True, envvar="QUARRY_TRACE", help="Print every request to stderr (also QUARRY_TRACE).")
+@click.pass_context
+def main(ctx: click.Context, chdir: Path | None, config: Path | None, trace: bool) -> None:
     """quarry: one CLI over scientific resources, with domains as lenses."""
+    if chdir is not None:
+        os.chdir(chdir)
+    ctx.obj = State(config=config.resolve() if config is not None else None, trace=trace)
 
 
 @main.command("help", context_settings=CONTEXT)
@@ -49,6 +113,139 @@ def help_command(ctx: click.Context, words: tuple[str, ...]) -> None:
     if remaining:
         raise click.UsageError(f"unknown command {' '.join(words)}", ctx)
     click.echo(command.get_help(click.Context(command, info_name=" ".join(["quarry", *words]), **CONTEXT)))
+
+
+def _findings(ctx: click.Context, findings: list[Finding]) -> None:
+    if findings:
+        emit(ctx, {"findings": [f.as_dict() for f in findings]},
+             "\n".join(f"{f.where}: {f.kind}: {f.detail}" for f in findings))
+        ctx.exit(1)
+
+
+@main.group(context_settings=CONTEXT)
+@output_options
+def domains() -> None:
+    """The domains and their resources."""
+
+
+@domains.command("list", context_settings=CONTEXT)
+@output_options
+@click.pass_context
+@reports_errors
+def domains_list(ctx: click.Context) -> None:
+    """List the domains, their resources and beliefs contracts."""
+    env = context.open_env()
+    rows = [{"id": d.id, "summary": d.summary, "includes": list(d.includes),
+             "resources": env.catalog.effective_resources(d.id), "beliefs_contract": d.beliefs_contract,
+             "beliefs_contract_version": d.beliefs_contract_version}
+            for d in sorted(env.catalog.domains.values(), key=lambda d: d.id)]
+    emit(ctx, {"domains": rows},
+         "\n".join(f"{r['id']}\t{', '.join(r['resources']) or '-'}\t{r['beliefs_contract'] or '-'}" for r in rows))
+
+
+@main.group(context_settings=CONTEXT)
+@output_options
+def resources() -> None:
+    """The catalog of resources."""
+
+
+@resources.command("list", context_settings=CONTEXT)
+@output_options
+@click.option("--domain", help="List this domain's resources (also QUARRY_DOMAIN).")
+@click.option("--role", type=click.Choice(ROLES), help="Only resources with this role.")
+@click.option("--route", type=click.Choice(ROUTE_KINDS), help="Only resources with a route of this kind.")
+@click.pass_context
+@reports_errors
+def resources_list(ctx: click.Context, domain: str | None, role: str | None, route: str | None) -> None:
+    """List the resources a domain selects."""
+    env = context.open_env()
+    chosen = resolve_domain(domain, os.environ, state(ctx).config, Path.cwd(), env.catalog)
+    rows = []
+    for rid in env.catalog.effective_resources(chosen):
+        r = env.catalog.resources[rid]
+        if role and role not in r.roles or route and route not in {x.kind for x in r.routes}:
+            continue
+        rows.append({"id": r.id, "name": r.name, "roles": list(r.roles), "prefixes": list(r.owned_prefixes())})
+    emit(ctx, {"domain": chosen, "resources": rows},
+         "\n".join(f"{r['id']}\t{', '.join(r['roles'])}\t{r['name']}" for r in rows) or f"({chosen}: no resources)")
+
+
+@resources.command("show", context_settings=CONTEXT)
+@output_options
+@click.argument("resource")
+@click.pass_context
+@reports_errors
+def resources_show(ctx: click.Context, resource: str) -> None:
+    """Show one resource's roles, routes, limits and pitfalls."""
+    env = context.open_env()
+    r = env.catalog.resources.get(resource)
+    if r is None:
+        raise QuarryError("unknown_resource", f"no resource {resource!r}")
+    report = dataclasses.asdict(r)
+    report["local_prefixes"] = {k: dataclasses.asdict(v) for k, v in r.local_prefixes.items()}
+    lines = [f"{r.name} ({r.id}): {', '.join(r.roles)}"]
+    lines += [f"  route {x.kind} {x.url} (service {x.service}, every {x.min_interval}s)" for x in r.routes]
+    lines += [f"  pitfall: {p.summary} -> {p.handling}" for p in r.pitfalls]
+    emit(ctx, report, "\n".join(lines))
+
+
+@main.group("id", context_settings=CONTEXT)
+@output_options
+def id_group() -> None:
+    """Identifiers."""
+
+
+@id_group.command("check", context_settings=CONTEXT)
+@output_options
+@click.argument("ids", nargs=-1, required=True)
+@click.pass_context
+@reports_errors
+def id_check(ctx: click.Context, ids: tuple[str, ...]) -> None:
+    """Check that identifiers are well formed for their prefixes."""
+    _findings(ctx, idmod.check_ids(ids, context.open_env().registry))
+
+
+@id_group.command("normalize", context_settings=CONTEXT)
+@output_options
+@click.argument("id")
+@click.pass_context
+@reports_errors
+def id_normalize(ctx: click.Context, id: str) -> None:
+    """Print an identifier as a canonical CURIE."""
+    env = context.open_env()
+    owned = [p for r in env.catalog.resources.values() for p in r.owned_prefixes()]
+    curie = idmod.normalize(id, env.registry, owned)
+    emit(ctx, {"id": str(curie)}, str(curie))
+
+
+@id_group.command("resolve", context_settings=CONTEXT)
+@output_options
+@click.argument("curie")
+@click.pass_context
+@reports_errors
+def id_resolve(ctx: click.Context, curie: str) -> None:
+    """Print the URLs that resolve a CURIE."""
+    env = context.open_env()
+    parsed = idmod.parse(curie, env.registry)
+    urls = idmod.resolve(parsed, env.registry)
+    if not urls:
+        raise QuarryError("no_resolver", f"no URL format is known for {parsed.prefix}")
+    emit(ctx, {"id": str(parsed), "urls": urls}, "\n".join(urls))
+
+
+@main.command("check", context_settings=CONTEXT)
+@output_options
+@click.pass_context
+@reports_errors
+def check_command(ctx: click.Context) -> None:
+    """Validate the catalog."""
+    from quarry import catalog as catalog_mod
+    try:
+        env = context.load_unchecked()
+    except CatalogError as error:
+        _findings(ctx, [Finding("catalog_invalid", "catalog", error.detail)])
+        return
+    _findings(ctx, catalog_mod.check(env.catalog, env.registry))
 
 
 if __name__ == "__main__":

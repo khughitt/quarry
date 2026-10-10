@@ -26,7 +26,7 @@ tt := "python3 tools/tt"
 # Run the whole small suite: testmon cannot track CLI subprocess dependencies.
 fast_cmd := "uv run pytest"
 test_cmd := "uv run pytest"
-check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && tasks check"
+check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && uv run quarry check && tasks check"
 
 # Staged paths that cannot change the code checks' verdict: a commit staging only these
 # runs docs_check_cmd instead of check_cmd. fnmatch globs, `*` crossing `/`. Narrow it
