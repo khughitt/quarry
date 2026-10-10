@@ -1,0 +1,225 @@
+"""ENA: query compilation, recorded searches, and the listing guard (spec §8.2, §8.3)."""
+import json
+from datetime import date
+from pathlib import Path
+
+import pytest
+from click.testing import CliRunner
+
+from quarry import catalog as catalog_mod
+from quarry import context, search
+from quarry.adapters import ena
+from quarry.cli import main
+from quarry.errors import QuarryError
+from quarry.ids import Curie
+from quarry.query import Query
+from quarry.testing import ReplayTransport, exchange, replay_client
+from tests.recordings.ena import HYPHEN, MYELOMA
+
+FX = Path(__file__).parent / "fixtures" / "ena"
+CAT = catalog_mod.load()
+ENA = ena.make(CAT.resources["ena"])
+BASE = "https://www.ebi.ac.uk/ena/portal/api"
+
+
+def test_phrases_or_filters_and():
+    q = Query(phrases=("myeloma", "plasmacytoma"), filters={"organism": "ncbitaxon:9606"},
+              since=date(2024, 1, 1), until=date(2024, 3, 31))
+    assert ena.compile_query(q) == (
+        '(study_title="myeloma" OR study_description="myeloma" OR '
+        'study_title="plasmacytoma" OR study_description="plasmacytoma") '
+        'AND tax_eq(9606) AND first_public>=2024-01-01 AND first_public<=2024-03-31')
+
+
+def test_hyphenated_terms_are_equality_not_wildcards():
+    compiled = ena.compile_query(Query(phrases=("RPMI-8226",)))
+    assert compiled == '(study_title="RPMI-8226" OR study_description="RPMI-8226")' and "*" not in compiled
+
+
+def test_organism_by_name_and_native_passthrough():
+    assert ena.compile_query(Query(phrases=("x",), filters={"organism": "Homo sapiens"})).endswith(
+        'AND scientific_name="Homo sapiens"')
+    assert ena.compile_query(Query(native='study_title="a*"')) == 'study_title="a*"'
+
+
+@pytest.mark.parametrize("phrase", ['the "MM" cohort', "ARP1*"])
+def test_quotes_and_wildcards_are_refused(phrase):
+    with pytest.raises(QuarryError) as caught:
+        ena.compile_query(Query(phrases=(phrase,)))
+    assert caught.value.kind == "unsupported_filter"
+
+
+def replay(*names):
+    return replay_client(ReplayTransport.from_files([FX / f"{n}.json" for n in names]))
+
+
+def test_recorded_search_is_complete_and_canonical():
+    with replay("search-myeloma") as client:
+        cov, rows = ENA.search(client, MYELOMA)
+    assert cov.complete == "total" and cov.returned == cov.total == len(rows) > 0
+    assert all(r.id.startswith("bioproject:PRJ") for r in rows)
+    assert all(x.split(":")[0] in {"insdc.sra", "geo"} for r in rows for x in r.xrefs)
+    assert all(r.domain_fields["biology"]["taxon"] == "ncbitaxon:9606" for r in rows)
+
+
+def test_recorded_hyphen_search_sends_equality():
+    with replay("search-hyphen") as client:
+        cov, _ = ENA.search(client, HYPHEN)
+    assert 'study_title="RPMI-8226"' in cov.native and cov.complete == "total"
+
+
+def test_recorded_show():
+    with replay("show-first") as client:
+        _, rows = ENA.search(client, MYELOMA)
+        prefix, local = rows[0].id.split(":", 1)
+        shown = ENA.show(client, Curie(prefix, local))
+    assert shown.id == rows[0].id
+
+
+def synthetic(total, listing, limit=0, query=Query(phrases=("x",))):
+    q = ena.compile_query(query)
+    return replay_client(ReplayTransport([
+        exchange("GET", f"{BASE}/count", {"result": "study", "query": q}, body=f"count\n{total}\n",
+                 content_type="text/plain"),
+        exchange("GET", f"{BASE}/search", {"result": "study", "query": q, "fields": ena.FIELDS, "format": "json",
+                                           "limit": limit}, body=listing),
+    ]))
+
+
+STUDY = {"study_accession": "PRJNA1", "secondary_study_accession": "SRP1;SRP2", "study_alias": "GSE7",
+         "study_title": "t", "study_description": "d", "tax_id": "9606", "scientific_name": "Homo sapiens",
+         "first_public": "2024-02-01"}
+
+
+def test_a_short_listing_fails():
+    with synthetic(5, json.dumps([STUDY] * 3)) as client, pytest.raises(QuarryError) as caught:
+        ENA.search(client, Query(phrases=("x",)))
+    assert caught.value.kind == "incomplete_listing"
+
+
+def test_no_matches_is_an_empty_complete_answer():
+    with synthetic(0, "") as client:
+        cov, rows = ENA.search(client, Query(phrases=("x",)))
+    assert (rows, cov.complete, cov.total) == ([], "total", 0)
+
+
+@pytest.mark.parametrize("count, listing", [
+    ("<html>busy</html>", "[]"),
+    ("count\n²\n", "[]"),
+    pytest.param("count\n" + "9" * 5000 + "\n", "[]", id="oversized-count"),
+    ("count\n2\n", "<html>busy</html>"),
+    ("count\n1\n", '{"error": "x"}'),
+])
+def test_malformed_answers_are_upstream_errors(count, listing):
+    q = ena.compile_query(Query(phrases=("x",)))
+    transport = ReplayTransport([
+        exchange("GET", f"{BASE}/count", {"result": "study", "query": q}, body=count, content_type="text/html"),
+        exchange("GET", f"{BASE}/search", {"result": "study", "query": q, "fields": ena.FIELDS, "format": "json",
+                                           "limit": 0}, body=listing, content_type="text/html"),
+    ])
+    with replay_client(transport) as client, pytest.raises(QuarryError) as caught:
+        ENA.search(client, Query(phrases=("x",)))
+    assert caught.value.kind == "upstream_failed"
+
+
+@pytest.mark.parametrize("field, value", [
+    ("study_accession", None), ("study_accession", "SRP1"), ("secondary_study_accession", ["SRP1"]),
+    ("tax_id", "human"), ("tax_id", "²"), ("study_title", 7),
+])
+def test_malformed_field_values_are_upstream_errors(field, value):
+    with synthetic(1, json.dumps([{**STUDY, field: value}])) as client, pytest.raises(QuarryError) as caught:
+        ENA.search(client, Query(phrases=("x",)))
+    assert caught.value.kind == "upstream_failed"
+
+
+def test_native_coverage_says_native():
+    query = Query(native='study_title="ARP1*"')
+    with synthetic(1, json.dumps([STUDY]), query=query) as client:
+        cov, _ = ENA.search(client, query)
+    assert cov.match == "native" and cov.native == 'study_title="ARP1*"'
+
+
+def test_limit_reports_limited():
+    query = Query(phrases=("x",), limit=2)
+    with synthetic(10, json.dumps([STUDY] * 2), limit=2, query=query) as client:
+        cov, rows = ENA.search(client, query)
+    assert cov.complete == "limited" and len(rows) == 2
+
+
+def test_row_cross_references():
+    with synthetic(1, json.dumps([STUDY])) as client:
+        _, rows = ENA.search(client, Query(phrases=("x",)))
+    assert rows[0].xrefs == ("insdc.sra:SRP1", "insdc.sra:SRP2", "geo:GSE7")
+
+
+def test_cli_search_through_replay(monkeypatch):
+    monkeypatch.setattr(context, "make_client", lambda trace: replay("search-myeloma"))
+    args = ["--json", "search", "--domain", "biology"]
+    for name, value in MYELOMA.filters.items():
+        args += [f"--{name}", value]
+    if MYELOMA.since:
+        args += ["--since", MYELOMA.since.isoformat()]
+    if MYELOMA.until:
+        args += ["--until", MYELOMA.until.isoformat()]
+    if MYELOMA.limit:
+        args += ["-n", str(MYELOMA.limit)]
+    out = CliRunner().invoke(main, [*args, *MYELOMA.phrases], catch_exceptions=False)
+    report = json.loads(out.stdout)
+    assert out.exit_code == 0 and report["coverage"][0]["resource"] == "ena"
+    assert report["coverage"][0]["complete"] == "total"
+
+
+@pytest.mark.parametrize("allow_partial", [False, True])
+@pytest.mark.parametrize("count, listing", [
+    ("<html>busy</html>", "[]"),
+    ("count\n²\n", "[]"),
+    pytest.param("count\n" + "9" * 5000 + "\n", "[]", id="oversized-count"),
+    ("count\n1\n", "not JSON"),
+    ("count\n1\n", '{"error": "x"}'),
+    ("count\n1\n", "[7]"),
+    ("count\n1\n", json.dumps([{**STUDY, "study_title": 7}])),
+])
+def test_malformed_upstream_responses_fail_in_both_search_modes(count, listing, allow_partial):
+    query = Query(native='study_title="x"')
+    transport = ReplayTransport([
+        exchange("GET", f"{BASE}/count", {"result": "study", "query": query.native},
+                 body=count, content_type="text/plain"),
+        exchange("GET", f"{BASE}/search", {"result": "study", "query": query.native,
+                 "fields": ena.FIELDS, "format": "json", "limit": 0}, body=listing),
+    ])
+    with replay_client(transport) as client:
+        if not allow_partial:
+            with pytest.raises(QuarryError) as caught:
+                search.run(catalog=CAT, client=client, query=query, resource_ids=["ena"],
+                           domain="biology", allow_partial=False)
+            assert caught.value.kind == "upstream_failed"
+        else:
+            report = search.run(catalog=CAT, client=client, query=query, resource_ids=["ena"],
+                                domain="biology", allow_partial=True)
+            cov = report["coverage"][0]
+            assert report["results"] == [] and report["warnings"]
+            assert cov["complete"] == "failed" and cov["error"]["kind"] == "upstream_failed"
+            assert cov["native"] == query.native and cov["match"] == "native"
+
+
+@pytest.mark.parametrize("prefix, field, local", [
+    ("bioproject", "study_accession", "PRJNA1"),
+    ("insdc.sra", "secondary_study_accession", "SRP1"),
+])
+def test_show_resolves_both_owned_prefixes(prefix, field, local):
+    transport = ReplayTransport([
+        exchange("GET", f"{BASE}/search", {"result": "study", "query": f'{field}="{local}"',
+                 "fields": ena.FIELDS, "format": "json", "limit": 2}, body=json.dumps([STUDY])),
+    ])
+    with replay_client(transport) as client:
+        assert ENA.show(client, Curie(prefix, local)).id == "bioproject:PRJNA1"
+
+
+def test_show_empty_body_is_not_found():
+    transport = ReplayTransport([
+        exchange("GET", f"{BASE}/search", {"result": "study", "query": 'study_accession="PRJNA1"',
+                 "fields": ena.FIELDS, "format": "json", "limit": 2}, body=""),
+    ])
+    with replay_client(transport) as client, pytest.raises(QuarryError) as caught:
+        ENA.show(client, Curie("bioproject", "PRJNA1"))
+    assert caught.value.kind == "not_found"

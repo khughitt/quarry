@@ -1,8 +1,8 @@
 id = "biology"
 summary = "Life-science repositories, knowledgebases, identifiers and ontologies"
 includes = ["core"]
-resources = []
-search_default = []
+resources = ["ena"]
+search_default = ["ena"]
 filters = ["organism"]
 beliefs_contract = "biology"           # the contract science activates by this name
 beliefs_contract_version = 1           # the version this domain was written against

@@ -150,3 +150,7 @@ hook-pre-push:
 # What the pre-push hook runs when CI runs the full suite for every pushed ref.
 hook-pre-push-fast:
     {{tt}} hook-pre-push-fast -- sh -c '{{check_cmd}} && {{push_fast_cmd}}'
+
+# Refresh one resource's recorded exchanges against the live service.
+record resource:
+    {{tt}} record -- uv run python -m tests.recordings {{resource}}

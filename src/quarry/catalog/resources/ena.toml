@@ -1,0 +1,28 @@
+id = "ena"
+name = "European Nucleotide Archive"
+roles = ["repository"]
+prefixes = ["bioproject", "insdc.sra"]  # Bioregistry prefixes this resource owns (spec §7)
+adapter = "quarry.adapters.ena"
+
+[[routes]]
+kind = "rest"
+url = "https://www.ebi.ac.uk/ena/portal/api"
+min_interval = 0.5
+service = "ebi-ena"
+auth = "none"
+reports_total = true
+
+[[pitfalls]]
+summary = "a wildcard cannot contain '-', '.' or a space, and matches substrings (ARP1 finds PARP1)"
+handling = "phrases compile to exact-equality clauses on study_title and study_description; no wildcard is generated"
+evidence = "mm-159cb7: 22 of 38 cell-line terms returned 0 under wildcards"
+
+[[pitfalls]]
+summary = "the search endpoint can answer an incomplete listing during an outage"
+handling = "every search also asks the count endpoint and fails when the listing is shorter"
+evidence = "mm-159cb7: a re-harvest saw a short listing beside HTTP 500s"
+
+[[pitfalls]]
+summary = "the count endpoint returns HTTP 500 under load"
+handling = "the client retries 5xx with backoff, then the search fails rather than report no count"
+evidence = "mm-159cb7: HTTP 500 on the count endpoint during a re-harvest"
