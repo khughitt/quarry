@@ -13,7 +13,8 @@ uv, and just are required. The checkout uses `.githooks/` via
 ## Gates
 
 - `just test-one <pytest args>` runs a path under `tests/`, `path::name`, or `-k expr`.
-- `just test-fast` selects affected tests through pytest-testmon; run it before committing.
+- `just test-fast` runs the whole small suite; run it before committing. Subprocess CLI
+  tests prevent reliable testmon selection; keep the full suite until affected selection is justified.
 - `just test` runs the full suite.
 - `just check` runs ops-check, ops-docs check, and tasks check.
 - There is no CI; the pre-push hook carries the full suite.

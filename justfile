@@ -1,6 +1,6 @@
 # Front door for tests. Copy to the project root and fill in the three commands below.
 # Inner loop: `just test-one <runner args>` on the test at hand, `just test-fast`
-# (affected-only) before committing. Full suite: `just test`.
+# before committing. Full suite: `just test`.
 # Gates: `just check` at pre-commit, `just gate` at pre-push and in CI.
 # The git hooks call `hook-pre-commit` and `hook-pre-push` instead, which run the very
 # same commands under their own target names. Hook cost is the number this design exists
@@ -23,8 +23,8 @@ tt := "python3 tools/tt"
 
 # The three commands, each written once. Recipes and hooks all run these, so a hook can
 # never drift from the gate it is supposed to be. Avoid single quotes inside them.
-# fast_cmd is affected-only through pytest-testmon.
-fast_cmd := "uv run pytest --testmon"
+# Run the whole small suite: testmon cannot track CLI subprocess dependencies.
+fast_cmd := "uv run pytest"
 test_cmd := "uv run pytest"
 check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && tasks check"
 
@@ -53,7 +53,7 @@ ci_remote := "origin"
 # crates changed since <base> and their reverse dependencies), falling back explicitly
 # to the fast set when the base cannot be resolved; testmon's own selection (fast_cmd
 # may serve); or the project's fixed fast set. Say which here.
-# testmon selects from its own dependency data, independent of the push base.
+# Use the same whole-suite gate until reliable affected selection is justified.
 push_fast_cmd := fast_cmd
 
 # The runner with no selection of its own: `test-one` appends the caller's arguments,
@@ -90,7 +90,7 @@ one_cmd := "uv run pytest"
 # fail setup, not be swallowed.
 setup_cmd := "just work-link .venv && uv sync --group dev"
 
-# Affected-only: the inner loop.
+# The inner loop runs the whole small suite.
 test-fast:
     {{tt}} test-fast -- sh -c '{{fast_cmd}}'
 

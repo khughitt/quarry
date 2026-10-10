@@ -3,4 +3,4 @@
 .tt/
 .venv/
 __pycache__/
-.testmondata
+.testmondata*
