@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: adapters-acquisition
 created: 2026-10-10T21:52:21Z
-updated: 2026-10-11T11:40:55Z
+updated: 2026-10-11T12:46:32Z
 started: 2026-10-11T01:28:29Z
 completed: 2026-10-11T11:40:55Z
 depends: []
@@ -45,3 +45,4 @@ Next approved-design milestone after the foundation: GEO, BioStudies, Zenodo, fi
   provenance: {"harness_session":"claude-code:cbc5639a-25c5-4d58-9460-4b8e834fa0bc","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-11T11:40:55Z (adapters-acquisition): GEO, PubMed, BioStudies, Zenodo and figshare adapters; files and files --acquisition (kernel request mirroring the kernel's URL/digest validators); core searches zenodo+figshare, biology geo+ena+biostudies; recorded fixtures for every resource; plan reviewed 3 rounds, 8 tasks each reviewed, final whole-branch review with one fix wave re-reviewed clean. Follow-ups: quarry-fcd1ac, quarry-5f2956. Open for the user: figshare landing uri_format unconfirmed behind the bot challenge; spec §8.2 --organism refusal ruling.
   provenance: {"harness_session":"claude-code:cbc5639a-25c5-4d58-9460-4b8e834fa0bc","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T12:46:32Z (main): figshare landing URL confirmed 2026-10-11 with a headless browser (the WAF challenges every plain HTTP client): https://figshare.com/articles/dataset/_/34330578 renders 'Item - Population tract priors symmetric'; the PLOS-portal item 34254439 under the same template renders: <title>Item - Logistic Regression Analysis – phagocytosis activity dysfunction. - figshare - Figshare</title>. uri_format in figshare.toml stands.
