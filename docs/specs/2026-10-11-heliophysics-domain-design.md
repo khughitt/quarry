@@ -1,12 +1,14 @@
 # quarry: the heliophysics domain
 
-Status: draft 2026-10-11, for review. Written from the sun program's phase-1 resource
+Status: draft 2026-10-11, revised after review round 1 (codex/gpt-6-astra, relayed by
+the user), for review. Written from the sun program's phase-1 resource
 survey (sun repository, `docs/reports/2026-10-10-phase-1-survey/`, task `sun-374ea3`),
 against the approved quarry spec (`2026-10-10-quarry-domain-layers-design.md`) and the
 catalog as implemented in `src/quarry/catalog.py` on 2026-10-11. Source goal
-`sci-ba7150`. The extensions this domain asks for are filed as `quarry-b794e6`,
-`quarry-bc633c`, `quarry-fadd26`, `quarry-bacd40` and `quarry-e2c1f1`; this spec records
-how the domain is written while they are undecided.
+`sci-ba7150`. The extensions this domain asks for are filed as `quarry-bc633c`, `quarry-bacd40`
+and `quarry-e2c1f1`, with `quarry-b794e6` as a consideration; this spec records how the
+domain is written while they are undecided. Every TOML block below was loaded with
+quarry's own loader, checker and identifier resolver on 2026-10-11 (§8).
 
 Sources: the survey's dossiers (`dossiers/<id>.md`, one per resource, each ending in the
 draft TOML copied here) and probe logs (`probes/<id>/log.md`, cited as `probes/<id>/<n>`
@@ -17,15 +19,16 @@ in every `evidence` field); the quarry spec §4 (model), §6 (catalog format), �
 
 The first quarry domain outside biology and the first test of the spec's §14: the Sun
 and the solar wind's data resources as a lens over one CLI. Twenty-one resources,
-twenty with a resource file; four domain filters; eight pitfall families observed live.
+twenty-one with a resource file (`arxiv` included, since `core` has none yet); four
+domain filters; eight pitfall families observed live.
 Magnetospheric and ionospheric resources (Kp, Dst) are out of scope through the sun
 program's phase 3 and are not listed.
 
 What it is not: adapters. Every resource file names an adapter module that does not
 exist yet; `quarry check` reports `missing_adapter` for each until the implementation
 task builds it, and this spec says what each adapter compiles (§5). Nor does it change
-the verbs: the extensions in §7 are a request field, a domain filter, a route kind, a
-role and a check, each allowed by §14.
+the verbs: the extensions in §7 are a domain filter, a
+role and a check, each allowed by §14, with a request field as a consideration.
 
 ## 2. Decisions
 
@@ -33,13 +36,13 @@ role and a check, each allowed by §14.
 |---|---|---|
 | Domain name | `heliophysics` (the science's name, as `biology`) | `solar`, `sun` (the program's repository name, not a science) |
 | Includes | `core` (Zenodo, figshare, PubMed) | a `physics` layer: nothing surveyed needs it, and quarry's §14 physics row (HEPData, INSPIRE) shares no resource with this domain |
-| Literature | `arxiv` in `core` with the domain's default category `astro-ph.SR`; `ads` listed in this domain | `ads` in `core`: it is the astrophysics index, keyed, and no other domain asked for it |
+| Literature | `arxiv` declared here (its file in §4.5) and proposed for `core`, which has no arXiv resource today; `ads` listed in this domain | `ads` in `core`: it is the astrophysics index, keyed, and no other domain asked for it |
 | Beliefs contract | none declared | `beliefs_contract = "heliophysics"`: no such contract exists, and the sun framing decides the contract by a worked example in its phase 3, not here |
 | Time | a domain filter `coverage` (observation interval), with `--at` for an instant | a shared coverage filter: one time-indexed domain is not evidence for the semantics a second will want (quarry-bc633c) |
 | Identifiers | `local_prefixes` for every scheme but `arxiv` and `doi` | waiting for Bioregistry: its search for "solar" and "helio" is empty (probes/goes-class/03, 04) |
 | OMNI ownership | `cdaweb` owns `cdaweb:` dataset ids and serves OMNI; `omniweb` owns the SPDF file tree under `omni:` | one OMNI resource: it has three doors with different retrieval units |
 | Registry and index | `hpde` and `vso` carry `knowledgebase` and `repository` with the misfit in a pitfall | inventing a role here: that is quarry-bacd40's decision |
-| HAPI | `query-endpoint` with a pitfall naming the grammar | a `hapi` kind: quarry-fadd26's decision |
+| HAPI | `rest`, with the grammar in the adapter and a pitfall | a `hapi` kind: HAPI is REST endpoints (`/catalog`, `/info`, `/data`) with one stable GET URL per cut (survey `probes/cdaweb/16`); the kind fits as written |
 
 ## 3. The domain file
 
@@ -58,13 +61,19 @@ search_default = ["vso", "cdaweb", "hek"]   # one index over archives, one in-si
 filters = ["coverage", "instrument", "observatory", "measurement"]
 ```
 
-`arxiv` is listed here as well as in `core` so that the domain can carry its default
-category; the catalog's `effective_resources` lists a resource once. No
+`arxiv` is listed here because `core` has no arXiv resource today (`core.toml`: zenodo,
+figshare, pubmed); its file is in §4.5 and the proposal is that `core` adopts it, after
+which this domain's entry becomes the default-category carrier only. No
 `beliefs_contract`, no `facet_namespaces` (§2).
 
-`search_default` is three, not nine: `vso` already federates JSOC, SDAC and NSO; `soar`
-is a per-mission archive; the bulk trees have no search; the knowledgebases other than
-HEK answer narrower questions. A user names the rest with `--in`.
+**The effective default search set is five, not three**: the three named here plus
+Zenodo and figshare inherited from `core` (loader output, §8: `vso, cdaweb, hek,
+zenodo, figshare`), exactly as a biology search covers GEO, ENA, BioStudies, Zenodo and
+figshare (quarry spec §6). That is intended: Zenodo and figshare hold solar datasets
+deposited beside papers. The domain's own three are few because `vso` already
+federates JSOC, SDAC and NSO, `soar` is a per-mission archive, the bulk trees have no
+search, and the knowledgebases other than HEK answer narrower questions. A user names
+the rest with `--in`.
 
 ## 4. The resource files
 
@@ -131,9 +140,9 @@ handling = "URLs are resolved at request time with rs_list R=1; the reproducible
 evidence = "probes/jsoc/04, 11, 19"
 
 [[pitfalls]]
-summary = "the export route refuses without a registered email; no digests on any route"
-handling = "required-key route; expected omitted from acquisition requests; sizes by HEAD"
-evidence = "probes/jsoc/05, 18, 11"
+summary = "the export route refuses without a registered email, is asynchronous (exp_request then exp_status until status 0), and completed with an empty file list for a cut rs_list resolves to 10 records; no digests on any route"
+handling = "required-key route; acquisition prefers rs_list with R=1 (online SUMS paths) over export; expected omitted; sizes by HEAD"
+evidence = "probes/jsoc/05, 18, 20, 21, 22, 11"
 ```
 
 ```toml
@@ -196,7 +205,7 @@ auth = "none"
 reports_total = false
 
 [[routes]]
-kind = "query-endpoint"                # HAPI 2.0; see quarry-fadd26
+kind = "rest"                          # HAPI 2.0: /catalog, /info?id=, /data?id=&parameters=&time.min=&time.max=&format=
 url = "https://cdaweb.gsfc.nasa.gov/hapi"
 min_interval = 1.0
 service = "spdf"
@@ -221,7 +230,7 @@ reports_total = false
 
 [[pitfalls]]
 summary = "a time cut becomes a file only through a service-side job, at a temporary URL that differs per request"
-handling = "files lists granules (orig_data); a cut is a request the adapter runs, never a stable URL"
+handling = "files lists granules (orig_data); a cut is emitted as a HAPI URL, never as the REST job's temporary URL"
 evidence = "sun phase-1 survey probes/cdaweb/05, 19"
 
 [[pitfalls]]
@@ -230,8 +239,8 @@ handling = "every file carries its own coverage beside the asked interval"
 evidence = "probes/cdaweb/04"
 
 [[pitfalls]]
-summary = "HAPI is a fixed grammar (id, parameters, time.min, time.max) streaming csv/json/binary, not TAP and not resource-shaped rest"
-handling = "the adapter speaks the grammar; the route kind is provisional"
+summary = "HAPI /data is one stable GET URL per cut (id, parameters, time.min, time.max, format), streamed with a header; the only CDAWeb route whose cut URL is reproducible"
+handling = "files --acquisition for a cut emits the HAPI URL; the REST data job is never cited as a URL"
 evidence = "probes/cdaweb/09, 10, 16"
 
 [[pitfalls]]
@@ -390,9 +399,9 @@ roles = ["repository"]
 adapter = "quarry.adapters.goes_xrs"
 
 [local_prefixes.goes]
-pattern = "^g\\d{2}/[a-z0-9-]+_science/\\d{4}/\\d{2}/[a-z0-9_.-]+\\.nc$"
-uri_format = "https://data.ngdc.noaa.gov/platforms/solar-space-observing-satellites/goes/goes$1"
-why = "NCEI L2 granule paths; Bioregistry has no prefix (probes/goes-xrs/08)"
+pattern = "^goes\\d{2}/l2/data/[a-z0-9-]+(_science)?/\\d{4}/\\d{2}/[a-z0-9_.-]+\\.nc$"
+uri_format = "https://data.ngdc.noaa.gov/platforms/solar-space-observing-satellites/goes/$1"
+why = "NCEI L2 granule paths below /goes/ (goes18/l2/data/xrsf-l2-avg1m_science/2025/10/sci_….nc, probes/goes-xrs/09); Bioregistry has no prefix (probes/goes-xrs/08)"
 
 [[routes]]
 kind = "bulk"
@@ -569,8 +578,8 @@ adapter = "quarry.adapters.donki"
 
 [local_prefixes.donki]
 pattern = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}-(FLR|CME|SEP|IPS|MPC|GST|RBE|HSS)-\\d{3}$|^\\d{8}-AL-\\d{3}$"
-uri_format = "https://ccmc.gsfc.nasa.gov/DONKI-API/get/$1"
-why = "flrID, activityID and messageID forms; no registry carries them"
+uri_format = "https://ccmc.gsfc.nasa.gov/tools/DONKI/"
+why = "flrID, activityID and messageID forms; no per-id endpoint was observed (records are fetched by type and date window, probes/donki/07–09), so resolution lands on the DONKI application; no registry carries them"
 
 [[routes]]
 kind = "rest"
@@ -604,7 +613,15 @@ uri_format = "https://www.swpc.noaa.gov/products/solar-region-summary"
 why = "NOAA active-region numbers, minted in the SRS and consumed by hek, donki and goes-xrs; the SRS prints them modulo 10000 (probes/swpc-events/03), the canonical form is the full number; Bioregistry has no NOAA space-weather scheme (probes/noaa-ar/03, 04)"
 
 [[routes]]
-kind = "bulk"
+kind = "bulk"                          # NCEI's HTTPS mirror of the SWPC daily products, one file per day: the acquisition route
+url = "https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports"
+min_interval = 1.0
+service = "ncei"
+auth = "none"
+reports_total = false
+
+[[routes]]
+kind = "bulk"                          # the SWPC archive itself: FTP, yearly tarballs; not reachable by the kernel's HTTP(S) acquisition
 url = "ftp://ftp.swpc.noaa.gov/pub"
 min_interval = 1.0
 service = "swpc"
@@ -628,14 +645,9 @@ auth = "none"
 reports_total = false
 
 [[pitfalls]]
-summary = "past days live inside yearly tarballs; a day is not a URL"
-handling = "the acquisition is the tarball; extraction is the consumer's"
-evidence = "sun phase-1 survey probes/swpc-events/11"
-
-[[pitfalls]]
-summary = "the archive host is FTP only; https to it resets"
-handling = "the bulk route is ftp://"
-evidence = "probes/swpc-events/05, 09"
+summary = "the SWPC archive is FTP only (https resets) and past days live inside yearly tarballs; the kernel's acquisition speaks HTTP(S)"
+handling = "acquisition uses NCEI's HTTPS mirror, one file per day (solar_region_summaries/YYYY/MM/YYYYMMDDSRS.txt, solar_event_reports/YYYY/MM/YYYYMMDDevents.txt); the FTP route is described for completeness"
+evidence = "sun phase-1 survey probes/swpc-events/05, 09, 11, 14, 15, 17, 18"
 
 [[pitfalls]]
 summary = "the last three days' lists are regenerated nightly"
@@ -679,9 +691,9 @@ roles = ["knowledgebase"]              # misfit: a registry of resource descript
 adapter = "quarry.adapters.hpde"
 
 [local_prefixes.spase]
-pattern = "^spase://[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)+$"
+pattern = "^[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)+$"
 uri_format = "https://spase-metadata.org/$1.json"
-why = "SPASE ResourceIDs, the field's one cross-resource identifier (cdaweb records carry them); Bioregistry has no prefix (probes/hpde/09)"
+why = "SPASE ResourceIDs written as CURIEs without their scheme: spase://NASA/NumericalData/OMNI/… is spase:NASA/NumericalData/OMNI/…, and the landing URL is the path plus .json (probes/hpde/14); the field's one cross-resource identifier (cdaweb records carry it); Bioregistry has no prefix (probes/hpde/09)"
 
 [[routes]]
 kind = "rest"                          # landing pages: .json, .xml, .html per ResourceID
@@ -797,12 +809,40 @@ handling = "rate limits and terms are read: open until read in a browser"
 evidence = "probes/ads/02, 03"
 ```
 
-`arxiv` is a `core` resource (Bioregistry `arxiv`; `probes/arxiv/05`); the domain adds
-only its default category. Its file is `core`'s to write; the survey's evidence for it:
-a 3-second interval requested in prose (`probes/arxiv/03`), date ranges on
-`submittedDate` and `lastUpdatedDate` that are exactly quarry's shared `--since` and
-`--until` (`probes/arxiv/06`), brackets that must be URL-encoded (`probes/arxiv/02`), and
-a feed-level `<title>` that is the query echo (`probes/arxiv/01`).
+```toml
+# resources/arxiv.toml  — proposed for core; declared by this domain until core adopts it
+id = "arxiv"
+name = "arXiv"
+roles = ["literature-index"]
+prefixes = ["arxiv"]                   # Bioregistry's prefix (probes/arxiv/05)
+adapter = "quarry.adapters.arxiv"
+
+[[routes]]
+kind = "rest"                          # Atom over GET; search_query, id_list, start, max_results
+url = "http://export.arxiv.org/api/query"
+min_interval = 3.0                     # 'incorporate a 3 second delay' (the API user manual)
+service = "arxiv"
+auth = "none"
+reports_total = true                   # opensearch:totalResults
+
+[[pitfalls]]
+summary = "date ranges (submittedDate, lastUpdatedDate) use brackets that must be URL-encoded; a literal [ fails the request"
+handling = "the adapter encodes; --since/--until compile to submittedDate"
+evidence = "sun phase-1 survey probes/arxiv/02, 06"
+
+[[pitfalls]]
+summary = "the feed-level <title> is the query echo, not a record"
+handling = "entries only"
+evidence = "probes/arxiv/01, 06"
+
+[[pitfalls]]
+summary = "metadata is CC0; e-prints carry their own licences"
+handling = "records carry the licence field when present"
+evidence = "probes/arxiv/04"
+```
+
+The heliophysics domain adds `astro-ph.SR` as the default category (an adapter setting
+the domain passes; where that setting lives is §9 question 1).
 
 ### 4.6 Not resources
 
@@ -858,31 +898,47 @@ stale; `donki`'s base moved once and may again.
 
 Each filed, each allowed by the quarry spec's §14, none changing a verb:
 
-1. **An acquisition-request field for the cut** (`quarry-b794e6`): interval and the
-   resource's selection parameters beside the locator; the adapter resolves URLs at
-   request time. Until it lands, `files --acquisition` on a series resource names the
-   granules (cdaweb `orig_data`, a JSOC record set's current paths) and the cut lives in
-   the title.
-2. **The `coverage` domain filter** (`quarry-bc633c`), §5, with its overlap and
+1. **The `coverage` domain filter** (`quarry-bc633c`), §5, with its overlap and
    nearest-instant semantics stated.
-3. **HAPI** (`quarry-fadd26`): a route kind or a documented `rest` grammar; written as
-   `query-endpoint` here.
-4. **A registry role** (`quarry-bacd40`) for `hpde` and `vso`; written as
+2. **A registry role** (`quarry-bacd40`) for `hpde` and `vso`; written as
    `knowledgebase` and `repository` here, each with the misfit in a pitfall.
-5. **A route liveness check** (`quarry-e2c1f1`) beside `quarry check`'s shape checks.
+3. **A route liveness check** (`quarry-e2c1f1`) beside `quarry check`'s shape checks.
 
-## 8. What `quarry check` says about this domain today
+And one consideration, not an extension the domain depends on: **a structured cut field
+in the acquisition request** (`quarry-b794e6`, lowered after the survey's review round
+1). As written, `files --acquisition` on a series resource emits the cut inside the
+locator (a JSOC record-set specifier) or inside a URL (a HAPI `/data` URL), both
+reproducible from the record; a field would make the cut legible to the kernel. HAPI
+needs no route kind: it is `rest` (survey finding withdrawn, `quarry-fadd26` dropped).
 
-Loading these files would pass the shape checks (`RESOURCE_KEYS`, `ROUTE_KEYS`, auth
-values, `key_env` with a key location). `check` would report:
+## 8. What quarry's loader, checker and resolver say about this domain
 
-- `missing_adapter` for every resource in §4: the implementation task's work;
-- nothing for `local_prefixes`: none of `jsoc`, `cdaweb`, `soar`, `goes`, `silso`,
-  `omni`, `hek`, `donki`, `noaa-ar`, `spase`, `bibcode` is a Bioregistry prefix or
-  synonym (`probes/goes-class/03`, `04`: Bioregistry's search for solar and
-  heliophysics terms is empty), and each is lowercase;
-- `prefix_owned_twice`: none; OMNI's ownership is assigned in §2;
-- `search_default_outside`: none.
+Run 2026-10-11 against this spec's TOML blocks copied into a temporary catalog beside
+the live `core` and `biology` files (`quarry.catalog.load`, `check` with no adapter
+modules, `quarry.ids.Registry.load().with_local`):
+
+- loading passes: every file is in shape (`RESOURCE_KEYS`, `ROUTE_KEYS`, auth values,
+  `key_env` with a key location, `local_prefixes` tables);
+- `check`: `missing_adapter` for each of the 19 resources with a new adapter (the
+  implementation task's work) and nothing else after this revision; the first draft also
+  gave `missing_resource: arxiv`, fixed by §4.5;
+- effective resources: the 19 here plus `zenodo`, `figshare`, `pubmed` from `core`;
+  search set `vso, cdaweb, hek, zenodo, figshare`; filters `coverage, instrument,
+  measurement, observatory`;
+- `local_prefixes`: none collides with a Bioregistry prefix or synonym, each is
+  lowercase;
+- the resolver, on representative ids: `jsoc:aia.lev1_euv_12s[…]` →
+  `jsoc_info?op=rs_list&ds=…`; `cdaweb:OMNI_HRO2_1MIN` → the NotesO anchor; `soar:solo_L2_…`
+  → the download route; `goes:goes18/l2/data/xrsf-l2-avg1m_science/2025/10/sci_….nc` →
+  the NCEI file (the first draft produced `goesg18` and dropped `l2/data`);
+  `silso:SN_d_tot_V2.0` → the TXT; `omni:omni_min202510.asc` → the SPDF file;
+  `hek:ivo://…` → the HER view; `spase:NASA/NumericalData/OMNI/…/PT1M` →
+  `spase-metadata.org/NASA/…/PT1M.json` (the first draft put `spase://` in the path);
+  `noaa-ar:14545` → the SRS page; `bibcode:2012SoPh..275...17L` → ADS; `arxiv:2108.02624v2`
+  → arXiv; `donki:…` → the DONKI application (no per-id endpoint exists).
+
+The run is reproducible from the spec: extract the ```toml blocks whose first line names
+`resources/<id>.toml` into a catalog directory and load it.
 
 ## 9. Open questions
 
