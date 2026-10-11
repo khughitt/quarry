@@ -29,8 +29,10 @@ The root command accepts `--json` and `--pretty` to choose output mode.
 
 The first version's repositories are GEO, ENA and BioStudies (biology) and Zenodo and
 figshare (core), with PubMed as a literature index named with `--in`. A biology search
-covers all five repositories; a domain filter such as `--organism` needs `--in` naming the
-resources that express it, since a resource that cannot is refused rather than skipped.
+covers all five repositories. A default-set repository that cannot express the query's
+filter or matching mode (`--organism` on Zenodo and figshare, `--exact` on BioStudies) is
+skipped, with a `skipped` coverage row giving the reason and a warning; one named with `--in`
+is refused instead, and a search with nothing left to run fails.
 A listing shorter than the resource's reported total fails rather than returning part of
 the answer, and `-n` limits the results explicitly, reporting the coverage as `limited` when
 it cuts the listing short.

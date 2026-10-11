@@ -195,11 +195,11 @@ def test_malformed_upstream_responses_fail_in_both_search_modes(count, listing, 
         if not allow_partial:
             with pytest.raises(QuarryError) as caught:
                 search.run(catalog=CAT, client=client, query=query, resource_ids=["ena"],
-                           domain="biology", allow_partial=False)
+                           domain="biology", allow_partial=False, from_defaults=False)
             assert caught.value.kind == "upstream_failed"
         else:
             report = search.run(catalog=CAT, client=client, query=query, resource_ids=["ena"],
-                                domain="biology", allow_partial=True)
+                                domain="biology", allow_partial=True, from_defaults=False)
             cov = report["coverage"][0]
             assert report["results"] == [] and report["warnings"]
             assert cov["complete"] == "failed" and cov["error"]["kind"] == "upstream_failed"
@@ -346,7 +346,7 @@ def test_later_ena_compilation_refusal_prevents_earlier_accepting_adapter_http(a
 
     with replay_client(httpx.MockTransport(ok)) as client, pytest.raises(QuarryError) as caught:
         search.run(catalog=catalog, client=client, query=Query(phrases=(phrase,)),
-                   resource_ids=[first.id, "ena"], domain="biology", allow_partial=allow_partial,
+                   resource_ids=[first.id, "ena"], domain="biology", allow_partial=allow_partial, from_defaults=False,
                    make=lambda resource: ena.make(resource) if resource.id == "ena" else Accepting())
     assert caught.value.kind == "unsupported_filter"
     assert seen == []

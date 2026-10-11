@@ -25,9 +25,22 @@ def completeness(*, total: int | None, returned: int, limit: int | None, short_p
                                             f"after {returned} records")
 
 
+def _unexpressed(adapter, query: Query) -> str | None:
+    """Why the adapter cannot carry the query's filters or matching mode, or None when it can."""
+    rid = adapter.resource.id
+    missing = set(query.filters) - adapter.filters
+    if missing:
+        return f"{rid} cannot filter by {', '.join(sorted(missing))}"
+    if query.exact and adapter.match != "exact":
+        return f"{rid} expands phrases and cannot match exactly"
+    return None
+
+
 def run(*, catalog: Catalog, client: Client, query: Query, resource_ids: list[str], domain: str,
-        allow_partial: bool, make=base.make) -> dict:
-    adapters = []
+        allow_partial: bool, from_defaults: bool, make=base.make) -> dict:
+    """Search each resource in order. When the set came from a domain's search_default, a resource
+    that cannot express the query is skipped with a coverage row; one named with --in is refused."""
+    planned: list[Coverage | base.Adapter] = []          # in search-set order: a skip row or an adapter to run
     for rid in resource_ids:
         resource = catalog.resources.get(rid)
         if resource is None:
@@ -35,14 +48,21 @@ def run(*, catalog: Catalog, client: Client, query: Query, resource_ids: list[st
         if not set(resource.roles) & DATA_ROLES:
             raise QuarryError("unsupported_role", f"{rid} holds no searchable records ({', '.join(resource.roles)})")
         adapter = make(resource)
-        missing = set(query.filters) - adapter.filters
-        if missing:
-            raise QuarryError("unsupported_filter", f"{rid} cannot filter by {', '.join(sorted(missing))}")
-        if query.exact and adapter.match != "exact":
-            raise QuarryError("unsupported_filter", f"{rid} expands phrases and cannot match exactly; leave it out with --in")
-        adapters.append((adapter, adapter.prepare(query)))
+        reason = _unexpressed(adapter, query)
+        if reason is not None and not from_defaults:
+            raise QuarryError("unsupported_filter", f"{reason}; leave it out of --in")
+        planned.append(adapter if reason is None else Coverage.skipped(rid, adapter.match, reason))
+    if all(isinstance(p, Coverage) for p in planned):
+        raise QuarryError("unsupported_filter", "no resource can carry this query: "
+                                                + "; ".join(p.reason for p in planned))
+    steps = [p if isinstance(p, Coverage) else (p, p.prepare(query)) for p in planned]
     coverage, results, warnings = [], [], []
-    for adapter, execute in adapters:
+    for step in steps:
+        if isinstance(step, Coverage):
+            coverage.append(step)
+            warnings.append(f"{step.resource} skipped: {step.reason}")
+            continue
+        adapter, execute = step
         try:
             cov, rows = execute(client)
         except QuarryError as error:

@@ -262,10 +262,15 @@ def check_command(ctx: click.Context) -> None:
     _findings(ctx, catalog_mod.check(env.catalog, env.registry))
 
 
+def _pretty_coverage(c: dict) -> str:
+    if c["complete"] == "skipped":
+        return f"# {c['resource']}: skipped ({c['reason']})"
+    return f"# {c['resource']}: {c['returned']} of {c['total'] if c['total'] is not None else '?'} ({c['complete']}, {c['match']})"
+
+
 def _pretty_search(report: dict) -> str:
     lines = [f"{r['id']}\t{r.get('date', '-')}\t{r['title']}" for r in report["results"]]
-    lines += [f"# {c['resource']}: {c['returned']} of {c['total'] if c['total'] is not None else '?'} ({c['complete']}, {c['match']})"
-              for c in report["coverage"]]
+    lines += [_pretty_coverage(c) for c in report["coverage"]]
     lines += [f"warning: {w}" for w in report["warnings"]]
     return "\n".join(lines)
 
@@ -303,7 +308,7 @@ def search_command(ctx, phrases, in_, domain, organism, exact, native, allow_par
         raise QuarryError("nothing_to_search", f"the {chosen} domain searches nothing by default; name resources with --in")
     with context.make_client(state(ctx).trace) as client:
         report = search_mod.run(catalog=env.catalog, client=client, query=query, resource_ids=resource_ids,
-                                domain=chosen, allow_partial=allow_partial)
+                                domain=chosen, allow_partial=allow_partial, from_defaults=not in_)
     emit(ctx, report, _pretty_search(report))
 
 
