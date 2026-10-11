@@ -6,9 +6,9 @@ priority: 2
 size: s
 complexity: mid
 process: direct
-owner: main
+owner: feat/skip-default-filters
 created: 2026-10-11T13:06:57Z
-updated: 2026-10-11T16:02:42Z
+updated: 2026-10-11T16:02:46Z
 started: 2026-10-11T16:02:12Z
 depends: []
 tags: []
@@ -25,3 +25,5 @@ Amend spec §8.2/§8.3 (docs/specs/2026-10-10-quarry-domain-layers-design.md in 
 - 2026-10-11T16:02:12Z (main): started
   provenance: {"harness_session":"claude-code:a416032d-4491-4057-8b25-f677dc3dbcd4","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-11T16:02:41Z (main): process planned -> direct: spec amendment ee9ccff (agreed with the user) settles row shape, warning, all-skipped failure and static decision; remaining work is one function in search.run plus tests and a README sentence
+- 2026-10-11T16:02:46Z (feat/skip-default-filters): resumed
+  provenance: {"harness_session":"claude-code:a416032d-4491-4057-8b25-f677dc3dbcd4","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
