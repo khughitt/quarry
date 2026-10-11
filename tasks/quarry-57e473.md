@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: heliophysics-domain
 created: 2026-10-11T19:01:36Z
-updated: 2026-10-11T19:34:15Z
+updated: 2026-10-11T19:42:08Z
 started: 2026-10-11T19:02:03Z
 depends: []
 tags: [heliophysics]
@@ -28,3 +28,4 @@ The first domain outside biology and the first §14 test. The design spec, writt
 - 2026-10-11T19:34:14Z (heliophysics-domain): review: spec round 1 — verdict: revise; findings: P2 2 (identifier templates produce wrong URLs; arxiv resource missing from core and the effective default search set is five); reviewer: codex/gpt-6-astra (relayed by the user)
 - 2026-10-11T19:34:15Z (heliophysics-domain): resumed
   provenance: {"harness_session":"claude-code:4a219dfe-7cba-478e-84d8-8594adc7dd5d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T19:42:08Z (heliophysics-domain): revised for round 1: identifier templates fixed (goes path below /goes/, spase CURIE without the scheme, donki lands on the application) and every template run through quarry.ids.resolve against the spec's TOML loaded with quarry.catalog.load (§8 records the run: only missing_adapter findings remain; search set vso, cdaweb, hek, zenodo, figshare); arxiv resource file supplied and proposed for core; HAPI is rest; NCEI HTTPS mirror route for swpc-events; the cut field is a consideration (survey finding 1 reassessed to not confirmed).
