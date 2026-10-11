@@ -1,0 +1,32 @@
+id = "zenodo"
+name = "Zenodo"
+roles = ["repository"]
+prefixes = ["zenodo.record"]           # Bioregistry's prefix; `zenodo` is its synonym
+adapter = "quarry.adapters.zenodo"
+
+[[routes]]
+kind = "rest"
+url = "https://zenodo.org/api"
+min_interval = 1.0
+service = "zenodo"
+auth = "optional-key"
+key_env = "ZENODO_TOKEN"
+key_param = "access_token"
+keyed_min_interval = 0.6
+reports_total = true
+page_cap = 25
+
+[[pitfalls]]
+summary = "a page size above 25 is HTTP 400 without a token"
+handling = "every listing pages by 25, with or without a token"
+evidence = "mm-159cb7; probe 2026-10-10: size=26 answered 400 'Page size cannot be greater than 25'"
+
+[[pitfalls]]
+summary = "the search index serves at most 10,000 results per query"
+handling = "a total above 10,000 is refused with too_many_results unless -n keeps the listing inside it"
+evidence = "Zenodo REST API documentation (the Elasticsearch result window)"
+
+[[pitfalls]]
+summary = "a record's own DOI and its paper's DOI are both DOIs"
+handling = "a related identifier whose relation is isSupplementTo, isDescribedBy or isCitedBy and whose resource type is a publication gives the publication; the record's DOI and every other related DOI are xrefs"
+evidence = "record 15025566: isDescribedBy 10.1038/s43018-025-01072-4 beside doi 10.5281/zenodo.15025566"

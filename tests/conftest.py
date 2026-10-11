@@ -5,6 +5,7 @@ import textwrap
 
 import pytest
 
+from quarry import catalog as catalog_mod
 from quarry import context
 
 CORE = 'id = "core"\nsummary = "test core"\nresources = []\nsearch_default = []\n'
@@ -41,9 +42,12 @@ def make_catalog(tmp_path, monkeypatch):
     return build
 
 
+KEY_VARIABLES = frozenset(r.key_env for res in catalog_mod.load().resources.values() for r in res.routes if r.key_env)
+
+
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch):
     """No test sees the host's QUARRY_* settings or service keys."""
     for name in list(os.environ):
-        if name.startswith("QUARRY_") or name.endswith("_API_KEY"):
+        if name.startswith("QUARRY_") or name.endswith("_API_KEY") or name in KEY_VARIABLES:
             monkeypatch.delenv(name)
