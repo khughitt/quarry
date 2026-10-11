@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: heliophysics-domain
 created: 2026-10-11T19:01:36Z
-updated: 2026-10-11T19:02:04Z
+updated: 2026-10-11T19:34:14Z
 started: 2026-10-11T19:02:03Z
 depends: []
 tags: [heliophysics]
@@ -25,3 +25,4 @@ The first domain outside biology and the first §14 test. The design spec, writt
   provenance: {"harness_session":"claude-code:4a219dfe-7cba-478e-84d8-8594adc7dd5d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-11T19:02:04Z (heliophysics-domain): parked (waiting on user, review): user reviews docs/specs/2026-10-11-heliophysics-domain-design.md on branch heliophysics-domain (worktree .worktrees/heliophysics-domain); on approval: merge to main, then a writing-plans pass for the catalog files and adapters, sequenced after quarry-b794e6 and quarry-bc633c are decided
   provenance: {"harness_session":"claude-code:4a219dfe-7cba-478e-84d8-8594adc7dd5d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T19:34:14Z (heliophysics-domain): review: spec round 1 — verdict: revise; findings: P2 2 (identifier templates produce wrong URLs; arxiv resource missing from core and the effective default search set is five); reviewer: codex/gpt-6-astra (relayed by the user)
