@@ -129,7 +129,9 @@ class RecordingTransport(httpx.BaseTransport):
                                      for h in KEPT_HEADERS if h in response.headers},
                          "body": self._scrub_body(content.decode(errors="replace"))},
         })
-        return httpx.Response(response.status_code, headers=response.headers, content=content, request=request)
+        # `content` is already decoded; keeping the encoding headers would make the client decode it again.
+        headers = [(k, v) for k, v in response.headers.multi_items() if k.lower() not in ("content-encoding", "content-length")]
+        return httpx.Response(response.status_code, headers=headers, content=content, request=request)
 
     def close(self) -> None:
         self.inner.close()

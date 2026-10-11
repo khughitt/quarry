@@ -16,29 +16,37 @@ uv run quarry --version
 uv run quarry --help
 uv run quarry help
 uv run quarry resources list --domain biology
-uv run quarry search --domain biology --organism ncbitaxon:9606 myeloma
-uv run quarry show bioproject:PRJNA1065887
+uv run quarry search --domain biology "multiple myeloma"
+uv run quarry search --domain biology --in geo --in ena --in biostudies --organism "Homo sapiens" "multiple myeloma"
+uv run quarry search --in pubmed --since 2024-01-01 "smoldering myeloma"
+uv run quarry show geo:GSE24080
+uv run quarry files geo:GSE24080
+uv run quarry files zenodo.record:21628233 --file "*.zip" --acquisition
 ```
 
 The root command accepts `--json` and `--pretty` to choose output mode.
 `QUARRY_FORMAT` sets the default to `json` or `pretty`.
 
-The foundation supports catalog and domain inspection, identifier checking,
-normalization and resolution, and ENA study search and metadata display. ENA is the
-only implemented repository adapter. Other repositories, file listing and
-acquisition, ontology term commands, and agent skills are subsequent milestones.
-
-Searches report the native query and coverage for each resource. A listing shorter
-than the reported total fails; `-n` explicitly limits results. Quarry does not
-download files or write governed records.
+The first version's repositories are GEO, ENA and BioStudies (biology) and Zenodo and
+figshare (core), with PubMed as a literature index named with `--in`. A biology search
+covers all five repositories; a domain filter such as `--organism` needs `--in` naming the
+resources that express it, since a resource that cannot is refused rather than skipped.
+A listing shorter than the resource's reported total fails rather than returning part of
+the answer, and `-n` limits the results explicitly, reporting the coverage as `limited` when
+it cuts the listing short.
+`files` lists a record's files with every location the
+resource gives; `files --acquisition` prints the request the kernel's acquisition takes
+(title, `accession:<CURIE>` locator, one http(s) URL per file). quarry downloads no bytes:
+`files --acquisition` emits the kernel's request only. Ontology terms, agent
+skills and live checks are the next milestone.
 
 ## Layout
 
 - `src/quarry/`: the Python package.
 - `src/quarry/catalog/`: resources, domains, and the pinned Bioregistry snapshot.
-- `src/quarry/adapters/`: resource adapters, currently ENA.
+- `src/quarry/adapters/`: one module per resource, plus `eutils.py` shared by GEO and PubMed.
 - `tests/fixtures/`: recorded resource responses for offline tests.
-- `tests/recordings/`: live recording scenarios, refreshed with `just record ena`.
+- `tests/recordings/`: live recording scenarios, refreshed with `just record <resource>`.
 - `tools/`: gate and timing tools vendored from ops.
 - `tasks/`: project task records.
 

@@ -158,7 +158,10 @@ class Client:
         raise UpstreamError(f"{shown}: more than {MAX_REDIRECTS} redirects")
 
     def request(self, route: Route, method: str, url: str, *, params: Mapping | None = None,
-                json: object = None, data: Mapping | None = None) -> httpx.Response:
+                json: object = None, data: Mapping | None = None,
+                accept: frozenset[int] = frozenset()) -> httpx.Response:
+        """`accept` names error statuses the caller reads itself (a 404 that means not found);
+        every other 4xx/5xx is an upstream failure."""
         key = self._key(route)
         params = dict(params or {})
         headers = {}
@@ -189,7 +192,7 @@ class Client:
                                         f"{delay:.0f} s, beyond the {WAIT_BUDGET:.0f} s budget")
                 sleep(delay if delay is not None else 2 ** (attempt - 1))
                 continue
-            if response.status_code >= 400:
+            if response.status_code >= 400 and response.status_code not in accept:
                 raise UpstreamError(f"{method} {shown}: HTTP {response.status_code}")
             return response
         raise AssertionError("unreachable: the last attempt returns or raises")

@@ -1,0 +1,32 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [],
+   "url": "https://www.ebi.ac.uk/biostudies/api/v1/studies/S-BSST1234"
+  },
+  "response": {
+   "body": "{\n  \"accno\" : \"S-BSST1234\",\n  \"attributes\" : [ {\n    \"name\" : \"Template\",\n    \"value\" : \"Default\"\n  }, {\n    \"name\" : \"ReleaseDate\",\n    \"value\" : \"2023-11-21\"\n  } ],\n  \"section\" : {\n    \"type\" : \"Study\",\n    \"attributes\" : [ {\n      \"name\" : \"Title\",\n      \"value\" : \"T-cell immunity induced and reshaped by an Anti-HPV immuno-oncotherapeutic  \\nlentiviral vector\\n\"\n    }, {\n      \"name\" : \"Description\",\n      \"value\" : \"TCR sequencing raw datas and MixCR analysis tables\"\n    }, {\n      \"name\" : \"Organism\",\n      \"value\" : \"Mus musculus (mouse)\"\n    }, {\n      \"name\" : \"License\",\n      \"value\" : \"CC0\",\n      \"valqual\" : [ {\n        \"name\" : \"URL\",\n        \"value\" : \"https://creativecommons.org/publicdomain/zero/1.0/legalcode\"\n      } ]\n    } ],\n    \"files\" : [ {\n      \"path\" : \"Raw datas.zip\",\n      \"size\" : 16932701596,\n      \"attributes\" : [ {\n        \"name\" : \"Description\",\n        \"value\" : \"Bulk TCR sequencing raw datas and MixCR analysis tables\"\n      } ],\n      \"type\" : \"directory\"\n    }, {\n      \"path\" : \"E7HPV16 raw datas.zip\",\n      \"size\" : 2462872206,\n      \"attributes\" : [ {\n        \"name\" : \"Description\",\n        \"value\" : \"E7HPV16 specific TCR sequencing raw datas and MixCR analysis tables\"\n      } ],\n      \"type\" : \"file\"\n    } ],\n    \"subsections\" : [ {\n      \"type\" : \"author\",\n      \"attributes\" : [ {\n        \"name\" : \"Name\",\n        \"value\" : \"ANNA\"\n      }, {\n        \"name\" : \"E-mail\",\n        \"value\" : \"francois.anna@pasteur.fr\"\n      }, {\n        \"name\" : \"affiliation\",\n        \"value\" : \"o1\",\n        \"reference\" : true\n      } ]\n    }, {\n      \"accno\" : \"o1\",\n      \"type\" : \"organisation\",\n      \"attributes\" : [ {\n        \"name\" : \"Name\",\n        \"value\" : \"Institut Pasteur\"\n      } ]\n    } ]\n  },\n  \"type\" : \"submission\"\n}",
+   "headers": {
+    "content-type": "application/json;charset=UTF-8"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [],
+   "url": "https://www.ebi.ac.uk/biostudies/api/v1/studies/S-BSST1234/info"
+  },
+  "response": {
+   "body": "{\"columns\":[{\"name\":\"Name\",\"title\":\"Name\",\"visible\":true,\"searchable\":true,\"data\":\"Name\",\"defaultContent\":\"\"},{\"name\":\"Size\",\"title\":\"Size\",\"visible\":true,\"searchable\":false,\"data\":\"Size\",\"defaultContent\":\"\"},{\"name\":\"Description\",\"title\":\"Description\",\"visible\":true,\"searchable\":true,\"data\":\"Description\",\"defaultContent\":\"\"}],\"files\":2,\"httpLink\":\"https://ftp.ebi.ac.uk/biostudies/fire/S-BSST/234/S-BSST1234\",\"ftpLink\":\"ftp://ftp.ebi.ac.uk/biostudies/fire/S-BSST/234/S-BSST1234\",\"globusLink\":\"https://app.globus.org/file-manager?origin_id=47772002-3e5b-4fd3-b97c-18cee38d6df2&origin_path=/biostudies/fire/S-BSST/234/S-BSST1234\",\"isPublic\":true,\"relPath\":\"S-BSST/234/S-BSST1234\",\"hasZippedFolders\":true,\"views\":0,\"released\":1700524800000,\"modified\":1712316754509,\"sections\":[],\"sectionFileCounts\":{}}",
+   "headers": {
+    "content-type": "application/json;charset=UTF-8"
+   },
+   "status": 200
+  }
+ }
+]

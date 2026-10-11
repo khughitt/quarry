@@ -1,0 +1,81 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "db",
+     "pubmed"
+    ],
+    [
+     "retmax",
+     "10000"
+    ],
+    [
+     "retmode",
+     "json"
+    ],
+    [
+     "retstart",
+     "0"
+    ],
+    [
+     "term",
+     "(\"smoldering myeloma\"[All Fields]) AND (\"2024/01/01\"[PDAT] : \"2024/03/31\"[PDAT])"
+    ]
+   ],
+   "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+  },
+  "response": {
+   "body": "{\"header\":{\"type\":\"esearch\",\"version\":\"0.3\"},\"esearchresult\":{\"count\":\"3\",\"retmax\":\"3\",\"retstart\":\"0\",\"idlist\":[\"38577249\",\"38466984\",\"37608776\"],\"translationset\":[],\"querytranslation\":\"\\\"smoldering myeloma\\\"[All Fields] AND 2024/01/01:2024/03/31[Date - Publication]\",\"warninglist\":{\"phrasesignored\":[],\"quotedphrasesnotfound\":[],\"outputmessages\":[\"Restrictions achieved. start and count adjusted to 0, 9999\"]}}}\n",
+   "headers": {
+    "content-type": "application/json; charset=UTF-8"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": "db=pubmed&retmode=json&id=38577249%2C38466984%2C37608776",
+   "method": "POST",
+   "query": [],
+   "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+  },
+  "response": {
+   "body": "{\"header\":{\"type\":\"esummary\",\"version\":\"0.3\"},\"result\":{\"uids\":[\"38577249\",\"38466984\",\"37608776\"],\"38577249\":{\"uid\":\"38577249\",\"pubdate\":\"2024 Jun\",\"epubdate\":\"2024 Mar 25\",\"source\":\"Bone Rep\",\"authors\":[{\"name\":\"Chevalier K\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Hamroun S\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Bitoun S\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Henry J\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Roux C\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Briot K\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Belkhir R\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Mariette X\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Seror R\",\"authtype\":\"Author\",\"clusterid\":\"\"}],\"lastauthor\":\"Seror R\",\"title\":\"High rate of progression to symptomatic multiple myeloma in patients with smoldering myeloma and isolated osteoporotic vertebral fracture.\",\"sorttitle\":\"high rate of progression to symptomatic multiple myeloma in patients with smoldering myeloma and isolated osteoporotic vertebral fracture\",\"volume\":\"21\",\"issue\":\"\",\"pages\":\"101755\",\"lang\":[\"eng\"],\"nlmuniqueid\":\"101646176\",\"issn\":\"2352-1872\",\"essn\":\"2352-1872\",\"pubtype\":[\"Journal Article\"],\"recordstatus\":\"PubMed\",\"pubstatus\":\"258\",\"articleids\":[{\"idtype\":\"pubmed\",\"idtypen\":1,\"value\":\"38577249\"},{\"idtype\":\"pmc\",\"idtypen\":8,\"value\":\"PMC10987890\"},{\"idtype\":\"pmcid\",\"idtypen\":5,\"value\":\"pmc-id: PMC10987890;\"},{\"idtype\":\"doi\",\"idtypen\":3,\"value\":\"10.1016/j.bonr.2024.101755\"},{\"idtype\":\"pii\",\"idtypen\":4,\"value\":\"S2352-1872(24)00022-6\"}],\"history\":[{\"pubstatus\":\"received\",\"date\":\"2023/09/06 00:00\"},{\"pubstatus\":\"revised\",\"date\":\"2024/03/20 00:00\"},{\"pubstatus\":\"accepted\",\"date\":\"2024/03/23 00:00\"},{\"pubstatus\":\"medline\",\"date\":\"2024/04/05 06:45\"},{\"pubstatus\":\"pubmed\",\"date\":\"2024/04/05 06:44\"},{\"pubstatus\":\"entrez\",\"date\":\"2024/04/05 04:05\"},{\"pubstatus\":\"pmc-release\",\"date\":\"2024/03/25 00:00\"}],\"references\":[],\"attributes\":[\"Has Abstract\"],\"pmcrefcount\":13,\"fulljournalname\":\"Bone reports\",\"elocationid\":\"doi: 10.1016/j.bonr.2024.101755\",\"doctype\":\"citation\",\"srccontriblist\":[],\"booktitle\":\"\",\"medium\":\"\",\"edition\":\"\",\"publisherlocation\":\"\",\"publishername\":\"\",\"srcdate\":\"\",\"reportnumber\":\"\",\"availablefromurl\":\"\",\"locationlabel\":\"\",\"doccontriblist\":[],\"docdate\":\"\",\"bookname\":\"\",\"chapter\":\"\",\"sortpubdate\":\"2024/03/25 00:00\",\"sortfirstauthor\":\"Chevalier K\",\"vernaculartitle\":\"\"},\"38466984\":{\"uid\":\"38466984\",\"pubdate\":\"2024 Mar 11\",\"epubdate\":\"2024 Mar 11\",\"source\":\"JMIR Res Protoc\",\"authors\":[{\"name\":\"Lee DJ\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"O'Donnell EK\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Raje N\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Panaroni C\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Redd R\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Ligibel J\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Sears DD\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Nadeem O\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Ghobrial IM\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Marinac CR\",\"authtype\":\"Author\",\"clusterid\":\"\"}],\"lastauthor\":\"Marinac CR\",\"title\":\"Design and Rationale of Prolonged Nightly Fasting for Multiple Myeloma Prevention (PROFAST): Protocol for a Randomized Controlled Pilot Trial.\",\"sorttitle\":\"design and rationale of prolonged nightly fasting for multiple myeloma prevention profast protocol for a randomized controlled pilot trial\",\"volume\":\"13\",\"issue\":\"\",\"pages\":\"e51368\",\"lang\":[\"eng\"],\"nlmuniqueid\":\"101599504\",\"issn\":\"1929-0748\",\"essn\":\"1929-0748\",\"pubtype\":[\"Journal Article\"],\"recordstatus\":\"PubMed\",\"pubstatus\":\"3\",\"articleids\":[{\"idtype\":\"pubmed\",\"idtypen\":1,\"value\":\"38466984\"},{\"idtype\":\"pmc\",\"idtypen\":8,\"value\":\"PMC10964146\"},{\"idtype\":\"pmcid\",\"idtypen\":5,\"value\":\"pmc-id: PMC10964146;\"},{\"idtype\":\"doi\",\"idtypen\":3,\"value\":\"10.2196/51368\"},{\"idtype\":\"pii\",\"idtypen\":4,\"value\":\"v13i1e51368\"}],\"history\":[{\"pubstatus\":\"received\",\"date\":\"2023/07/31 00:00\"},{\"pubstatus\":\"accepted\",\"date\":\"2023/11/23 00:00\"},{\"pubstatus\":\"revised\",\"date\":\"2023/11/17 00:00\"},{\"pubstatus\":\"medline\",\"date\":\"2024/03/11 18:43\"},{\"pubstatus\":\"pubmed\",\"date\":\"2024/03/11 18:42\"},{\"pubstatus\":\"entrez\",\"date\":\"2024/03/11 16:53\"},{\"pubstatus\":\"pmc-release\",\"date\":\"2024/03/11 00:00\"}],\"references\":[],\"attributes\":[\"Has Abstract\"],\"pmcrefcount\":95,\"fulljournalname\":\"JMIR research protocols\",\"elocationid\":\"doi: 10.2196/51368\",\"doctype\":\"citation\",\"srccontriblist\":[],\"booktitle\":\"\",\"medium\":\"\",\"edition\":\"\",\"publisherlocation\":\"\",\"publishername\":\"\",\"srcdate\":\"\",\"reportnumber\":\"\",\"availablefromurl\":\"\",\"locationlabel\":\"\",\"doccontriblist\":[],\"docdate\":\"\",\"bookname\":\"\",\"chapter\":\"\",\"sortpubdate\":\"2024/03/11 00:00\",\"sortfirstauthor\":\"Lee DJ\",\"vernaculartitle\":\"\"},\"37608776\":{\"uid\":\"37608776\",\"pubdate\":\"2024 Feb 1\",\"epubdate\":\"2024 Feb 1\",\"source\":\"Haematologica\",\"authors\":[{\"name\":\"Garcia JB\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Storti P\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Iannozzi NT\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Marchica V\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Agnelli L\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Toscani D\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Franceschi V\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Todaro G\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Sammarelli G\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Notarfranchi L\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Scita M\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Palma BD\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Raimondi V\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Lungu O\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Pruneri G\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Donofrio G\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Giuliani N\",\"authtype\":\"Author\",\"clusterid\":\"\"}],\"lastauthor\":\"Giuliani N\",\"title\":\"Identification of PSMB4 and PSMD4 as novel target genes correlated with 1q21 amplification in patients with smoldering myeloma and multiple myeloma.\",\"sorttitle\":\"identification of psmb4 and psmd4 as novel target genes correlated with 1q21 amplification in patients with smoldering myeloma and multiple myeloma\",\"volume\":\"109\",\"issue\":\"2\",\"pages\":\"627-631\",\"lang\":[\"eng\"],\"nlmuniqueid\":\"0417435\",\"issn\":\"0390-6078\",\"essn\":\"1592-8721\",\"pubtype\":[\"Letter\",\"Research Support, Non-U.S. Gov't\"],\"recordstatus\":\"PubMed - indexed for MEDLINE\",\"pubstatus\":\"3\",\"articleids\":[{\"idtype\":\"pubmed\",\"idtypen\":1,\"value\":\"37608776\"},{\"idtype\":\"pmc\",\"idtypen\":8,\"value\":\"PMC10828761\"},{\"idtype\":\"pmcid\",\"idtypen\":5,\"value\":\"pmc-id: PMC10828761;\"},{\"idtype\":\"doi\",\"idtypen\":3,\"value\":\"10.3324/haematol.2023.283200\"}],\"history\":[{\"pubstatus\":\"received\",\"date\":\"2023/03/24 00:00\"},{\"pubstatus\":\"medline\",\"date\":\"2024/02/02 06:43\"},{\"pubstatus\":\"pubmed\",\"date\":\"2023/08/23 06:42\"},{\"pubstatus\":\"entrez\",\"date\":\"2023/08/23 03:38\"},{\"pubstatus\":\"pmc-release\",\"date\":\"2023/08/24 00:00\"}],\"references\":[],\"attributes\":[],\"pmcrefcount\":15,\"fulljournalname\":\"Haematologica\",\"elocationid\":\"doi: 10.3324/haematol.2023.283200\",\"doctype\":\"citation\",\"srccontriblist\":[],\"booktitle\":\"\",\"medium\":\"\",\"edition\":\"\",\"publisherlocation\":\"\",\"publishername\":\"\",\"srcdate\":\"\",\"reportnumber\":\"\",\"availablefromurl\":\"\",\"locationlabel\":\"\",\"doccontriblist\":[],\"docdate\":\"\",\"bookname\":\"\",\"chapter\":\"\",\"sortpubdate\":\"2024/02/01 00:00\",\"sortfirstauthor\":\"Garcia JB\",\"vernaculartitle\":\"\"}}}\n",
+   "headers": {
+    "content-type": "application/json; charset=UTF-8"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "db",
+     "pubmed"
+    ],
+    [
+     "id",
+     "38577249"
+    ],
+    [
+     "retmode",
+     "json"
+    ]
+   ],
+   "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+  },
+  "response": {
+   "body": "{\"header\":{\"type\":\"esummary\",\"version\":\"0.3\"},\"result\":{\"uids\":[\"38577249\"],\"38577249\":{\"uid\":\"38577249\",\"pubdate\":\"2024 Jun\",\"epubdate\":\"2024 Mar 25\",\"source\":\"Bone Rep\",\"authors\":[{\"name\":\"Chevalier K\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Hamroun S\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Bitoun S\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Henry J\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Roux C\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Briot K\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Belkhir R\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Mariette X\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Seror R\",\"authtype\":\"Author\",\"clusterid\":\"\"}],\"lastauthor\":\"Seror R\",\"title\":\"High rate of progression to symptomatic multiple myeloma in patients with smoldering myeloma and isolated osteoporotic vertebral fracture.\",\"sorttitle\":\"high rate of progression to symptomatic multiple myeloma in patients with smoldering myeloma and isolated osteoporotic vertebral fracture\",\"volume\":\"21\",\"issue\":\"\",\"pages\":\"101755\",\"lang\":[\"eng\"],\"nlmuniqueid\":\"101646176\",\"issn\":\"2352-1872\",\"essn\":\"2352-1872\",\"pubtype\":[\"Journal Article\"],\"recordstatus\":\"PubMed\",\"pubstatus\":\"258\",\"articleids\":[{\"idtype\":\"pubmed\",\"idtypen\":1,\"value\":\"38577249\"},{\"idtype\":\"pmc\",\"idtypen\":8,\"value\":\"PMC10987890\"},{\"idtype\":\"pmcid\",\"idtypen\":5,\"value\":\"pmc-id: PMC10987890;\"},{\"idtype\":\"doi\",\"idtypen\":3,\"value\":\"10.1016/j.bonr.2024.101755\"},{\"idtype\":\"pii\",\"idtypen\":4,\"value\":\"S2352-1872(24)00022-6\"}],\"history\":[{\"pubstatus\":\"received\",\"date\":\"2023/09/06 00:00\"},{\"pubstatus\":\"revised\",\"date\":\"2024/03/20 00:00\"},{\"pubstatus\":\"accepted\",\"date\":\"2024/03/23 00:00\"},{\"pubstatus\":\"medline\",\"date\":\"2024/04/05 06:45\"},{\"pubstatus\":\"pubmed\",\"date\":\"2024/04/05 06:44\"},{\"pubstatus\":\"entrez\",\"date\":\"2024/04/05 04:05\"},{\"pubstatus\":\"pmc-release\",\"date\":\"2024/03/25 00:00\"}],\"references\":[],\"attributes\":[\"Has Abstract\"],\"pmcrefcount\":13,\"fulljournalname\":\"Bone reports\",\"elocationid\":\"doi: 10.1016/j.bonr.2024.101755\",\"doctype\":\"citation\",\"srccontriblist\":[],\"booktitle\":\"\",\"medium\":\"\",\"edition\":\"\",\"publisherlocation\":\"\",\"publishername\":\"\",\"srcdate\":\"\",\"reportnumber\":\"\",\"availablefromurl\":\"\",\"locationlabel\":\"\",\"doccontriblist\":[],\"docdate\":\"\",\"bookname\":\"\",\"chapter\":\"\",\"sortpubdate\":\"2024/03/25 00:00\",\"sortfirstauthor\":\"Chevalier K\",\"vernaculartitle\":\"\"}}}\n",
+   "headers": {
+    "content-type": "application/json; charset=UTF-8"
+   },
+   "status": 200
+  }
+ }
+]

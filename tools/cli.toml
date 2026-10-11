@@ -1231,6 +1231,17 @@ args = [
   { name = "curie", value = "string", required = true },
 ]
 
+[[cli.quarry.commands]]
+path = ["files"]
+summary = "List a record's files, or the acquisition request the kernel takes for them"
+args = [
+  { name = "curie", value = "string", required = true },
+]
+options = [
+  { names = ["--file"], value = "string", repeatable = true },
+  { names = ["--acquisition"], value = "none" },
+]
+
 # ---- science
 
 [[cli.science.commands]]

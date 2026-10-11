@@ -54,6 +54,7 @@ def run(*, catalog: Catalog, client: Client, query: Query, resource_ids: list[st
             warnings.append(f"{adapter.resource.id} failed: {error.detail}")
             continue
         coverage.append(cov)
+        warnings += list(cov.warnings)
         results += rows
     return {"domain": domain, "coverage": [c.as_dict() for c in coverage],
             "results": [r.as_dict() for r in results], "warnings": warnings}

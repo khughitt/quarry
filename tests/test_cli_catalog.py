@@ -11,7 +11,7 @@ ALPHA = """
 id = "alpha"
 name = "Alpha archive"
 roles = ["repository"]
-prefixes = ["geo"]
+prefixes = []
 adapter = "quarry.adapters"
 [[routes]]
 kind = "rest"

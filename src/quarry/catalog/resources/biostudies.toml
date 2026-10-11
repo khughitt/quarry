@@ -1,0 +1,39 @@
+id = "biostudies"
+name = "BioStudies"
+roles = ["repository"]
+prefixes = ["biostudies", "arrayexpress"]   # S-… studies and the ArrayExpress collection's E-… ids
+adapter = "quarry.adapters.biostudies"
+
+[[routes]]
+kind = "rest"
+url = "https://www.ebi.ac.uk/biostudies/api/v1"
+min_interval = 0.5
+service = "ebi-biostudies"
+auth = "none"
+reports_total = true
+page_cap = 100
+
+[[pitfalls]]
+summary = "phrase queries expand through EFO synonyms with no off switch"
+handling = "coverage says match: expanded; --exact refuses BioStudies, so an exact biology search names its resources with --in"
+evidence = "mm-159cb7; the search answer lists expandedEfoTerms and expandedSynonyms"
+
+[[pitfalls]]
+summary = "search hits omit the organism"
+handling = "--organism becomes the facet.organism parameter (a taxon name; an ncbitaxon: CURIE is refused) and every hit then carries it; show reads the study's Organism attribute"
+evidence = "mm-159cb7 read one facet listing and one filtered pass per organism value"
+
+[[pitfalls]]
+summary = "totalHits is an estimate on large result sets (isTotalHitsExact: false)"
+handling = "an inexact total is reported as null and the listing pages to a short page (complete: short-page)"
+evidence = "probe 2026-10-10: 'multiple myeloma' reports 10761 inexact hits"
+
+[[pitfalls]]
+summary = "E-GEOD-n is the GEO import of GSEn, and S-EPMCn holds a paper's supplementary files"
+handling = "arrayexpress:E-GEOD-n carries a geo:GSEn cross-reference; biostudies:S-EPMCn carries pmc:PMCn as its publication"
+evidence = "mm-159cb7 mapped E-GEOD to geo: for overlap"
+
+[[pitfalls]]
+summary = "a study's file list mixes files and directories, and <httpLink>/Files/<path> does not serve a directory"
+handling = "files lists a directory with media_type inode/directory and its ftp location only; --acquisition refuses it by name with unsupported_transport unless --file leaves it out; an entry with no type, or a type other than file or directory, is upstream_failed"
+evidence = "S-BSST1234 lists 'Raw datas.zip' as a 16,932,701,596-byte directory beside a 2.46 GB file (recorded 2026-10-10)"

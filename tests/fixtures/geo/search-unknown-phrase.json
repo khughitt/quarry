@@ -1,0 +1,38 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "db",
+     "gds"
+    ],
+    [
+     "retmax",
+     "10000"
+    ],
+    [
+     "retmode",
+     "json"
+    ],
+    [
+     "retstart",
+     "0"
+    ],
+    [
+     "term",
+     "(\"qwzx myeloma zzq\"[All Fields]) AND gse[ETYP]"
+    ]
+   ],
+   "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+  },
+  "response": {
+   "body": "{\"header\":{\"type\":\"esearch\",\"version\":\"0.3\"},\"esearchresult\":{\"count\":\"0\",\"retmax\":\"0\",\"retstart\":\"0\",\"idlist\":[],\"translationset\":[],\"querytranslation\":\"(\\\"qwzx myeloma zzq\\\"[All Fields]) AND gse[ETYP]\",\"warninglist\":{\"phrasesignored\":[],\"quotedphrasesnotfound\":[\"\\\"qwzx myeloma zzq\\\"[All Fields]\"],\"outputmessages\":[\"No items found.\"]}}}\n",
+   "headers": {
+    "content-type": "application/json; charset=UTF-8"
+   },
+   "status": 200
+  }
+ }
+]

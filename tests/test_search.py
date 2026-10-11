@@ -13,8 +13,8 @@ FAKE = """
 id = "{id}"
 name = "{id}"
 roles = ["{role}"]
-prefixes = [{prefixes}]
 adapter = "tests.fake_adapter"
+{prefix}
 [[routes]]
 kind = "rest"
 url = "https://{id}.example"
@@ -23,13 +23,19 @@ service = "{id}"
 auth = "none"
 reports_total = true
 """
+LOCAL = """[local_prefixes.{name}]
+pattern = '{pattern}'
+uri_format = "https://{name}.example/$1"
+why = "a test prefix nothing shipped owns"
+"""
 
 
 @pytest.fixture
 def catalog(make_catalog):
-    fakes = {rid: FAKE.format(id=rid, role=role, prefixes=prefixes)
-             for rid, role, prefixes in (("alpha", "repository", '"geo"'), ("beta", "repository", ""),
-                                         ("expanding", "repository", ""), ("onto", "ontology", '"go"'))}
+    fakes = {rid: FAKE.format(id=rid, role=role, prefix=prefix)
+             for rid, role, prefix in (("alpha", "repository", LOCAL.format(name="alpha", pattern=r"^GSE\d+$")),
+                                       ("beta", "repository", ""), ("expanding", "repository", ""),
+                                       ("onto", "ontology", LOCAL.format(name="onto", pattern=r"^\d+$")))}
     return make_catalog(fakes, ["alpha", "beta", "expanding", "onto"], ["alpha", "beta"])
 
 
@@ -112,11 +118,11 @@ def test_native_with_limit(catalog):
 
 
 def test_show_routes_by_prefix_owner(catalog):
-    out = invoke("show", "GEO:GSE5")
-    assert out.exit_code == 0 and json.loads(out.stdout)["id"] == "geo:GSE5"
+    out = invoke("show", "alpha:GSE5")
+    assert out.exit_code == 0 and json.loads(out.stdout)["id"] == "alpha:GSE5"
 
 
-@pytest.mark.parametrize("curie, kind", [("pubmed:1", "no_owner"), ("go:0008150", "unsupported_role"), ("GSE5", "ambiguous_id")])
+@pytest.mark.parametrize("curie, kind", [("doi:10.1000/x", "no_owner"), ("onto:0008150", "unsupported_role"), ("GSE5", "ambiguous_id")])
 def test_show_refusals(catalog, curie, kind):
     out = invoke("show", curie)
     assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == kind
@@ -149,7 +155,7 @@ def test_core_without_explicit_resources_fails(catalog):
 def test_search_pretty_reports_rows_coverage_and_warnings(catalog):
     out = CliRunner().invoke(main, ["search", "--domain", "biology", "--in", "alpha", "-n", "1", "x"])
     assert out.exit_code == 0
-    assert out.stdout == "geo:GSE1\t-\trow 1\n# alpha: 1 of 3 (limited, exact)\n"
+    assert out.stdout == "alpha:GSE1\t-\trow 1\n# alpha: 1 of 3 (limited, exact)\n"
     out = CliRunner().invoke(main, ["search", "--domain", "biology", "--in", "alpha", "--allow-partial", "fail"])
     assert out.exit_code == 0
     assert "warning: alpha failed: alpha is down" in out.stdout
@@ -185,3 +191,9 @@ def test_partial_native_failure_preserves_query_and_match(catalog, monkeypatch, 
                                    "error": {"kind": "upstream_failed", "detail": "service is down"}}]
     assert report["results"] == []
     assert report["warnings"] == [f"{resource} failed: service is down"]
+
+
+def test_adapter_warnings_reach_the_report_but_not_the_coverage_object(catalog):
+    report = json.loads(invoke("search", "--domain", "biology", "--in", "alpha", "warn").stdout)
+    assert report["warnings"] == ["alpha warns"]
+    assert "warnings" not in report["coverage"][0]

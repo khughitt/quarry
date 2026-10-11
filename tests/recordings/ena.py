@@ -17,8 +17,19 @@ def show_first(adapter, client):
     adapter.show(client, Curie(prefix, local))
 
 
+def files_first(adapter, client):
+    """The first myeloma study that has read files; tests/test_ena.py mirrors this walk."""
+    _, rows = adapter.search(client, MYELOMA)
+    for row in rows:
+        prefix, local = row.id.split(":", 1)
+        if adapter.files(client, Curie(prefix, local))[1]:
+            return
+    raise ValueError("no ENA myeloma study has read files; widen MYELOMA dates before recording files-first")
+
+
 SCENARIOS = {
     "search-myeloma": lambda adapter, client: adapter.search(client, MYELOMA),
     "search-hyphen": lambda adapter, client: adapter.search(client, HYPHEN),
     "show-first": show_first,
+    "files-first": files_first,
 }

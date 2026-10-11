@@ -486,3 +486,19 @@ def test_json_body_redaction_keeps_unquoted_credential_echoes_safe_and_valid(sen
         c.post("https://h.example/json", content=body)
     for side in ("request", "response"):
         assert json.loads(recorder.exchanges[0][side]["body"]) == {"echo": "REDACTED", "keep": 7}
+
+
+def test_accepted_statuses_return_and_others_still_raise():
+    c = client(lambda r: httpx.Response(404))
+    assert c.request(route(), "GET", "x", accept=frozenset({404})).status_code == 404
+    with pytest.raises(UpstreamError):
+        c.request(route(), "GET", "x")
+
+
+def test_recording_a_gzip_response_hands_the_client_the_body_once():
+    import gzip
+    body = b'{"ok": true}'
+    inner = httpx.MockTransport(lambda r: httpx.Response(200, headers={"content-encoding": "gzip"}, stream=httpx.ByteStream(gzip.compress(body))))
+    recorder = RecordingTransport(frozenset(), [], inner=inner)
+    assert httpx.Client(transport=recorder).get("https://example.org/x").content == body
+    assert recorder.take()[0]["response"]["body"] == body.decode()

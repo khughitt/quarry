@@ -2,17 +2,19 @@
 import dataclasses
 import functools
 import importlib.metadata
+import json
 import os
 import sys
 from pathlib import Path
 
 import click
 
-from quarry import context
+from quarry import acquisition, context
+from quarry import files as files_mod
 from quarry import ids as idmod
 from quarry import search as search_mod
 from quarry.adapters import base as adapter_base
-from quarry.catalog import DATA_ROLES, ROLES, ROUTE_KINDS, CatalogError, Finding
+from quarry.catalog import DATA_ROLES, ROLES, ROUTE_KINDS, CatalogError, Finding, Resource
 from quarry.errors import QuarryError
 from quarry.lens import resolve_domain
 from quarry.output import CONTEXT, emit, fail, output_options
@@ -305,6 +307,17 @@ def search_command(ctx, phrases, in_, domain, organism, exact, native, allow_par
     emit(ctx, report, _pretty_search(report))
 
 
+def _owned(env: context.Env, text: str) -> tuple[idmod.Curie, Resource]:
+    """The CURIE and the data-holding resource that owns its prefix (spec §7)."""
+    parsed = idmod.parse(text, env.registry)
+    owner = env.catalog.owner(parsed.prefix)
+    if owner is None:
+        raise QuarryError("no_owner", f"no catalog resource owns {parsed.prefix}: ids under it are cross-references only")
+    if not set(owner.roles) & DATA_ROLES:
+        raise QuarryError("unsupported_role", f"{owner.id} holds no records")
+    return parsed, owner
+
+
 @main.command("show", context_settings=CONTEXT)
 @output_options
 @click.argument("curie")
@@ -313,15 +326,36 @@ def search_command(ctx, phrases, in_, domain, organism, exact, native, allow_par
 def show_command(ctx: click.Context, curie: str) -> None:
     """Show one record."""
     env = context.open_env()
-    parsed = idmod.parse(curie, env.registry)
-    owner = env.catalog.owner(parsed.prefix)
-    if owner is None:
-        raise QuarryError("no_owner", f"no catalog resource owns {parsed.prefix}: ids under it are cross-references only")
-    if not set(owner.roles) & DATA_ROLES:
-        raise QuarryError("unsupported_role", f"{owner.id} holds no records to show")
+    parsed, owner = _owned(env, curie)
     with context.make_client(state(ctx).trace) as client:
         result = adapter_base.make(owner).show(client, parsed)
     emit(ctx, result.as_dict(), f"{result.id}\t{result.date or '-'}\t{result.title}")
+
+
+def _pretty_files(listed: list[files_mod.File]) -> str:
+    lines = [f"{f.name}\t{f.size if f.size is not None else '-'}\t{f.urls[0] if f.urls else '-'}" for f in listed]
+    return "\n".join([*lines, f"# {len(listed)} files"])
+
+
+@main.command("files", context_settings=CONTEXT)
+@output_options
+@click.argument("curie")
+@click.option("--file", "globs", multiple=True, help="Only files whose name matches this glob; repeatable, widening.")
+@click.option("--acquisition", "as_request", is_flag=True, help="Print the acquisition request the kernel takes (spec §9).")
+@click.pass_context
+@reports_errors
+def files_command(ctx: click.Context, curie: str, globs: tuple[str, ...], as_request: bool) -> None:
+    """List a record's files, or the acquisition request the kernel takes for them."""
+    env = context.open_env()
+    parsed, owner = _owned(env, curie)
+    with context.make_client(state(ctx).trace) as client:
+        record, listed = adapter_base.make(owner).files(client, parsed)
+    listed = files_mod.select(listed, globs)
+    if as_request:
+        request = acquisition.build(record, parsed, listed)
+        emit(ctx, request, json.dumps(request, indent=1))
+        return
+    emit(ctx, {"id": str(parsed), "resource": owner.id, "files": [f.as_dict() for f in listed]}, _pretty_files(listed))
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import Protocol
 
 from quarry.catalog import Resource
+from quarry.files import File
 from quarry.http import Client
 from quarry.ids import Curie
 from quarry.query import Query
@@ -26,6 +27,10 @@ class Adapter(Protocol):
         ...
 
     def show(self, client: Client, curie: Curie) -> Result: ...
+
+    def files(self, client: Client, curie: Curie) -> tuple[Result, list[File]]:
+        """The record and its files, every location the resource gives; not_found when missing."""
+        ...
 
 
 def make(resource: Resource) -> Adapter:
