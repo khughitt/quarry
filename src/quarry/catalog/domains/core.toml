@@ -1,4 +1,4 @@
 id = "core"
 summary = "Resources every science shares: general repositories, literature, identifiers"
-resources = []
+resources = ["pubmed"]
 search_default = []

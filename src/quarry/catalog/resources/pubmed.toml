@@ -1,0 +1,27 @@
+id = "pubmed"
+name = "PubMed"
+roles = ["literature-index"]
+prefixes = ["pubmed"]
+adapter = "quarry.adapters.pubmed"
+
+[[routes]]                             # the same E-utilities service as GEO: one throttle, one key
+kind = "rest"
+url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+min_interval = 0.34
+service = "ncbi-eutils"
+auth = "optional-key"
+key_env = "NCBI_API_KEY"
+key_param = "api_key"
+keyed_min_interval = 0.1
+reports_total = true
+page_cap = 10000
+
+[[pitfalls]]
+summary = "PubMed maps phrases through automatic term mapping and, when a phrase is not indexed, searches its words ANDed"
+handling = "coverage says match: expanded; --exact refuses PubMed; --native sends PubMed syntax unchanged"
+evidence = "PubMed help: automatic term mapping and phrase searching"
+
+[[pitfalls]]
+summary = "esearch serves at most 10,000 ids per query without the history server"
+handling = "a count above the window is refused with too_many_results before any summary request; -n inside the window is served"
+evidence = "E-utilities documentation; mm-159cb7's reviews search capped retmax by hand"
