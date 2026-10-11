@@ -1,8 +1,8 @@
 # quarry: the heliophysics domain
 
-Status: draft 2026-10-11, revised after review rounds 1 and 2 (codex/gpt-6-astra,
-relayed by the user; round 2 accepted the catalog corrections); awaiting the user's
-approval for planning. Written from the sun program's phase-1 resource
+Status: approved 2026-10-11 for implementation planning, after three review rounds
+(codex/gpt-6-astra, relayed by the user). The plan keeps the coverage-filter decision
+(`quarry-bc633c`) and §9's open choices explicit, and has its own review gate. Written from the sun program's phase-1 resource
 survey (sun repository, `docs/reports/2026-10-10-phase-1-survey/`, task `sun-374ea3`),
 against the approved quarry spec (`2026-10-10-quarry-domain-layers-design.md`) and the
 catalog as implemented in `src/quarry/catalog.py` on 2026-10-11. Source goal
