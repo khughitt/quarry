@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: main
 created: 2026-10-11T13:06:57Z
-updated: 2026-10-11T16:02:41Z
+updated: 2026-10-11T16:02:42Z
 started: 2026-10-11T16:02:12Z
 depends: []
 tags: []
@@ -24,3 +24,4 @@ Amend spec §8.2/§8.3 (docs/specs/2026-10-10-quarry-domain-layers-design.md in 
 - 2026-10-11T15:29:04Z (main): Spec amended in science ee9ccff (§8.2 'Refusal and skipping', §8.3 'Skipped'; also §9's checksum sentence: GEO and BioStudies publish none, ENA/Zenodo/figshare MD5). An all-skipped search fails unsupported_filter naming every resource. Remaining: implement and test in quarry, README sentence.
 - 2026-10-11T16:02:12Z (main): started
   provenance: {"harness_session":"claude-code:a416032d-4491-4057-8b25-f677dc3dbcd4","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T16:02:41Z (main): process planned -> direct: spec amendment ee9ccff (agreed with the user) settles row shape, warning, all-skipped failure and static decision; remaining work is one function in search.run plus tests and a README sentence
