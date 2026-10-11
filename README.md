@@ -45,3 +45,7 @@ download files or write governed records.
 ## Consumers
 
 People and agents use the CLI; no project consumers are established yet.
+
+## License
+
+MIT, see [LICENSE](LICENSE).

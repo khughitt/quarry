@@ -3,6 +3,8 @@ name = "quarry"
 version = "0.1.0"
 description = "One CLI and skills over scientific resources, with domains as lenses"
 requires-python = ">=3.13"
+license = "MIT"
+license-files = ["LICENSE"]
 dependencies = ["click>=8.1", "httpx>=0.28"]
 
 [project.scripts]
