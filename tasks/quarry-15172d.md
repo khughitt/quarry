@@ -1,15 +1,16 @@
 ---
 id: quarry-15172d
 title: "Search completeness: count unique ids, not rows"
-status: doing
+status: done
 priority: 2
 size: s
 complexity: mid
 process: direct
 owner: fix/search-unique-ids
 created: 2026-10-11T15:28:20Z
-updated: 2026-10-11T16:22:33Z
+updated: 2026-10-11T16:24:25Z
 started: 2026-10-11T16:22:27Z
+completed: 2026-10-11T16:24:25Z
 depends: []
 tags: []
 source: quarry-3f4c3b
@@ -24,4 +25,8 @@ Zenodo, figshare and BioStudies prove completeness by len(rows) == total. Offset
 - 2026-10-11T16:22:27Z (main): started
   provenance: {"harness_session":"claude-code:3372c373-34b3-4b18-ad87-45995d054cdd","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-11T16:22:33Z (fix/search-unique-ids): resumed
+  provenance: {"harness_session":"claude-code:3372c373-34b3-4b18-ad87-45995d054cdd","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T16:24:25Z (fix/search-unique-ids): done
+  provenance: {"harness_session":"claude-code:3372c373-34b3-4b18-ad87-45995d054cdd","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T16:24:25Z (fix/search-unique-ids): search.distinct refuses a repeated id with incomplete_listing; Zenodo, figshare and BioStudies call it before completeness, so a count that matches over a repeated row no longer reports total or short-page
   provenance: {"harness_session":"claude-code:3372c373-34b3-4b18-ad87-45995d054cdd","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
