@@ -156,8 +156,8 @@ class Biostudies:
 
         return execute
 
-    def _study(self, client: Client, curie: Curie) -> tuple[Result, list[tuple[str, int | None]]]:
-        """The record and its (path, size) file entries; directories are not files."""
+    def _study(self, client: Client, curie: Curie) -> tuple[Result, list[tuple[str, int | None, str]]]:
+        """The record and its (path, size, type) entries, type being "file" or "directory"."""
         response = client.request(self.route, "GET", f"studies/{curie.local}", accept=frozenset({404}))
         if response.status_code == 404:
             raise QuarryError("not_found", f"{curie} is not in BioStudies")
@@ -177,14 +177,16 @@ class Biostudies:
                         domain_fields={"biology": {"organism": organism}} if organism else {})
         entries = []
         for entry in _collect(doc, "files"):
-            if entry.get("type") != "file":
-                continue
+            if type(entry.get("type")) is not str:
+                raise UpstreamError("biostudies study: a file entry has no type")
+            if entry["type"] not in ("file", "directory"):
+                raise UpstreamError(f"biostudies study: a file entry has type {entry['type']!r}, neither file nor directory")
             if type(entry.get("path")) is not str or not entry["path"]:
                 raise UpstreamError("biostudies study: a file has no path")
             size = entry.get("size")
             if size is not None and (type(size) is not int or size < 0):
                 raise UpstreamError("biostudies study: a file size is not a number")
-            entries.append((entry["path"], size))
+            entries.append((entry["path"], size, entry["type"]))
         return record, entries
 
     def show(self, client: Client, curie: Curie) -> Result:
@@ -196,9 +198,18 @@ class Biostudies:
         base = info.get("httpLink")
         if type(base) is not str or not base.startswith("https://"):
             raise UpstreamError("biostudies info: no https link to the study's files")
-        bases = [base] + ([info["ftpLink"]] if type(info.get("ftpLink")) is str and info["ftpLink"].startswith("ftp://") else [])
-        return record, [File(name=path, urls=tuple(f"{b.rstrip('/')}/Files/{quote(path)}" for b in bases), size=size)
-                        for path, size in entries]
+        ftp = [info["ftpLink"]] if type(info.get("ftpLink")) is str and info["ftpLink"].startswith("ftp://") else []
+        files = []
+        for path, size, kind in entries:
+            # <httpLink>/Files/<path> does not serve a directory, so a directory carries its ftp location
+            # only; --acquisition then refuses it by name unless --file leaves it out.
+            if kind == "directory":
+                files.append(File(name=path, urls=tuple(f"{b.rstrip('/')}/Files/{quote(path)}" for b in ftp), size=size,
+                                  media_type="inode/directory"))
+            else:
+                files.append(File(name=path, urls=tuple(f"{b.rstrip('/')}/Files/{quote(path)}" for b in [base] + ftp),
+                                  size=size))
+        return record, files
 
 
 def make(resource: Resource) -> Biostudies:

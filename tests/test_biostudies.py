@@ -150,22 +150,43 @@ def test_a_200_that_is_not_the_study_is_an_upstream_error(body):     # a blank d
     assert caught.value.kind == "upstream_failed"
 
 
-def test_files_walk_nested_sections_skip_directories_and_percent_encode_paths(monkeypatch):     # Review Focus 1
+def test_files_walk_nested_sections_percent_encode_paths_and_list_directories_without_an_http_location(monkeypatch):  # Review Focus 1
     transport = ReplayTransport([study("S-BSST1234", json.dumps(STUDY)), info("S-BSST1234", json.dumps(INFO))])
     record, files = BS.files(replay_client(transport), Curie("biostudies", "S-BSST1234"))
     assert record.title == "T-cell immunity"
     assert [f.as_dict() for f in files] == [
+        {"name": "Raw datas.zip", "size": 16, "media_type": "inode/directory",
+         "urls": ["ftp://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234/Files/Raw%20datas.zip"]},
         {"name": "E7HPV16 raw datas é.zip", "size": 2462872206,
          "urls": ["https://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234/Files/E7HPV16%20raw%20datas%20%C3%A9.zip",
                   "ftp://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234/Files/E7HPV16%20raw%20datas%20%C3%A9.zip"]},
         {"name": "sub/E.idf.txt", "size": 2688,
          "urls": ["https://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234/Files/sub/E.idf.txt",
                   "ftp://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234/Files/sub/E.idf.txt"]}]
-    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport(
-        [study("S-BSST1234", json.dumps(STUDY)), info("S-BSST1234", json.dumps(INFO))])))
-    out = CliRunner().invoke(main, ["--json", "files", "biostudies:S-BSST1234", "--acquisition"], catch_exceptions=False)
+    no_ftp = {k: v for k, v in INFO.items() if k != "ftpLink"}
+    _, files = BS.files(replay_client(ReplayTransport([study("S-BSST1234", json.dumps(STUDY)), info("S-BSST1234", json.dumps(no_ftp))])),
+                        Curie("biostudies", "S-BSST1234"))
+    assert files[0].name == "Raw datas.zip" and files[0].urls == ()
+
+    def acquire(*args):
+        monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport(
+            [study("S-BSST1234", json.dumps(STUDY)), info("S-BSST1234", json.dumps(INFO))])))
+        return CliRunner().invoke(main, ["--json", "files", "biostudies:S-BSST1234", "--acquisition", *args], catch_exceptions=False)
+    out = acquire()
+    error = json.loads(out.stderr)["error"]
+    assert out.exit_code == 1 and error["kind"] == "unsupported_transport" and "Raw datas.zip" in error["detail"]
+    out = acquire("--file", "E7HPV16*", "--file", "sub/*")
     assert out.exit_code == 0, out.stderr
     assert [r["name"] for r in json.loads(out.stdout)["resources"]] == ["E7HPV16 raw datas é.zip", "sub/E.idf.txt"]
+
+
+@pytest.mark.parametrize("kind", [None, 7, "symlink"])
+def test_a_file_entry_without_a_known_type_is_an_upstream_error(kind):
+    entry = {"path": "x.txt", "size": 1, **({} if kind is None else {"type": kind})}
+    doc = {**STUDY, "section": {**STUDY["section"], "files": [entry]}}
+    with pytest.raises(QuarryError) as caught:
+        BS.show(replay_client(ReplayTransport([study("S-BSST1234", json.dumps(doc))])), Curie("biostudies", "S-BSST1234"))
+    assert caught.value.kind == "upstream_failed"
 
 
 def test_info_without_an_https_link_is_an_upstream_error():
@@ -198,9 +219,19 @@ def test_recorded_files_e_geod_5900_come_from_nested_sections():
     assert any(f.name.endswith(".sdrf.txt") for f in files) and all(f.urls[0].startswith("https://") for f in files)
 
 
-def test_recorded_files_s_bsst1234_encode_the_space(monkeypatch):
+def test_recorded_files_s_bsst1234_list_the_directory_and_acquire_only_the_file(monkeypatch):
     _, files = BS.files(replay("files-s-bsst1234"), S_BSST1234)
-    assert any(" " in f.name and "%20" in f.urls[0] for f in files)
+    directory = next(f for f in files if f.name == "Raw datas.zip")
+    assert directory.media_type == "inode/directory" and directory.size == 16932701596
+    assert not any(u.startswith("http") for u in directory.urls)
+    assert any(" " in f.name and "%20" in f.urls[0] and f.urls[0].startswith("https://") for f in files if f.media_type is None)
     monkeypatch.setattr(context, "make_client", lambda trace: replay("files-s-bsst1234"))
     out = CliRunner().invoke(main, ["--json", "files", "biostudies:S-BSST1234", "--acquisition"], catch_exceptions=False)
-    assert out.exit_code == 0 and all(" " not in r["url"] for r in json.loads(out.stdout)["resources"])
+    error = json.loads(out.stderr)["error"]
+    assert out.exit_code == 1 and error["kind"] == "unsupported_transport" and "Raw datas.zip" in error["detail"]
+    monkeypatch.setattr(context, "make_client", lambda trace: replay("files-s-bsst1234"))
+    out = CliRunner().invoke(main, ["--json", "files", "biostudies:S-BSST1234", "--acquisition", "--file", "E7HPV16*"],
+                             catch_exceptions=False)
+    resources = json.loads(out.stdout)["resources"]
+    assert out.exit_code == 0 and [r["name"] for r in resources] == ["E7HPV16 raw datas.zip"]
+    assert all(" " not in r["url"] for r in resources)
