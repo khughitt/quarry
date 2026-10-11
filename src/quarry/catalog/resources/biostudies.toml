@@ -42,3 +42,8 @@ evidence = "probe 2026-10-11: 'myeloma' page 1 holds MODEL1908290002; 'cryo-EM' 
 summary = "a study's file list mixes files and directories, and <httpLink>/Files/<path> does not serve a directory"
 handling = "files lists a directory with media_type inode/directory and its ftp location only; --acquisition refuses it by name with unsupported_transport unless --file leaves it out; an entry with no type, or a type other than file or directory, is upstream_failed"
 evidence = "S-BSST1234 lists 'Raw datas.zip' as a 16,932,701,596-byte directory beside a 2.46 GB file (recorded 2026-10-10)"
+
+[[pitfalls]]
+summary = "a study may hold its files in File List attributes rather than inline (S-BIAD144: none inline, 223 in 'File list_1.json'), and the lists of large studies run to hundreds of MB"
+handling = "files follows each section's File List at <httpLink>/Files/<name> and fails incomplete_listing when the entries listed differ from info.files; a study needing file lists with more than 10,000 files is refused with too_many_results, naming the lists, before any is read"
+evidence = "probe 2026-10-11: S-BIAD144 info.files 223 with no inline entries; S-BIAD2's RawFiles.json is 944,806,735 bytes for 1,309,774 files"

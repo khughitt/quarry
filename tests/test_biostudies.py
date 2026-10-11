@@ -16,7 +16,7 @@ from quarry.errors import QuarryError
 from quarry.ids import Curie
 from quarry.query import Query
 from quarry.testing import ReplayTransport, exchange, replay_client
-from tests.recordings.biostudies import E_GEOD_5900, S_BSST1234, SMOLDERING
+from tests.recordings.biostudies import E_GEOD_5900, S_BIAD144, S_BSST1234, SMOLDERING
 
 FX = Path(__file__).parent / "fixtures" / "biostudies"
 CAT = catalog_mod.load()
@@ -134,7 +134,7 @@ STUDY = {"accno": "S-BSST1234", "attributes": [{"name": "ReleaseDate", "value": 
                      "subsections": [{"type": "Assays and Data", "subsections": [
                          {"type": "Data files", "files": [[{"path": "sub/E.idf.txt", "size": 2688, "type": "file"}]]}]}]}}
 INFO = {"httpLink": "https://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234",
-        "ftpLink": "ftp://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234", "files": 2}
+        "ftpLink": "ftp://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234", "files": 3}
 
 
 def study(acc, body, status=200):
@@ -213,6 +213,48 @@ def test_info_without_an_https_link_is_an_upstream_error():
     assert caught.value.kind == "upstream_failed"
 
 
+LISTED = {**STUDY, "section": {**STUDY["section"], "files": [{"path": "top.txt", "size": 1, "type": "file"}],
+                               "subsections": [{"type": "Study Component", "attributes": [
+                                   {"name": "File List", "value": "File list_1.json"}]}]}}
+LIST = [{"path": "experiments/a.czi", "size": 10, "attributes": [{"name": "cells", "value": "WT"}], "type": "file"},
+        {"path": "experiments/raw", "size": 20, "type": "directory"}]
+FILES = "https://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234/Files"
+
+
+def listed(info_doc, *rest):
+    return replay_client(ReplayTransport([study("S-BSST1234", json.dumps(LISTED)), info("S-BSST1234", json.dumps(info_doc)), *rest]))
+
+
+def test_files_follow_a_sections_file_list_beside_its_inline_files():   # S-BIAD144 holds its 223 files in a file list
+    file_list = exchange("GET", f"{FILES}/File%20list_1.json", body=json.dumps(LIST))
+    _, files = BS.files(listed(INFO, file_list), Curie("biostudies", "S-BSST1234"))
+    assert [(f.name, f.size, f.media_type) for f in files] == [
+        ("top.txt", 1, None), ("experiments/a.czi", 10, None), ("experiments/raw", 20, "inode/directory")]
+    assert files[1].urls[0] == f"{FILES}/experiments/a.czi"
+
+
+def test_files_fail_incomplete_listing_when_the_count_differs_from_info():
+    with pytest.raises(QuarryError) as caught:
+        BS.files(replay_client(ReplayTransport([study("S-BSST1234", json.dumps(STUDY)), info("S-BSST1234", json.dumps({**INFO, "files": 4}))])),
+                 Curie("biostudies", "S-BSST1234"))
+    assert caught.value.kind == "incomplete_listing" and "3 of 4" in caught.value.detail
+
+
+def test_file_lists_above_the_window_are_refused_before_any_list_is_read():  # S-BIAD2's list is 945 MB for 1,309,774 files
+    with pytest.raises(QuarryError) as caught:
+        BS.files(listed({**INFO, "files": 1309774}), Curie("biostudies", "S-BSST1234"))
+    assert caught.value.kind == "too_many_results" and "File%20list_1.json" in caught.value.detail
+
+
+@pytest.mark.parametrize("info_doc,list_body", [({**INFO, "files": "3"}, None), ({**{k: v for k, v in INFO.items() if k != "files"}}, None),
+                                                (INFO, '{"files": []}'), (INFO, '[{"path": "x"}]')])
+def test_a_missing_count_or_a_malformed_file_list_is_an_upstream_error(info_doc, list_body):
+    rest = [] if list_body is None else [exchange("GET", f"{FILES}/File%20list_1.json", body=list_body)]
+    with pytest.raises(QuarryError) as caught:
+        BS.files(listed(info_doc, *rest), Curie("biostudies", "S-BSST1234"))
+    assert caught.value.kind == "upstream_failed"
+
+
 def replay(*names):
     return replay_client(ReplayTransport.from_files([FX / f"{n}.json" for n in names]))
 
@@ -252,3 +294,12 @@ def test_recorded_files_s_bsst1234_list_the_directory_and_acquire_only_the_file(
     resources = json.loads(out.stdout)["resources"]
     assert out.exit_code == 0 and [r["name"] for r in resources] == ["E7HPV16 raw datas.zip"]
     assert all(" " not in r["url"] for r in resources)
+
+
+def test_recorded_files_s_biad144_come_from_its_file_list(monkeypatch):
+    _, files = BS.files(replay("files-s-biad144"), S_BIAD144)
+    assert len(files) == 223 and all(f.urls[0].startswith("https://") and f.media_type is None for f in files)
+    monkeypatch.setattr(context, "make_client", lambda trace: replay("files-s-biad144"))
+    out = CliRunner().invoke(main, ["--json", "files", "biostudies:S-BIAD144", "--acquisition"], catch_exceptions=False)
+    assert out.exit_code == 0, out.stderr
+    assert len(json.loads(out.stdout)["resources"]) == 223

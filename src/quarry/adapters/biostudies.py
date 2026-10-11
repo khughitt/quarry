@@ -20,6 +20,7 @@ from quarry.results import Coverage, Result
 from quarry.search import completeness
 
 CAP = 100
+FILE_LIST_WINDOW = 10_000   # a study with more files than this keeps them in lists of hundreds of MB
 BIOSTUDIES = re.compile(r"^S-[A-Z]{4}[\-\_A-Z\d]+$")          # Bioregistry's biostudies pattern
 ARRAYEXPRESS = re.compile(r"^[AEP]-\w{4}-\d+$")               # Bioregistry's arrayexpress pattern
 BIOMODELS = re.compile(r"^((BIOMD|MODEL)\d{10})|(BMID\d{12})$")  # Bioregistry's biomodels.db pattern
@@ -90,6 +91,16 @@ def _json(text: str, what: str) -> dict:
     return data
 
 
+def _json_array(text: str, what: str) -> list[dict]:
+    try:
+        data = json.loads(text)
+    except ValueError:
+        raise UpstreamError(f"biostudies {what}: not JSON") from None
+    if type(data) is not list or any(type(e) is not dict for e in data):
+        raise UpstreamError(f"biostudies {what}: expected a JSON array of file entries")
+    return data
+
+
 def _page(text: str) -> dict:
     data = _json(text, "search")
     if (type(data.get("hits")) is not list or any(type(h) is not dict for h in data["hits"])
@@ -118,6 +129,33 @@ def _collect(node: object, key: str) -> Iterator[dict]:
     elif type(node) is list:
         for item in node:
             yield from _collect(item, key)
+
+
+def _file_lists(node: object) -> Iterator[str]:
+    """Every section's File List attribute value: a JSON array of file entries at <httpLink>/Files/<value>."""
+    if type(node) is dict:
+        for item in node.get("attributes") if type(node.get("attributes")) is list else []:
+            if type(item) is dict and item.get("name") == "File List" and type(item.get("value")) is str:
+                yield item["value"]
+        for name, value in node.items():
+            if name not in ("attributes", "files", "links"):
+                yield from _file_lists(value)
+    elif type(node) is list:
+        for item in node:
+            yield from _file_lists(item)
+
+
+def _entry(entry: dict, what: str) -> tuple[str, int | None, str]:
+    if type(entry.get("type")) is not str:
+        raise UpstreamError(f"biostudies {what}: a file entry has no type")
+    if entry["type"] not in ("file", "directory"):
+        raise UpstreamError(f"biostudies {what}: a file entry has type {entry['type']!r}, neither file nor directory")
+    if type(entry.get("path")) is not str or not entry["path"]:
+        raise UpstreamError(f"biostudies {what}: a file has no path")
+    size = entry.get("size")
+    if size is not None and (type(size) is not int or size < 0):
+        raise UpstreamError(f"biostudies {what}: a file size is not a number")
+    return entry["path"], size, entry["type"]
 
 
 def _leaves(value: object) -> Iterator[dict]:
@@ -164,8 +202,9 @@ class Biostudies:
 
         return execute
 
-    def _study(self, client: Client, curie: Curie) -> tuple[Result, list[tuple[str, int | None, str]]]:
-        """The record and its (path, size, type) entries, type being "file" or "directory"."""
+    def _study(self, client: Client, curie: Curie) -> tuple[Result, list[tuple[str, int | None, str]], list[str]]:
+        """The record, its inline (path, size, type) entries, type being "file" or "directory",
+        and the file lists that hold the rest."""
         response = client.request(self.route, "GET", f"studies/{curie.local}", accept=frozenset({404}))
         if response.status_code == 404:
             raise QuarryError("not_found", f"{curie} is not in BioStudies")
@@ -183,29 +222,30 @@ class Biostudies:
                         date=attrs.get("ReleaseDate") or None, summary=attrs.get("Description") or None, xrefs=tuple(xrefs),
                         publication=f"pmc:PMC{paper.group(1)}" if paper else None,
                         domain_fields={"biology": {"organism": organism}} if organism else {})
-        entries = []
-        for entry in _collect(doc, "files"):
-            if type(entry.get("type")) is not str:
-                raise UpstreamError("biostudies study: a file entry has no type")
-            if entry["type"] not in ("file", "directory"):
-                raise UpstreamError(f"biostudies study: a file entry has type {entry['type']!r}, neither file nor directory")
-            if type(entry.get("path")) is not str or not entry["path"]:
-                raise UpstreamError("biostudies study: a file has no path")
-            size = entry.get("size")
-            if size is not None and (type(size) is not int or size < 0):
-                raise UpstreamError("biostudies study: a file size is not a number")
-            entries.append((entry["path"], size, entry["type"]))
-        return record, entries
+        entries = [_entry(entry, "study") for entry in _collect(doc, "files")]
+        return record, entries, list(_file_lists(doc))
 
     def show(self, client: Client, curie: Curie) -> Result:
         return self._study(client, curie)[0]
 
     def files(self, client: Client, curie: Curie) -> tuple[Result, list[File]]:
-        record, entries = self._study(client, curie)
+        record, entries, lists = self._study(client, curie)
         info = _json(client.request(self.route, "GET", f"studies/{curie.local}/info").text, "info")
         base = info.get("httpLink")
         if type(base) is not str or not base.startswith("https://"):
             raise UpstreamError("biostudies info: no https link to the study's files")
+        total = info.get("files")
+        if type(total) is not int or total < 0:
+            raise UpstreamError("biostudies info: no file count")
+        urls = [f"{base.rstrip('/')}/Files/{quote(name)}" for name in lists]
+        if lists and total > FILE_LIST_WINDOW:
+            raise QuarryError("too_many_results", f"{curie} has {total} files, more than the {FILE_LIST_WINDOW} quarry "
+                                                  f"reads from BioStudies file lists; the lists are {', '.join(urls)}")
+        for url in urls:
+            listed = _json_array(client.request(self.route, "GET", url).text, f"file list {url}")
+            entries += [_entry(entry, f"file list {url}") for entry in listed]
+        if len(entries) != total:
+            raise QuarryError("incomplete_listing", f"{curie}: BioStudies listed {len(entries)} of {total} files")
         ftp = [info["ftpLink"]] if type(info.get("ftpLink")) is str and info["ftpLink"].startswith("ftp://") else []
         files = []
         for path, size, kind in entries:
