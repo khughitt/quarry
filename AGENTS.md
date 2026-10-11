@@ -25,7 +25,7 @@ Use the just recipes so tools/tt records each run; never call pytest directly.
 
 - `src/quarry/`: the Python package.
 - `src/quarry/catalog/`: resources, domains, and the pinned Bioregistry snapshot.
-- `src/quarry/adapters/`: one module per supported resource.
+- `src/quarry/adapters/`: one module per supported resource; `eutils.py` is shared by GEO and PubMed.
 - `tests/`: tests; `tests/fixtures/` holds recorded resource responses.
 - `tests/recordings/`: scenarios that `just record <resource>` captures.
 - `tools/`: timing and gate tools vendored from ops.

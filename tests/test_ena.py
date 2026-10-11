@@ -158,7 +158,7 @@ def test_row_cross_references():
 
 def test_cli_search_through_replay(monkeypatch):
     monkeypatch.setattr(context, "make_client", lambda trace: replay("search-myeloma"))
-    args = ["--json", "search", "--domain", "biology"]
+    args = ["--json", "search", "--domain", "biology", "--in", "ena"]
     for name, value in MYELOMA.filters.items():
         args += [f"--{name}", value]
     if MYELOMA.since:

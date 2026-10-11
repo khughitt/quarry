@@ -80,7 +80,7 @@ def test_json_is_honoured_by_every_leaf_command(monkeypatch, tmp_path):
     assert recorded, "show-first recording is empty; refresh it with just record ena"
     first = recorded[-1]["request"]["query"]
     shown = next(v for k, v in first if k == "query").split('"')[1]
-    search_args = ["search", "--domain", "biology"]
+    search_args = ["search", "--domain", "biology", "--in", "ena"]
     for name, value in MYELOMA.filters.items():
         search_args += [f"--{name}", value]
     if MYELOMA.since:
