@@ -8,9 +8,9 @@ complexity: mid
 process: planned
 owner: heliophysics-domain
 created: 2026-10-11T19:01:36Z
-updated: 2026-10-11T20:43:41Z
+updated: 2026-10-11T20:43:43Z
 started: 2026-10-11T19:02:03Z
-depends: []
+depends: [quarry-bc633c]
 tags: [heliophysics]
 source: sun-374ea3
 agent: claude-code/claude-fable-5-1
