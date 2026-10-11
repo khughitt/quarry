@@ -34,6 +34,11 @@ handling = "arrayexpress:E-GEOD-n carries a geo:GSEn cross-reference; biostudies
 evidence = "mm-159cb7 mapped E-GEOD to geo: for overlap"
 
 [[pitfalls]]
+summary = "search also returns studies of the BioModels (MODELn, BIOMDn) and EMPIAR (EMPIAR-n) collections"
+handling = "they keep their own archives' ids, biomodels.db:MODELn and empiar:n, as cross-reference-only CURIEs; an accession of any other shape is upstream_failed naming it"
+evidence = "probe 2026-10-11: 'myeloma' page 1 holds MODEL1908290002; 'cryo-EM' returns EMPIAR-10058"
+
+[[pitfalls]]
 summary = "a study's file list mixes files and directories, and <httpLink>/Files/<path> does not serve a directory"
 handling = "files lists a directory with media_type inode/directory and its ftp location only; --acquisition refuses it by name with unsupported_transport unless --file leaves it out; an entry with no type, or a type other than file or directory, is upstream_failed"
 evidence = "S-BSST1234 lists 'Raw datas.zip' as a 16,932,701,596-byte directory beside a 2.46 GB file (recorded 2026-10-10)"

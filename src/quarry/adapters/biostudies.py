@@ -1,5 +1,6 @@
-"""BioStudies (spec §13): studies across every collection, ArrayExpress ids under arrayexpress:
-and the rest under biostudies:. Phrases are quoted and ORed in `query`, dates go in the query
+"""BioStudies (spec §13): studies across every collection, ArrayExpress ids under arrayexpress:,
+the BioModels and EMPIAR collections under their own archives' prefixes, and the rest under
+biostudies:. Phrases are quoted and ORed in `query`, dates go in the query
 as release_date, the organism is the facet.organism parameter, and totals count only when
 BioStudies says they are exact."""
 from __future__ import annotations
@@ -21,6 +22,8 @@ from quarry.search import completeness
 CAP = 100
 BIOSTUDIES = re.compile(r"^S-[A-Z]{4}[\-\_A-Z\d]+$")          # Bioregistry's biostudies pattern
 ARRAYEXPRESS = re.compile(r"^[AEP]-\w{4}-\d+$")               # Bioregistry's arrayexpress pattern
+BIOMODELS = re.compile(r"^((BIOMD|MODEL)\d{10})|(BMID\d{12})$")  # Bioregistry's biomodels.db pattern
+EMPIAR = re.compile(r"^EMPIAR-(\d+)$")                         # empiar's local id is the digits
 EGEOD = re.compile(r"^E-GEOD-(\d+)$")
 EPMC = re.compile(r"^S-EPMC(\d+)$")
 GSE = re.compile(r"^GSE\d+$")
@@ -54,7 +57,12 @@ def _id(accession: str) -> str:
         return f"arrayexpress:{accession}"
     if BIOSTUDIES.match(accession):
         return f"biostudies:{accession}"
-    raise UpstreamError("biostudies: an accession matches neither the biostudies nor the arrayexpress pattern")
+    if BIOMODELS.fullmatch(accession):
+        return f"biomodels.db:{accession}"
+    if m := EMPIAR.match(accession):
+        return f"empiar:{m.group(1)}"
+    raise UpstreamError(f"biostudies: accession {accession!r} matches no archive quarry knows "
+                        "(biostudies, arrayexpress, biomodels.db, empiar)")
 
 
 def _row(h: dict, organism: str | None) -> Result:

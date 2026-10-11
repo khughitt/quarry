@@ -63,6 +63,23 @@ def test_exact_total_pages_until_the_total_and_maps_ids_xrefs_and_publication():
     assert rows[0].domain_fields == {} and rows[0].date == "2024-01-02"
 
 
+def test_hits_from_other_archives_keep_their_own_prefixes():
+    q, _ = biostudies.compile_query(Query(phrases=("myeloma",)))
+    hits = [hit("MODEL1908290002"), hit("BIOMD0000000001"), hit("EMPIAR-10058")]
+    client = replay_client(ReplayTransport([page(q, 1, hits, 3, True)]))
+    cov, rows = BS.search(client, Query(phrases=("myeloma",)))
+    assert [r.id for r in rows] == ["biomodels.db:MODEL1908290002", "biomodels.db:BIOMD0000000001", "empiar:10058"]
+    assert cov.complete == "total"
+
+
+def test_an_accession_of_no_known_archive_is_named_in_the_error():
+    q, _ = biostudies.compile_query(Query(phrases=("x",)))
+    client = replay_client(ReplayTransport([page(q, 1, [hit("WEIRD-1")], 1, True)]))
+    with pytest.raises(QuarryError) as caught:
+        BS.search(client, Query(phrases=("x",)))
+    assert caught.value.kind == "upstream_failed" and "WEIRD-1" in caught.value.detail
+
+
 def test_inexact_total_pages_to_a_short_page_and_reports_no_total():
     q, _ = biostudies.compile_query(Query(phrases=("x",)))
     client = replay_client(ReplayTransport([page(q, 1, [hit(f"S-BSST{i}") for i in range(100)], 10761, False),
