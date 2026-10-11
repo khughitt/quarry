@@ -37,6 +37,7 @@ class Coverage:
     returned: int
     complete: str                       # total | short-page | limited | failed
     error: Mapping[str, str] | None = None
+    warnings: tuple[str, ...] = ()      # what the adapter wants the report to say; never in as_dict
 
     def as_dict(self) -> dict:
         out = {"resource": self.resource, "native": self.native, "match": self.match, "total": self.total,

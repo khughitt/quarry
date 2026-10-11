@@ -9,6 +9,7 @@ from collections.abc import Callable
 
 from quarry.catalog import Resource
 from quarry.errors import QuarryError
+from quarry.files import File
 from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
@@ -102,6 +103,42 @@ def _rows(text: str) -> list[dict]:
     return data
 
 
+FILE_FIELDS = ("run_accession,fastq_ftp,fastq_md5,fastq_bytes,submitted_ftp,submitted_md5,submitted_bytes,"
+               "sra_ftp,sra_md5,sra_bytes")
+FTP_HOST = "ftp.sra.ebi.ac.uk/"
+
+
+def _split(d: dict, key: str) -> list[str]:
+    value = d.get(key)
+    if value is None or value == "":
+        return []
+    if type(value) is not str:
+        raise UpstreamError(f"ena filereport: {key} is not text")
+    return value.split(";")
+
+
+def _files(rows: list[dict]) -> list[File]:
+    """One File per path in the run's fastq, submitted and sra columns; md5 and bytes align by index."""
+    files = []
+    for d in rows:
+        if type(d.get("run_accession")) is not str:
+            raise UpstreamError("ena filereport: run_accession is not text")
+        for kind in ("fastq", "submitted", "sra"):
+            paths, md5s, sizes = (_split(d, f"{kind}_{suffix}") for suffix in ("ftp", "md5", "bytes"))
+            if not paths:
+                continue
+            if len(md5s) not in (0, len(paths)) or len(sizes) not in (0, len(paths)):
+                raise UpstreamError(f"ena filereport: {kind} paths, md5s and sizes disagree for {d['run_accession']}")
+            for i, path in enumerate(paths):
+                if not path.startswith(FTP_HOST):
+                    raise UpstreamError("ena filereport: a file is not under ftp.sra.ebi.ac.uk")
+                if sizes and not re.fullmatch(r"[0-9]+", sizes[i]):
+                    raise UpstreamError("ena filereport: a size is not a number")
+                files.append(File(name=path.rsplit("/", 1)[-1], urls=(f"https://{path}", f"ftp://{path}"),
+                                  size=int(sizes[i]) if sizes else None, checksums={"md5": md5s[i]} if md5s else {}))
+    return files
+
+
 class Ena:
     match = "exact"
     filters = frozenset({"organism"})
@@ -135,6 +172,12 @@ class Ena:
         if not rows:
             raise QuarryError("not_found", f"{curie} is not in ENA")
         return _row(rows[0])
+
+    def files(self, client: Client, curie: Curie) -> tuple[Result, list[File]]:
+        record = self.show(client, curie)             # not_found before the file report
+        listing = client.request(self.route, "GET", "filereport", params={
+            "accession": curie.local, "result": "read_run", "fields": FILE_FIELDS, "format": "json", "limit": 0}).text
+        return record, _files(_rows(listing))
 
 
 def make(resource: Resource) -> Ena:

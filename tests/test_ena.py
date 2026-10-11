@@ -373,3 +373,75 @@ def test_ena_prepare_compiles_once_without_http_and_executes_the_compiled_query(
     with replay_client(httpx.MockTransport(empty)) as client:
         cov, rows = prepared(client)
     assert len(seen) == 2 and rows == [] and cov.complete == "total"
+
+
+FILE_ROW = {"run_accession": "SRR1",
+            "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/SRR1/SRR1_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR1/SRR1_2.fastq.gz",
+            "fastq_md5": "a1;a2", "fastq_bytes": "10;20", "submitted_ftp": "", "submitted_md5": "", "submitted_bytes": "",
+            "sra_ftp": "", "sra_md5": "", "sra_bytes": ""}
+
+
+def filereport(accession, body):
+    return exchange("GET", f"{BASE}/filereport", {"accession": accession, "result": "read_run", "fields": ena.FILE_FIELDS,
+                                                 "format": "json", "limit": 0}, body=body)
+
+
+def shown(field, local, body=json.dumps([STUDY])):
+    return exchange("GET", f"{BASE}/search", {"result": "study", "query": f'{field}="{local}"', "fields": ena.FIELDS,
+                                             "format": "json", "limit": 2}, body=body)
+
+
+def test_files_split_paths_md5s_and_sizes_and_serve_https_first():
+    transport = ReplayTransport([shown("study_accession", "PRJNA1"), filereport("PRJNA1", json.dumps([FILE_ROW]))])
+    with replay_client(transport) as client:
+        record, files = ENA.files(client, Curie("bioproject", "PRJNA1"))
+    assert record.id == "bioproject:PRJNA1"
+    assert [f.as_dict() for f in files] == [
+        {"name": "SRR1_1.fastq.gz", "size": 10, "checksums": {"md5": "a1"},
+         "urls": ["https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR1/SRR1_1.fastq.gz", "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR1/SRR1_1.fastq.gz"]},
+        {"name": "SRR1_2.fastq.gz", "size": 20, "checksums": {"md5": "a2"},
+         "urls": ["https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR1/SRR1_2.fastq.gz", "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR1/SRR1_2.fastq.gz"]}]
+
+
+def test_files_of_a_study_without_runs_is_empty_and_a_missing_study_is_not_found():
+    with replay_client(ReplayTransport([shown("study_accession", "PRJNA1"), filereport("PRJNA1", "[\n\n]")])) as client:
+        assert ENA.files(client, Curie("bioproject", "PRJNA1"))[1] == []
+    with replay_client(ReplayTransport([shown("study_accession", "PRJNA9", body="")])) as client, \
+            pytest.raises(QuarryError) as caught:
+        ENA.files(client, Curie("bioproject", "PRJNA9"))
+    assert caught.value.kind == "not_found"
+
+
+@pytest.mark.parametrize("row", [
+    {**FILE_ROW, "fastq_md5": "a1"},                                                          # two paths, one md5
+    {**FILE_ROW, "fastq_bytes": "10;x"},                                                      # a size that is not a number
+    {**FILE_ROW, "fastq_ftp": "example.org/evil.gz", "fastq_md5": "a", "fastq_bytes": "1"},  # off the ENA host
+    {**FILE_ROW, "run_accession": 7},
+    {**FILE_ROW, "fastq_ftp": ["x"]},
+])
+def test_malformed_filereport_rows_are_upstream_errors(row):
+    transport = ReplayTransport([shown("study_accession", "PRJNA1"), filereport("PRJNA1", json.dumps([row]))])
+    with replay_client(transport) as client, pytest.raises(QuarryError) as caught:
+        ENA.files(client, Curie("bioproject", "PRJNA1"))
+    assert caught.value.kind == "upstream_failed"
+
+
+def test_recorded_files_and_acquisition(monkeypatch):
+    """Mirrors tests/recordings/ena.py::files_first: the first myeloma study with read files."""
+    with replay("files-first") as client:
+        _, rows = ENA.search(client, MYELOMA)
+        for row in rows:
+            prefix, local = row.id.split(":", 1)
+            record, files = ENA.files(client, Curie(prefix, local))
+            if files:
+                break
+    assert files, "the files-first recording holds no study with files; re-record it"
+    assert record.id == row.id and all(f.urls[0].startswith("https://ftp.sra.ebi.ac.uk/") for f in files)
+    assert all("md5" in f.checksums and "sha256" not in f.checksums for f in files)
+    monkeypatch.setattr(context, "make_client", lambda trace: replay("files-first"))
+    out = CliRunner().invoke(main, ["--json", "files", row.id, "--acquisition"], catch_exceptions=False)
+    assert out.exit_code == 0, out.stderr
+    request = json.loads(out.stdout)
+    assert request["locator"] == f"accession:{row.id}" and request["title"] == record.title
+    assert len(request["resources"]) == len(files)
+    assert all("expected" not in r and r["url"].startswith("https://") for r in request["resources"])
