@@ -1,0 +1,34 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "facet.organism",
+     "Homo sapiens"
+    ],
+    [
+     "page",
+     "1"
+    ],
+    [
+     "pageSize",
+     "100"
+    ],
+    [
+     "query",
+     "(\"smoldering myeloma\") AND release_date:[2000-01-01 TO 2026-12-31]"
+    ]
+   ],
+   "url": "https://www.ebi.ac.uk/biostudies/api/v1/search"
+  },
+  "response": {
+   "body": "{\"page\":1,\"pageSize\":100,\"totalHits\":3,\"isTotalHitsExact\":true,\"sortBy\":\"relevance\",\"sortOrder\":\"descending\",\"suggestion\":[],\"expandedEfoTerms\":[\"asymptomatic myeloma\",\"smoldering myeloma\",\"asymptomatic plasma cell myeloma\",\"smouldering myeloma\",\"smouldering multiple myeloma\",\"smoldering multiple myeloma\"],\"expandedSynonyms\":[\"asymptomatic myeloma\",\"smoldering myeloma\",\"asymptomatic plasma cell myeloma\",\"smouldering myeloma\",\"smouldering multiple myeloma\",\"smoldering multiple myeloma\",\"smoldering plasma cell myeloma\"],\"query\":\"(\\\"smoldering myeloma\\\") AND release_date:[2000-01-01 TO 2026-12-31]\",\"facets\":{\"facet.organism\":[\"Homo sapiens\"]},\"hits\":[{\"accession\":\"E-GEOD-5900\",\"type\":\"study\",\"title\":\"Transcription profiling of human bone marrow aspirate plasma cells from healthy Donors (N=22), MGUS (N=44), and Smoldering Myeloma (N=12)\",\"author\":\"Shaughnessy Jr John\",\"links\":3,\"files\":2,\"release_date\":\"2008-06-14\",\"views\":178,\"isPublic\":true,\"content\":\"E-GEOD-5900 Transcription profiling of human bone marrow aspirate plasma cells from healthy Donors (N=22), MGUS (N=44), and Smoldering Myeloma (N=12) transcription profiling by array EFO EFO_0002768 Homo sapiens This series represents bone marrow aspirates from smoldering multiple myeloma patients\"},{\"accession\":\"E-GEOD-43860\",\"type\":\"study\",\"title\":\"DNA methylation in normal PC, MGUS, SMM and MM\",\"author\":\"Christoph Heuck Amit Verma Seema Singhal\",\"links\":3,\"files\":170,\"release_date\":\"2013-04-03\",\"views\":136,\"isPublic\":true,\"content\":\" with monoclonal gammopathy of uncertain significance (MGUS), 4 patients with smoldering myeloma (SMM), 13 patients with newly diagnosed myeloma (NEWMM), 16 patients with relapsed myeloma (REL), including 2 patients with serial samples,  and 2 patients in clinical complete remission (REM) were analyzed\"},{\"accession\":\"E-MTAB-62\",\"type\":\"study\",\"title\":\"Human gene expression atlas of 5372 samples representing 369 different cell and tissue types, disease states and cell lines\",\"author\":\"Margus Lukk\",\"links\":2,\"files\":5374,\"release_date\":\"2010-08-04\",\"views\":1599,\"isPublic\":true,\"content\":null}],\"nextCursor\":null,\"tooManyExpansionTerms\":false}",
+   "headers": {
+    "content-type": "application/json;charset=UTF-8"
+   },
+   "status": 200
+  }
+ }
+]
