@@ -7,7 +7,7 @@ from quarry.catalog import DATA_ROLES, Catalog
 from quarry.errors import QuarryError
 from quarry.http import Client
 from quarry.query import Query
-from quarry.results import Coverage
+from quarry.results import Coverage, Result
 
 
 def completeness(*, total: int | None, returned: int, limit: int | None, short_page: bool) -> str:
@@ -23,6 +23,18 @@ def completeness(*, total: int | None, returned: int, limit: int | None, short_p
         return "short-page"
     raise QuarryError("incomplete_listing", f"the resource reports no total and paging ended without a short page "
                                             f"after {returned} records")
+
+
+def distinct(rows: list[Result]) -> list[Result]:
+    """The rows, refused when an id repeats: offset paging over a moving or tied sort that repeats
+    one record can skip another while the count still matches the total."""
+    seen = set()
+    for row in rows:
+        if row.id in seen:
+            raise QuarryError("incomplete_listing", f"the resource returned {row.id} twice while paging; "
+                                                    f"a record may have been skipped")
+        seen.add(row.id)
+    return rows
 
 
 def _unexpressed(adapter, query: Query) -> str | None:

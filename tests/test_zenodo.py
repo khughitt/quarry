@@ -74,6 +74,14 @@ def test_short_listing_fails_rather_than_returning_a_partial_result():
     assert caught.value.kind == "incomplete_listing"
 
 
+def test_a_record_repeated_across_pages_fails_although_the_count_matches_the_total():
+    q = zenodo.compile_query(Query(phrases=("x",)))
+    client = replay_client(ReplayTransport([page(q, 1, [record(i) for i in range(25)], 26), page(q, 2, [record(24)], 26)]))
+    with pytest.raises(QuarryError) as caught:
+        ZEN.search(client, Query(phrases=("x",)))
+    assert caught.value.kind == "incomplete_listing" and "zenodo.record:24" in caught.value.detail
+
+
 def test_limit_above_a_page_keeps_pages_of_25_and_truncates():
     query = Query(phrases=("x",), limit=30)
     q = zenodo.compile_query(query)
