@@ -419,6 +419,17 @@ def test_a_submitted_basename_repeated_across_runs_stays_unique_under_its_run(mo
     assert [r["name"] for r in json.loads(out.stdout)["resources"]] == [f.name for f in files]
 
 
+@pytest.mark.parametrize("acquire", [False, True])
+def test_files_named_by_a_secondary_accession_carry_the_canonical_curie(monkeypatch, acquire):
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport(
+        [shown("secondary_study_accession", "SRP1"), filereport("SRP1", json.dumps([FILE_ROW]))])))
+    args = ["--json", "files", "insdc.sra:SRP1", *(["--acquisition"] if acquire else [])]
+    out = CliRunner().invoke(main, args, catch_exceptions=False)
+    assert out.exit_code == 0, out.stderr
+    emitted = json.loads(out.stdout)
+    assert (emitted["locator"] == "accession:bioproject:PRJNA1") if acquire else (emitted["id"] == "bioproject:PRJNA1")
+
+
 def test_files_of_a_study_without_runs_is_empty_and_a_missing_study_is_not_found():
     with replay_client(ReplayTransport([shown("study_accession", "PRJNA1"), filereport("PRJNA1", "[\n\n]")])) as client:
         assert ENA.files(client, Curie("bioproject", "PRJNA1"))[1] == []

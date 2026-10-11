@@ -9,7 +9,6 @@ from quarry import files as files_mod
 from quarry.cli import main
 from quarry.errors import QuarryError
 from quarry.files import File
-from quarry.ids import Curie
 from quarry.results import Result
 from tests import fake_adapter
 
@@ -18,7 +17,6 @@ A = File("a.txt", urls=("https://alpha.example/a.txt", "ftp://alpha.example/a.tx
 B = File("b.bin", urls=("ftp://alpha.example/b.bin",))
 C = File("c.csv", urls=("https://alpha.example/c.csv",), checksums={"md5": "0" * 32})
 RECORD = Result(id="alpha:GSE5", resource="alpha", kind="dataset", title="five")
-CURIE = Curie("alpha", "GSE5")
 
 
 def test_select_matches_names_case_sensitively_and_widens_over_globs():
@@ -41,7 +39,7 @@ def test_file_as_dict_omits_unknowns():
 
 
 def test_build_emits_title_locator_and_resources_with_sha256_only():
-    request = acquisition.build(RECORD, CURIE, [A, C])
+    request = acquisition.build(RECORD, [A, C])
     assert request == {"title": "five", "locator": "accession:alpha:GSE5",
                        "resources": [{"name": "a.txt", "url": "https://alpha.example/a.txt", "expected": "sha256:" + "ab" * 32},
                                      {"name": "c.csv", "url": "https://alpha.example/c.csv"}]}
@@ -49,12 +47,12 @@ def test_build_emits_title_locator_and_resources_with_sha256_only():
 
 def test_build_titles_an_untitled_record_by_its_curie():
     untitled = Result(id="alpha:GSE5", resource="alpha", kind="dataset", title="")
-    assert acquisition.build(untitled, CURIE, [C])["title"] == "alpha:GSE5"
+    assert acquisition.build(untitled, [C])["title"] == "alpha:GSE5"
 
 
 def test_build_lowercases_an_uppercase_sha256():
     upper = File("u.txt", urls=("https://h/u",), checksums={"sha256": "AB" * 32})
-    assert acquisition.build(RECORD, CURIE, [upper])["resources"][0]["expected"] == "sha256:" + "ab" * 32
+    assert acquisition.build(RECORD, [upper])["resources"][0]["expected"] == "sha256:" + "ab" * 32
 
 
 @pytest.mark.parametrize("files, kind, named", [
@@ -76,7 +74,7 @@ def test_build_lowercases_an_uppercase_sha256():
 ])
 def test_build_refusals_name_the_file(files, kind, named):
     with pytest.raises(QuarryError) as caught:
-        acquisition.build(RECORD, CURIE, files)
+        acquisition.build(RECORD, files)
     assert caught.value.kind == kind and named in caught.value.detail
 
 
