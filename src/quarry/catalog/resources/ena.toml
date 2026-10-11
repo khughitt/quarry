@@ -38,4 +38,4 @@ evidence = "mm-159cb7: HTTP 500 on the count endpoint during a re-harvest"
 [[pitfalls]]
 summary = "tax_eq matches one taxon node, and tax_tree, which includes subtaxa, takes ids only"
 handling = "--organism includes subtaxa: an ncbitaxon: CURIE compiles to tax_tree; a name is first resolved through the taxonomy service's any-name lookup, refused when it names no taxon (not_found) or several (ambiguous_id)"
-evidence = "probe 2026-10-11: tax_eq(10088) 226 studies, tax_tree(10088) 94,364; tax_tree(\"Mus\") is refused; any-name/mouse lists Mus musculus and Mus"
+evidence = "probe 2026-10-11: tax_eq(10088) 226 studies, tax_tree(10088) 94,364; tax_tree(\"Mus\") is refused; any-name/mouse lists Mus musculus and Mus; any-name/Nonexistus%20fakeus answers 200 with an empty list"
