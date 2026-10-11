@@ -265,3 +265,9 @@ def test_recorded_files_and_acquisition(monkeypatch):
         "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE24nnn/GSE24080/suppl/GSE24080_MM_UAMS565_ClinInfo_27Jun2008_LS_clean.xls.gz",
         "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE24nnn/GSE24080/suppl/GSE24080_RAW.tar"]
     assert all("expected" not in r for r in request["resources"])
+
+
+def test_organism_compiles_to_the_taxon_subtree_by_id_and_by_name():
+    """Spec 2026-10-11 §3: [ORGN] without :noexp includes subtaxa, so GEO already means the subtree."""
+    assert geo.compile_query(Query(phrases=("x",), filters={"organism": "ncbitaxon:10088"})).endswith(" AND txid10088[ORGN]")
+    assert geo.compile_query(Query(phrases=("x",), filters={"organism": "Mus"})).endswith(' AND "Mus"[ORGN]')

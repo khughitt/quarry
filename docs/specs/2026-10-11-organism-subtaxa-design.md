@@ -1,6 +1,6 @@
 # `--organism` includes subtaxa, in GEO and ENA alike
 
-Status: draft for review (task quarry-695d0a). Amends spec §8.2 of the quarry domain-layers
+Status: approved 2026-10-11 (spec review round 2); implemented by docs/plans/2026-10-11-organism-subtaxa.md. Amends spec §8.2 of the quarry domain-layers
 design (science `docs/specs/2026-10-10-quarry-domain-layers-design.md`).
 
 ## 1. Problem

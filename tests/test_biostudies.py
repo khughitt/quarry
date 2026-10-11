@@ -9,7 +9,7 @@ import pytest
 from click.testing import CliRunner
 
 from quarry import catalog as catalog_mod
-from quarry import context
+from quarry import context, search
 from quarry.adapters import biostudies
 from quarry.cli import main
 from quarry.errors import QuarryError
@@ -313,3 +313,20 @@ def test_recorded_files_s_biad144_come_from_its_file_list(monkeypatch):
     out = CliRunner().invoke(main, ["--json", "files", "biostudies:S-BIAD144", "--acquisition"], catch_exceptions=False)
     assert out.exit_code == 0, out.stderr
     assert len(json.loads(out.stdout)["resources"]) == 223
+
+
+def test_an_organism_label_search_warns_in_the_report_that_subtaxa_are_left_out():
+    query = Query(phrases=("x",), filters={"organism": "Mus musculus"})
+    q, params = biostudies.compile_query(query)
+    with replay_client(ReplayTransport([page(q, 1, [hit("S-BSST1")], 1, True, **params)])) as client:
+        report = search.run(catalog=CAT, client=client, query=query, resource_ids=["biostudies"],
+                            domain="biology", allow_partial=False, from_defaults=False)
+    assert report["warnings"] == ["biostudies matches the organism label Mus musculus only, not its subtaxa"]
+    assert "warnings" not in report["coverage"][0]
+
+
+def test_no_organism_no_warning():
+    q, _ = biostudies.compile_query(Query(phrases=("x",)))
+    with replay_client(ReplayTransport([page(q, 1, [hit("S-BSST1")], 1, True)])) as client:
+        cov, _ = BS.search(client, Query(phrases=("x",)))
+    assert cov.warnings == ()

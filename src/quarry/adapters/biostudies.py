@@ -211,7 +211,8 @@ class Biostudies:
             rows = rows[:query.limit] if query.limit else rows
             complete = completeness(total=exact_total, returned=len(rows), limit=query.limit, short_page=short)
             match = "native" if query.native is not None else self.match
-            return Coverage(self.resource.id, native, match, exact_total, len(rows), complete), rows
+            warnings = (f"biostudies matches the organism label {organism} only, not its subtaxa",) if organism else ()
+            return Coverage(self.resource.id, native, match, exact_total, len(rows), complete, warnings=warnings), rows
 
         return execute
 

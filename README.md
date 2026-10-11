@@ -33,6 +33,10 @@ covers all five repositories. A default-set repository that cannot express the q
 filter or matching mode (`--organism` on Zenodo and figshare, `--exact` on BioStudies) is
 skipped, with a `skipped` coverage row giving the reason and a warning; one named with `--in`
 is refused instead, and a search with nothing left to run fails.
+`--organism` takes a taxon name or an `ncbitaxon:` CURIE and includes every taxon below it.
+ENA resolves a name to one taxon first and refuses a name that names none or several, listing
+the CURIEs to pass instead. BioStudies matches its organism label only: the report warns so for
+a name, and a CURIE skips it from a default set.
 A listing shorter than the resource's reported total fails rather than returning part of
 the answer, and `-n` limits the results explicitly, reporting the coverage as `limited` when
 it cuts the listing short.
