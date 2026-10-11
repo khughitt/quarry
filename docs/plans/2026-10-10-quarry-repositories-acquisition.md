@@ -65,6 +65,10 @@ Consequences fixed here, not open for the implementer:
 - GEO covers series (`GSE`) only; `geo:GSM…`, `geo:GPL…`, `geo:GDS…` are refused with
   `unsupported_id` before any request.
 - `files` on PubMed is `unsupported_role`: a publication carries no files (§4.3).
+- `search --domain biology --organism …` is refused, naming Zenodo: core's repositories sit in
+  biology's search set and cannot express the filter, and §8.2 forbids dropping it. The filter
+  rides on `--in geo --in ena --in biostudies`. Whether a domain filter should instead apply only
+  to the declaring domain's resources is a spec question for the user, not a plan decision.
 
 ## Global Constraints
 
@@ -168,7 +172,7 @@ git branch -d quarry-files
 
 **Files:**
 - Create: `src/quarry/files.py`, `src/quarry/acquisition.py`, `tests/test_files.py`, `tests/fixtures/ena/files-first.json` (recorded)
-- Modify: `src/quarry/http.py` (`accept`), `src/quarry/results.py` (`Coverage.warnings`), `src/quarry/search.py` (collect them), `src/quarry/adapters/base.py` (`files` in the protocol), `src/quarry/adapters/ena.py` (`files`), `src/quarry/cli.py` (`files` command, shared owner lookup), `tests/fake_adapter.py`, `tests/test_search.py`, `tests/test_http.py`, `tests/test_ena.py`, `tests/recordings/ena.py`, `tests/test_cli_surface.py`, `tools/cli.toml` (by `vendored adopt`)
+- Modify: `tests/test_cli_catalog.py` (the fake's prefix), `src/quarry/http.py` (`accept`), `src/quarry/results.py` (`Coverage.warnings`), `src/quarry/search.py` (collect them), `src/quarry/adapters/base.py` (`files` in the protocol), `src/quarry/adapters/ena.py` (`files`), `src/quarry/cli.py` (`files` command, shared owner lookup), `tests/fake_adapter.py`, `tests/test_search.py`, `tests/test_http.py`, `tests/test_ena.py`, `tests/recordings/ena.py`, `tests/test_cli_surface.py`, `tools/cli.toml` (by `vendored adopt`)
 
 **Interfaces:**
 - Consumes: Task 1's row; `Client.request`, `Result`, `Coverage`, `Curie`, `QuarryError`, `UpstreamError`, `completeness`, `ReplayTransport`, `exchange`, `replay_client`, `context.make_client`.
@@ -204,8 +208,8 @@ A = File("a.txt", urls=("https://alpha.example/a.txt", "ftp://alpha.example/a.tx
          checksums={"sha256": "ab" * 32}, media_type="text/plain")
 B = File("b.bin", urls=("ftp://alpha.example/b.bin",))
 C = File("c.csv", urls=("https://alpha.example/c.csv",), checksums={"md5": "0" * 32})
-RECORD = Result(id="geo:GSE5", resource="alpha", kind="dataset", title="five")
-CURIE = Curie("geo", "GSE5")
+RECORD = Result(id="alpha:GSE5", resource="alpha", kind="dataset", title="five")
+CURIE = Curie("alpha", "GSE5")
 
 
 def test_select_matches_names_case_sensitively_and_widens_over_globs():
@@ -229,22 +233,24 @@ def test_file_as_dict_omits_unknowns():
 
 def test_build_emits_title_locator_and_resources_with_sha256_only():
     request = acquisition.build(RECORD, CURIE, [A, C])
-    assert request == {"title": "five", "locator": "accession:geo:GSE5",
+    assert request == {"title": "five", "locator": "accession:alpha:GSE5",
                        "resources": [{"name": "a.txt", "url": "https://alpha.example/a.txt", "expected": "sha256:" + "ab" * 32},
                                      {"name": "c.csv", "url": "https://alpha.example/c.csv"}]}
 
 
 def test_build_titles_an_untitled_record_by_its_curie():
-    untitled = Result(id="geo:GSE5", resource="alpha", kind="dataset", title="")
-    assert acquisition.build(untitled, CURIE, [C])["title"] == "geo:GSE5"
+    untitled = Result(id="alpha:GSE5", resource="alpha", kind="dataset", title="")
+    assert acquisition.build(untitled, CURIE, [C])["title"] == "alpha:GSE5"
 
 
 @pytest.mark.parametrize("files, kind, named", [
-    ([], "no_files", "geo:GSE5"),
+    ([], "no_files", "alpha:GSE5"),
     ([A, A], "duplicate_file_name", "a.txt"),
     ([A, B], "unsupported_transport", "b.bin"),
     ([File("sp.txt", urls=("https://h/a b.txt",))], "unsupported_transport", "sp.txt"),
     ([File("u.txt", urls=("https://h/é.txt",))], "unsupported_transport", "u.txt"),
+    ([File("f.txt", urls=("https://h/x#part",))], "unsupported_transport", "f.txt"),
+    ([File("w.txt", urls=("https://user@h/x",))], "unsupported_transport", "w.txt"),
 ])
 def test_build_refusals_name_the_file(files, kind, named):
     with pytest.raises(QuarryError) as caught:
@@ -312,6 +318,8 @@ def http_url(file: File) -> str | None:
 quarry emits it; the kernel retrieves the bytes and mints the dataset."""
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 from quarry.errors import QuarryError
 from quarry.files import File, http_url
 from quarry.ids import Curie
@@ -327,6 +335,9 @@ def _retrievable(file: File) -> str:
     if any(c.isspace() or not c.isprintable() or ord(c) > 126 for c in url):
         raise QuarryError("unsupported_transport", f"{file.name}: its URL carries whitespace or a non-ASCII character, "
                                                    f"which the kernel refuses; the adapter must percent-encode it")
+    parts = urlsplit(url)
+    if "#" in url or parts.username is not None or parts.password is not None:
+        raise QuarryError("unsupported_transport", f"{file.name}: its URL carries a fragment or userinfo, which the kernel refuses")
     return url
 
 
@@ -349,7 +360,7 @@ def build(record: Result, curie: Curie, files: list[File]) -> dict:
 - [ ] **Step 4: Run the tests to see them pass**
 
 Run: `just test-one tests/test_files.py`
-Expected: PASS (7 tests).
+Expected: PASS (9 tests).
 
 - [ ] **Step 5: Add `Coverage.warnings` and `accept`, with their tests**
 
@@ -409,17 +420,23 @@ and
 Run: `just test-one tests/test_search.py tests/test_http.py`
 Expected: PASS.
 
-- [ ] **Step 6: Write the failing CLI tests for `files`**
+- [ ] **Step 6: Give the fake resources prefixes no shipped resource will own**
 
-Append to `tests/test_files.py`:
+`tests/conftest.py::make_catalog` copies every shipped resource file into each test catalog, and
+`catalog.check` reports `prefix_owned_twice` when two resources own one prefix. The fakes in
+`tests/test_search.py` and `tests/test_cli_catalog.py` own `geo` and `go`, which Task 3's GEO and
+plan 3's GO resources will own; from Task 3 on, every CLI test over those fixtures would fail
+with `catalog_invalid`. Move the fakes to local prefixes of their own now.
+
+In `tests/test_search.py`, replace the `FAKE` template and the `catalog` fixture with:
 
 ```python
 FAKE = """
 id = "{id}"
 name = "{id}"
 roles = ["{role}"]
-prefixes = [{prefixes}]
 adapter = "tests.fake_adapter"
+{prefix}
 [[routes]]
 kind = "rest"
 url = "https://{id}.example"
@@ -428,12 +445,49 @@ service = "{id}"
 auth = "none"
 reports_total = true
 """
+LOCAL = """[local_prefixes.{name}]
+pattern = '{pattern}'
+uri_format = "https://{name}.example/$1"
+why = "a test prefix nothing shipped owns"
+"""
 
 
 @pytest.fixture
 def catalog(make_catalog):
-    fakes = {rid: FAKE.format(id=rid, role=role, prefixes=prefixes)
-             for rid, role, prefixes in (("alpha", "repository", '"geo"'), ("onto", "ontology", '"go"'))}
+    fakes = {rid: FAKE.format(id=rid, role=role, prefix=prefix)
+             for rid, role, prefix in (("alpha", "repository", LOCAL.format(name="alpha", pattern=r"^GSE\d+$")),
+                                       ("beta", "repository", ""), ("expanding", "repository", ""),
+                                       ("onto", "ontology", LOCAL.format(name="onto", pattern=r"^\d+$")))}
+    return make_catalog(fakes, ["alpha", "beta", "expanding", "onto"], ["alpha", "beta"])
+```
+
+and in the same file: `invoke("show", "ALPHA:GSE5")` becomes `invoke("show", "ALPHA:GSE5")` with its
+expected id `"alpha:GSE5"`; the `test_show_refusals` cases become
+`[("doi:10.1000/x", "no_owner"), ("onto:0008150", "unsupported_role"), ("GSE5", "ambiguous_id")]`
+(spec §7: `doi:` has no owner in the first version); the pretty assertion becomes
+`"alpha:GSE1\t-\trow 1\n# alpha: 1 of 3 (limited, exact)\n"`.
+
+In `tests/fake_adapter.py`, the rows become
+`Result(id=f"{self.resource.id}:GSE{i}", resource=self.resource.id, kind="dataset", title=f"row {i}")`.
+
+In `tests/test_cli_catalog.py::ALPHA`, `prefixes = ["geo"]` becomes `prefixes = []` (its tests
+resolve real Bioregistry ids through the registry and need no owner).
+
+Run: `just test-one tests/test_search.py tests/test_cli_catalog.py`
+Expected: PASS.
+
+- [ ] **Step 7: Write the failing CLI tests for `files`**
+
+Append to `tests/test_files.py`:
+
+```python
+from tests.test_search import FAKE, LOCAL
+
+
+@pytest.fixture
+def catalog(make_catalog):
+    fakes = {"alpha": FAKE.format(id="alpha", role="repository", prefix=LOCAL.format(name="alpha", pattern=r"^GSE\d+$")),
+             "onto": FAKE.format(id="onto", role="ontology", prefix=LOCAL.format(name="onto", pattern=r"^\d+$"))}
     return make_catalog(fakes, ["alpha", "onto"], ["alpha"])
 
 
@@ -443,29 +497,29 @@ def invoke(*args):
 
 def test_files_lists_every_location_and_narrows_with_file(catalog, monkeypatch):
     monkeypatch.setattr(fake_adapter, "FILES", [A, B, C])
-    out = invoke("files", "GEO:GSE5")
+    out = invoke("files", "ALPHA:GSE5")
     assert out.exit_code == 0, out.stderr
-    assert json.loads(out.stdout) == {"id": "geo:GSE5", "resource": "alpha", "files": [A.as_dict(), B.as_dict(), C.as_dict()]}
-    report = json.loads(invoke("files", "geo:GSE5", "--file", "*.txt", "--file", "c.*").stdout)
+    assert json.loads(out.stdout) == {"id": "alpha:GSE5", "resource": "alpha", "files": [A.as_dict(), B.as_dict(), C.as_dict()]}
+    report = json.loads(invoke("files", "alpha:GSE5", "--file", "*.txt", "--file", "c.*").stdout)
     assert [f["name"] for f in report["files"]] == ["a.txt", "c.csv"]
-    assert json.loads(invoke("files", "geo:GSE5", "--file", "none.*").stdout)["files"] == []
+    assert json.loads(invoke("files", "alpha:GSE5", "--file", "none.*").stdout)["files"] == []
 
 
 def test_files_acquisition_is_the_kernel_request(catalog, monkeypatch):
     monkeypatch.setattr(fake_adapter, "FILES", [A, B, C])
-    out = invoke("files", "geo:GSE5", "--acquisition")
+    out = invoke("files", "alpha:GSE5", "--acquisition")
     assert out.exit_code == 1 and out.stdout == "" and json.loads(out.stderr)["error"]["kind"] == "unsupported_transport"
-    out = invoke("files", "geo:GSE5", "--acquisition", "--file", "a.txt", "--file", "c.csv")
+    out = invoke("files", "alpha:GSE5", "--acquisition", "--file", "a.txt", "--file", "c.csv")
     assert out.exit_code == 0, out.stderr
     assert json.loads(out.stdout) == {
-        "title": "shown", "locator": "accession:geo:GSE5",
+        "title": "shown", "locator": "accession:alpha:GSE5",
         "resources": [{"name": "a.txt", "url": "https://alpha.example/a.txt", "expected": "sha256:" + "ab" * 32},
                       {"name": "c.csv", "url": "https://alpha.example/c.csv"}]}
-    out = invoke("files", "geo:GSE5", "--acquisition", "--file", "none.*")
+    out = invoke("files", "alpha:GSE5", "--acquisition", "--file", "none.*")
     assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == "no_files"
 
 
-@pytest.mark.parametrize("curie, kind", [("doi:10.1000/x", "no_owner"), ("go:0008150", "unsupported_role"), ("GSE5", "ambiguous_id")])
+@pytest.mark.parametrize("curie, kind", [("doi:10.1000/x", "no_owner"), ("onto:0008150", "unsupported_role"), ("GSE5", "ambiguous_id")])
 def test_files_refusals_match_show(catalog, curie, kind):
     out = invoke("files", curie)
     assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == kind
@@ -473,10 +527,10 @@ def test_files_refusals_match_show(catalog, curie, kind):
 
 def test_files_pretty_output(catalog, monkeypatch):
     monkeypatch.setattr(fake_adapter, "FILES", [A, B])
-    out = CliRunner().invoke(main, ["files", "geo:GSE5"], catch_exceptions=False)
+    out = CliRunner().invoke(main, ["files", "alpha:GSE5"], catch_exceptions=False)
     assert out.stdout == "a.txt\t3\thttps://alpha.example/a.txt\nb.bin\t-\tftp://alpha.example/b.bin\n# 2 files\n"
-    out = CliRunner().invoke(main, ["files", "geo:GSE5", "--acquisition", "--file", "a.txt"], catch_exceptions=False)
-    assert json.loads(out.stdout)["locator"] == "accession:geo:GSE5"
+    out = CliRunner().invoke(main, ["files", "alpha:GSE5", "--acquisition", "--file", "a.txt"], catch_exceptions=False)
+    assert json.loads(out.stdout)["locator"] == "accession:alpha:GSE5"
 ```
 
 Add to `tests/fake_adapter.py`, after the imports and before `class Fake`:
@@ -497,7 +551,7 @@ and inside `class Fake`:
 Run: `just test-one tests/test_files.py`
 Expected: the four new tests FAIL with `No such command 'files'` (exit 2).
 
-- [ ] **Step 7: Adopt the table and write the command**
+- [ ] **Step 8: Adopt the table and write the command**
 
 ```bash
 (cd "$TREE/ops" && python3 bin/vendored adopt --into "$WT" cli.toml)
@@ -577,7 +631,7 @@ def files_command(ctx: click.Context, curie: str, globs: tuple[str, ...], as_req
 Run: `just test-one tests/test_files.py tests/test_search.py tests/test_cli_surface.py::test_surface_equals_table`
 Expected: PASS.
 
-- [ ] **Step 8: Write the failing ENA `files` tests**
+- [ ] **Step 9: Write the failing ENA `files` tests**
 
 Append to `tests/test_ena.py`:
 
@@ -657,7 +711,7 @@ def test_recorded_files_and_acquisition(monkeypatch):
 Run: `just test-one tests/test_ena.py -k files`
 Expected: FAIL (`Ena` has no attribute `files`; no `FILE_FIELDS`).
 
-- [ ] **Step 9: Implement ENA `files` and the recording scenario**
+- [ ] **Step 10: Implement ENA `files` and the recording scenario**
 
 In `src/quarry/adapters/ena.py`, add `from quarry.files import File` and:
 
@@ -723,7 +777,7 @@ def files_first(adapter, client):
 
 and `"files-first": files_first` in `SCENARIOS`.
 
-- [ ] **Step 10: Record and replay**
+- [ ] **Step 11: Record and replay**
 
 ```bash
 just record ena
@@ -738,7 +792,7 @@ project: set `MYELOMA`'s window to a different quarter and record again.
 Run: `just test-one tests/test_ena.py`
 Expected: PASS.
 
-- [ ] **Step 11: Give the conformance leaf test a `files` invocation**
+- [ ] **Step 12: Give the conformance leaf test a `files` invocation**
 
 In `tests/test_cli_surface.py::test_json_is_honoured_by_every_leaf_command`, add
 `fx / "files-first.json"` to the `ReplayTransport.from_files([...])` list and
@@ -748,7 +802,7 @@ starts at the same first study `show-first` shows, so its show and file report a
 Run: `just test-fast`
 Expected: PASS, every test.
 
-- [ ] **Step 12: Commit**
+- [ ] **Step 13: Commit**
 
 ```bash
 git add src/quarry tests tools/cli.toml
@@ -808,7 +862,7 @@ evidence = "mm-159cb7: resolving membership from brief text brought a 1.5-6 h ha
 
 [[pitfalls]]
 summary = "suppl/filelist.txt is missing for many series and no checksum is published"
-handling = "files reads !Series_supplementary_file lines from the brief text and serves the HTTPS mirror of each FTP path; checksums stay unset"
+handling = "files reads !Series_supplementary_file lines from the brief text (NONE means no files) and serves the HTTPS mirror of each FTP path; checksums stay unset"
 evidence = "probe 2026-10-10: GSE24080 has filelist.txt, GSE193531 answers 404; the brief text lists both series' files"
 
 [[pitfalls]]
@@ -1162,7 +1216,7 @@ def test_synthetic_limit_is_limited():
     assert cov.complete == "limited" and len(rows) == 1
 
 
-@pytest.mark.parametrize("field, value", [("accession", "GSM1"), ("accession", None), ("title", 7), ("pdat", "Sep 2010"),
+@pytest.mark.parametrize("field, value", [("accession", "XYZ1"), ("accession", None), ("title", 7), ("pdat", "Sep 2010"),
                                           ("pubmedids", "20064235"), ("pubmedids", ["x"]), ("extrelations", "SRA")])
 def test_malformed_summaries_are_upstream_errors(field, value):
     q = geo.compile_query(Query(phrases=("x",)))
@@ -1170,6 +1224,14 @@ def test_malformed_summaries_are_upstream_errors(field, value):
     with pytest.raises(QuarryError) as caught:
         GEO.search(client, Query(phrases=("x",)))
     assert caught.value.kind == "upstream_failed"
+
+
+def test_native_query_matching_samples_is_refused_as_unsupported_id():
+    q = "GSM592930[ACCN]"
+    client = replay_client(ReplayTransport([esearch(q, 1, ["300592930"]), esummary([{**SUMMARY, "uid": "300592930", "accession": "GSM592930"}])]))
+    with pytest.raises(QuarryError) as caught:
+        GEO.search(client, Query(native=q))
+    assert caught.value.kind == "unsupported_id"
 
 
 def fetch(summary=SUMMARY, text=BRIEF):
@@ -1193,8 +1255,10 @@ def test_files_come_from_the_brief_with_https_first_and_no_checksum():
                                               "ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE24nnn/GSE24080/suppl/GSE24080_RAW.tar"]}]
 
 
-def test_series_without_supplementary_files_lists_nothing_and_cannot_be_acquired(monkeypatch):   # Review Focus 2
-    text = "\n".join(line for line in BRIEF.splitlines() if "supplementary" not in line) + "\n"
+@pytest.mark.parametrize("spelling", [None, "!Series_supplementary_file = NONE"])
+def test_series_without_supplementary_files_lists_nothing_and_cannot_be_acquired(monkeypatch, spelling):   # Review Focus 2
+    kept = [line for line in BRIEF.splitlines() if "supplementary" not in line] + ([spelling] if spelling else [])
+    text = "\n".join(kept) + "\n"
     monkeypatch.setattr(context, "make_client", lambda trace: replay_client(fetch(text=text)))
     out = CliRunner().invoke(main, ["--json", "files", "geo:GSE24080"], catch_exceptions=False)
     assert out.exit_code == 0 and json.loads(out.stdout)["files"] == []
@@ -1259,7 +1323,7 @@ def test_recorded_search_is_complete_human_and_canonical():
     cov, rows = GEO.search(replay("search-myeloma"), MYELOMA)
     assert cov.complete == "total" and cov.returned == cov.total == len(rows) > 0
     assert all(r.id.startswith("geo:GSE") and r.resource == "geo" for r in rows)
-    assert all(r.domain_fields["biology"]["organism"] == "Homo sapiens" for r in rows)
+    assert all("Homo sapiens" in r.domain_fields["biology"]["organism"].split("; ") for r in rows)   # mixed series list several
     assert all(r.publication is None or r.publication.startswith("pubmed:") for r in rows)
 
 
@@ -1331,6 +1395,7 @@ from quarry.search import completeness
 
 TAXON = re.compile(r"^ncbitaxon:(\d+)$", re.IGNORECASE)
 GSE = re.compile(r"^GSE\d+$")
+OTHER = re.compile(r"^G(SM|PL|DS)\d+$")
 PRJ = re.compile(r"^PRJ[DEN][A-Z]\d+$")
 SRA = re.compile(r"^[SED]R[APRSXZ]\d+$")
 FTP = "ftp://ftp.ncbi.nlm.nih.gov/"
@@ -1361,7 +1426,11 @@ def compile_query(query: Query) -> str:
 
 
 def _valid(d: dict) -> dict:
-    if type(d.get("accession")) is not str or not GSE.match(d["accession"]):
+    acc = d.get("accession")
+    if type(acc) is str and OTHER.match(acc):
+        raise QuarryError("unsupported_id", f"geo:{acc} is not a series; quarry covers GSE records only "
+                                            f"(add gse[ETYP] to a native query)")
+    if type(acc) is not str or not GSE.match(acc):
         raise UpstreamError("geo esummary: accession is not a GSE series")
     for name in STRINGS:
         if d.get(name) is not None and type(d[name]) is not str:
@@ -1454,6 +1523,8 @@ class Geo:
         summary, text = self._fetch(client, curie)
         files = []
         for url in SUPPL.findall(text):
+            if url == "NONE":                       # GEO's SOFT spelling of "no supplementary files"
+                continue
             if not url.startswith(FTP):
                 raise UpstreamError("geo brief: a supplementary file is not under ftp.ncbi.nlm.nih.gov")
             files.append(File(name=url.rsplit("/", 1)[1], urls=(f"https://ftp.ncbi.nlm.nih.gov/{url[len(FTP):]}", url)))
@@ -1533,10 +1604,7 @@ evidence = "E-utilities documentation; mm-159cb7's reviews search capped retmax 
 
 In `src/quarry/catalog/domains/core.toml`: `resources = ["pubmed"]` (leave `search_default = []`).
 
-PubMed now owns `pubmed`, so `tests/test_search.py::test_show_refusals` and
-`tests/test_files.py::test_files_refusals_match_show` must use a prefix nothing owns for
-their `no_owner` case: change `("pubmed:1", "no_owner")` to `("doi:10.1000/x", "no_owner")` in both
-(spec §7: `doi:` has no owner in the first version).
+(The `no_owner` test cases already use `doi:10.1000/x`, since Task 2 moved them off `pubmed:1`.)
 
 - [ ] **Step 2: Write the failing tests**
 
@@ -1989,7 +2057,8 @@ STUDY = {"accno": "S-BSST1234", "attributes": [{"name": "ReleaseDate", "value": 
                      "links": [[{"url": "GSE5900", "attributes": [{"name": "Type", "value": "GEO"}]}]],
                      "subsections": [{"type": "Assays and Data", "subsections": [
                          {"type": "Data files", "files": [[{"path": "sub/E.idf.txt", "size": 2688, "type": "file"}]]}]}]}}
-INFO = {"httpLink": "https://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234", "files": 2}
+INFO = {"httpLink": "https://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234",
+        "ftpLink": "ftp://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234", "files": 2}
 
 
 def study(acc, body, status=200):
@@ -2020,9 +2089,11 @@ def test_files_walk_nested_sections_skip_directories_and_percent_encode_paths(mo
     assert record.title == "T-cell immunity"
     assert [f.as_dict() for f in files] == [
         {"name": "E7HPV16 raw datas é.zip", "size": 2462872206,
-         "urls": ["https://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234/Files/E7HPV16%20raw%20datas%20%C3%A9.zip"]},
+         "urls": ["https://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234/Files/E7HPV16%20raw%20datas%20%C3%A9.zip",
+                  "ftp://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234/Files/E7HPV16%20raw%20datas%20%C3%A9.zip"]},
         {"name": "sub/E.idf.txt", "size": 2688,
-         "urls": ["https://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234/Files/sub/E.idf.txt"]}]
+         "urls": ["https://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234/Files/sub/E.idf.txt",
+                  "ftp://ftp.ebi.ac.uk/pub/databases/biostudies/S-BSST/234/S-BSST1234/Files/sub/E.idf.txt"]}]
     monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport(
         [study("S-BSST1234", json.dumps(STUDY)), info("S-BSST1234", json.dumps(INFO))])))
     out = CliRunner().invoke(main, ["--json", "files", "biostudies:S-BSST1234", "--acquisition"], catch_exceptions=False)
@@ -2052,6 +2123,12 @@ def test_recorded_show_e_geod_5900_links_geo():
     shown = BS.show(replay("show-e-geod-5900"), E_GEOD_5900)
     assert shown.id == "arrayexpress:E-GEOD-5900" and "geo:GSE5900" in shown.xrefs
     assert shown.domain_fields["biology"]["organism"] == "Homo sapiens"
+
+
+def test_recorded_files_e_geod_5900_come_from_nested_sections():
+    record, files = BS.files(replay("files-e-geod-5900"), E_GEOD_5900)
+    assert record.id == "arrayexpress:E-GEOD-5900" and files
+    assert any(f.name.endswith(".sdrf.txt") for f in files) and all(f.urls[0].startswith("https://") for f in files)
 
 
 def test_recorded_files_s_bsst1234_encode_the_space(monkeypatch):
@@ -2289,7 +2366,9 @@ class Biostudies:
         base = info.get("httpLink")
         if type(base) is not str or not base.startswith("https://"):
             raise UpstreamError("biostudies info: no https link to the study's files")
-        return record, [File(name=path, urls=(f"{base.rstrip('/')}/Files/{quote(path)}",), size=size) for path, size in entries]
+        bases = [base] + ([info["ftpLink"]] if type(info.get("ftpLink")) is str and info["ftpLink"].startswith("ftp://") else [])
+        return record, [File(name=path, urls=tuple(f"{b.rstrip('/')}/Files/{quote(path)}" for b in bases), size=size)
+                        for path, size in entries]
 
 
 def make(resource: Resource) -> Biostudies:
@@ -2319,7 +2398,7 @@ needs at least one human study). Every test passes; `check` prints nothing.
 
 **Files:**
 - Create: `src/quarry/adapters/zenodo.py`, `src/quarry/catalog/resources/zenodo.toml`, `tests/test_zenodo.py`, `tests/recordings/common.py`, `tests/recordings/zenodo.py`, `tests/fixtures/zenodo/*.json` (recorded)
-- Modify: `src/quarry/catalog/domains/core.toml` (`resources` gains `zenodo`)
+- Modify: `src/quarry/catalog/domains/core.toml` (`resources` gains `zenodo`), `tests/conftest.py` (`clean_env` clears every declared key variable)
 
 **Interfaces:**
 - Consumes: Task 2's `File`, `Adapter.files`, `Coverage.warnings`, `Client.request(accept=...)`.
@@ -2365,6 +2444,24 @@ evidence = "record 15025566: isDescribedBy 10.1038/s43018-025-01072-4 beside doi
 ```
 
 In `src/quarry/catalog/domains/core.toml`: `resources = ["zenodo", "pubmed"]`.
+
+`tests/conftest.py::clean_env` deletes `QUARRY_*` and `*_API_KEY` only; a host that exports
+`ZENODO_TOKEN` would send `access_token` on every replayed Zenodo request and match nothing.
+Make it clear every key variable the catalog declares. Replace the fixture with:
+
+```python
+KEY_VARIABLES = frozenset(r.key_env for res in catalog_mod.load().resources.values() for r in res.routes if r.key_env)
+
+
+@pytest.fixture(autouse=True)
+def clean_env(monkeypatch):
+    """No test sees the host's QUARRY_* settings or service keys."""
+    for name in list(os.environ):
+        if name.startswith("QUARRY_") or name.endswith("_API_KEY") or name in KEY_VARIABLES:
+            monkeypatch.delenv(name)
+```
+
+with `from quarry import catalog as catalog_mod` among the imports.
 
 - [ ] **Step 2: Write the failing tests**
 
@@ -3261,6 +3358,20 @@ def test_exact_biology_search_names_biostudies_before_any_request(monkeypatch):
     assert out.exit_code == 1 and "biostudies" in json.loads(out.stderr)["error"]["detail"]
 
 
+def test_organism_on_the_biology_default_set_names_the_first_core_resource(monkeypatch):
+    """Spec §8.2: a filter a resource cannot express is refused, never dropped. Zenodo and figshare
+    sit in biology's search set through core and have no organism, so --organism needs --in."""
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport([])))
+    out = invoke("search", "--domain", "biology", "--organism", "Homo sapiens", "x")
+    assert out.exit_code == 1 and "zenodo" in json.loads(out.stderr)["error"]["detail"]
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport.from_files(
+        [FX / "geo" / "search-myeloma.json"])))
+    from tests.recordings.geo import MYELOMA
+    out = invoke("search", "--domain", "biology", "--in", "geo", "--organism", MYELOMA.filters["organism"],
+                 "--since", MYELOMA.since.isoformat(), "--until", MYELOMA.until.isoformat(), *MYELOMA.phrases)
+    assert out.exit_code == 0, out.stderr
+
+
 def test_taxon_curie_in_biology_names_biostudies_before_any_request(monkeypatch):
     monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport([])))   # any request would fail
     out = invoke("search", "--domain", "biology", "--organism", "ncbitaxon:9606", "x")
@@ -3299,8 +3410,10 @@ HGNC = "hgnc"
 
 Two tests replay ENA fixtures alone under `--domain biology`, which now covers five resources:
 in `tests/test_ena.py::test_cli_search_through_replay` change `["--json", "search", "--domain", "biology"]`
-to `["--json", "search", "--in", "ena"]`, and in `tests/test_cli_surface.py::test_json_is_honoured_by_every_leaf_command`
-change `search_args = ["search", "--domain", "biology"]` to `search_args = ["search", "--in", "ena"]`.
+to `["--json", "search", "--domain", "biology", "--in", "ena"]`, and in
+`tests/test_cli_surface.py::test_json_is_honoured_by_every_leaf_command` change
+`search_args = ["search", "--domain", "biology"]` to `search_args = ["search", "--domain", "biology", "--in", "ena"]`.
+The domain stays: `--organism` is a biology filter, and without `--domain` the lens is `core`.
 
 Run: `just test-one tests/test_domains.py tests/test_ena.py tests/test_cli_surface.py`
 Expected: PASS.
@@ -3315,7 +3428,8 @@ uv run quarry --version
 uv run quarry --help
 uv run quarry help
 uv run quarry resources list --domain biology
-uv run quarry search --domain biology --organism "Homo sapiens" "multiple myeloma"
+uv run quarry search --domain biology "multiple myeloma"
+uv run quarry search --domain biology --in geo --in ena --in biostudies --organism "Homo sapiens" "multiple myeloma"
 uv run quarry search --in pubmed --since 2024-01-01 "smoldering myeloma"
 uv run quarry show geo:GSE24080
 uv run quarry files geo:GSE24080
@@ -3327,7 +3441,9 @@ The root command accepts `--json` and `--pretty` to choose output mode.
 
 The first version's repositories are GEO, ENA and BioStudies (biology) and Zenodo and
 figshare (core), with PubMed as a literature index named with `--in`. A biology search
-covers all five repositories. `files` lists a record's files with every location the
+covers all five repositories; a domain filter such as `--organism` needs `--in` naming the
+resources that express it, since a resource that cannot is refused rather than skipped.
+`files` lists a record's files with every location the
 resource gives; `files --acquisition` prints the request the kernel's acquisition takes
 (title, `accession:<CURIE>` locator, one http(s) URL per file). Ontology terms, agent
 skills and live checks are the next milestone.
@@ -3368,5 +3484,7 @@ git commit -m "feat(domains): biology searches GEO, ENA and BioStudies; core sea
   the scenario is changed.
 - Every task's commit is preceded by `just test-fast`; the pre-push hook runs the full gate.
 - `quarry-e0f1c0` (required-key refusal) stays separate: no route in this plan is `required-key`.
+- Deferred, minor: none of the resource files sets `fairsharing` (spec §6, "when one exists"); the
+  foundation's ENA file omits it too. One follow-up fills all six.
 - When the plan lands, the consuming tasks `sci-a17882` (science acquire) and `mm-13aac8`
   (roster migration) can start; both depend on `quarry-3f4c3b`.
