@@ -7,7 +7,7 @@ size: m
 complexity: mid
 process: planned
 created: 2026-10-11T18:56:51Z
-updated: 2026-10-11T18:56:56Z
+updated: 2026-10-11T18:57:39Z
 depends: []
 tags: [heliophysics]
 source: sun-374ea3
@@ -19,3 +19,4 @@ Further finding of the sun phase-1 survey (source goal sci-ba7150). HPDE.io / sp
 ## Notes
 
 - 2026-10-11T18:56:56Z (main): concerns: none — filed from the sun phase-1 survey (sun-374ea3) as a finding against the quarry contract
+- 2026-10-11T18:57:39Z (main): correction: the 'concerns:' line above was written in error and names no closed task; this task concerns no closed work. It is a finding filed from the sun phase-1 survey (sun-374ea3).
