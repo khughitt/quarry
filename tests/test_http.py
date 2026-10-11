@@ -493,3 +493,12 @@ def test_accepted_statuses_return_and_others_still_raise():
     assert c.request(route(), "GET", "x", accept=frozenset({404})).status_code == 404
     with pytest.raises(UpstreamError):
         c.request(route(), "GET", "x")
+
+
+def test_recording_a_gzip_response_hands_the_client_the_body_once():
+    import gzip
+    body = b'{"ok": true}'
+    inner = httpx.MockTransport(lambda r: httpx.Response(200, headers={"content-encoding": "gzip"}, stream=httpx.ByteStream(gzip.compress(body))))
+    recorder = RecordingTransport(frozenset(), [], inner=inner)
+    assert httpx.Client(transport=recorder).get("https://example.org/x").content == body
+    assert recorder.take()[0]["response"]["body"] == body.decode()

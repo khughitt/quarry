@@ -19,7 +19,7 @@ DATA_ROLES = frozenset({"repository", "knowledgebase", "literature-index"})
 ROUTE_KINDS = ("rest", "query-endpoint", "bulk", "local-tool")
 AUTH = ("none", "optional-key", "required-key")
 CATALOG_ROOT = Path(__file__).parent / "catalog"
-NOT_ADAPTERS = frozenset({"base"})
+NOT_ADAPTERS = frozenset({"base", "eutils"})
 _REQUIRED = object()
 
 
