@@ -146,12 +146,15 @@ class Geo:
 
     def files(self, client: Client, curie: Curie) -> tuple[Result, list[File]]:
         summary, text = self._fetch(client, curie)
+        urls = SUPPL.findall(text)
+        if len(urls) != sum(line.startswith("!Series_supplementary_file") for line in text.split("\n")):
+            raise UpstreamError("geo brief: a supplementary file line could not be read")
         files = []
-        for url in SUPPL.findall(text):
+        for url in urls:
             if url == "NONE":                       # GEO's SOFT spelling of "no supplementary files"
                 continue
             if not url.startswith(FTP):
-                raise UpstreamError("geo brief: a supplementary file is not under ftp.ncbi.nlm.nih.gov")
+                raise UpstreamError(f"geo brief: a supplementary file is not under ftp.ncbi.nlm.nih.gov: {url}")
             files.append(File(name=url.rsplit("/", 1)[1], urls=(f"https://ftp.ncbi.nlm.nih.gov/{url[len(FTP):]}", url)))
         return self._result(summary, text), files
 

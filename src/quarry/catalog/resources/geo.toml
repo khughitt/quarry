@@ -48,3 +48,8 @@ evidence = "GSE24080 lists three PubMed ids"
 summary = "Entrez drops a term it has no records for (or a field tag it does not know) and answers for the rest, never widening the query"
 handling = "esearch reads errorlist and warninglist; each term Entrez found nothing for or ignored becomes a warning in the search report, in NCBI's spelling"
 evidence = "probe 2026-10-11: an unknown quoted phrase or [ORGN] term is named in warninglist.quotedphrasesnotfound, an unknown txid in errorlist.phrasesnotfound, an unknown --native field tag in errorlist.fieldsnotfound"
+
+[[pitfalls]]
+summary = "a supplementary file line may name a URL outside ftp.ncbi.nlm.nih.gov or one quarry cannot read"
+handling = "files fails the whole call with upstream_failed naming the URL (or saying a line could not be read) rather than listing the rest; no file is silently dropped"
+evidence = "the brief text's !Series_supplementary_file lines are free text; every recorded series lists ftp.ncbi.nlm.nih.gov paths"

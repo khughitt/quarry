@@ -152,6 +152,20 @@ def test_series_without_supplementary_files_lists_nothing_and_cannot_be_acquired
     assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == "no_files"
 
 
+def test_a_supplementary_line_the_pattern_cannot_read_is_an_upstream_error():
+    text = BRIEF + "!Series_supplementary_file = ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE24nnn/GSE24080/suppl/a b.txt\n"
+    with pytest.raises(QuarryError) as caught:
+        GEO.files(replay_client(fetch(text=text)), Curie("geo", "GSE24080"))
+    assert caught.value.kind == "upstream_failed" and caught.value.detail == "geo brief: a supplementary file line could not be read"
+
+
+def test_a_supplementary_file_off_the_ncbi_host_fails_the_call_by_name():
+    text = BRIEF + "!Series_supplementary_file = https://example.org/GSE24080_extra.txt\n"
+    with pytest.raises(QuarryError) as caught:
+        GEO.files(replay_client(fetch(text=text)), Curie("geo", "GSE24080"))
+    assert caught.value.kind == "upstream_failed" and "https://example.org/GSE24080_extra.txt" in caught.value.detail
+
+
 def test_missing_series_is_not_found_and_other_geo_ids_are_refused_first():
     client = replay_client(ReplayTransport([esearch("GSE9[ACCN] AND gse[ETYP]", 0, [], retmax=20)]))
     with pytest.raises(QuarryError) as caught:
