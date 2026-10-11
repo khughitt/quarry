@@ -55,6 +55,14 @@ def test_pages_until_a_short_page_and_keeps_item_ids_with_doi_xrefs_and_paper_pu
     assert rows[0].publication is None and rows[0].xrefs == ()
 
 
+def test_an_item_repeated_across_pages_fails_although_paging_ended_on_a_short_page():
+    q = figshare.compile_query(Query(phrases=("x",)))
+    first = [item(i, "2026-10-10") for i in range(100)]
+    with pytest.raises(QuarryError) as caught:
+        FIG.search(replay_client(ReplayTransport([page(q, 1, first), page(q, 2, [item(99, "2026-10-10")])])), Query(phrases=("x",)))
+    assert caught.value.kind == "incomplete_listing" and "figshare:99" in caught.value.detail
+
+
 def test_since_orders_newest_first_skips_newer_than_until_and_stops_below_since():
     query = Query(phrases=("x",), since=date(2026, 9, 1), until=date(2026, 10, 10))
     q = figshare.compile_query(query)

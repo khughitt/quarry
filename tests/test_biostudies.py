@@ -96,6 +96,16 @@ def test_short_listing_under_an_exact_total_fails():
     assert caught.value.kind == "incomplete_listing"
 
 
+@pytest.mark.parametrize("total, exact", [(101, True), (10761, False)])
+def test_a_hit_repeated_across_pages_fails(total, exact):
+    q, _ = biostudies.compile_query(Query(phrases=("x",)))
+    client = replay_client(ReplayTransport([page(q, 1, [hit(f"S-BSST{i}") for i in range(100)], total, exact),
+                                            page(q, 2, [hit("S-BSST99")], total, exact)]))
+    with pytest.raises(QuarryError) as caught:
+        BS.search(client, Query(phrases=("x",)))
+    assert caught.value.kind == "incomplete_listing" and "biostudies:S-BSST99" in caught.value.detail
+
+
 def test_limit_asks_for_a_small_page_and_is_limited():
     query = Query(phrases=("x",), limit=2)
     q, _ = biostudies.compile_query(query)

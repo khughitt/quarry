@@ -17,7 +17,7 @@ from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
 from quarry.results import Coverage, Result
-from quarry.search import completeness
+from quarry.search import completeness, distinct
 
 CAP = 100
 FILE_LIST_WINDOW = 10_000   # a study with more files than this keeps them in lists of hundreds of MB
@@ -195,6 +195,7 @@ class Biostudies:
                 if short or (query.limit and len(rows) >= query.limit) or (exact_total is not None and len(rows) >= exact_total):
                     break
                 page += 1
+            rows = distinct(rows)
             rows = rows[:query.limit] if query.limit else rows
             complete = completeness(total=exact_total, returned=len(rows), limit=query.limit, short_page=short)
             match = "native" if query.native is not None else self.match

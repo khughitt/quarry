@@ -14,7 +14,7 @@ from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
 from quarry.results import Coverage, Result
-from quarry.search import completeness
+from quarry.search import completeness, distinct
 
 CAP = 25
 WINDOW = 10_000
@@ -141,6 +141,7 @@ class Zenodo:
                 if not hits["hits"] or len(rows) >= wanted:
                     break
                 page += 1
+            rows = distinct(rows)
             rows = rows[:query.limit] if query.limit else rows
             complete = completeness(total=total, returned=len(rows), limit=query.limit, short_page=False)
             match = "native" if query.native is not None else self.match

@@ -15,7 +15,7 @@ from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
 from quarry.results import Coverage, Result
-from quarry.search import completeness
+from quarry.search import completeness, distinct
 
 CAP = 100
 TAGS = re.compile(r"<[^>]+>")
@@ -128,6 +128,7 @@ class Figshare:
                 if stopped or short or (query.limit and len(rows) >= query.limit):
                     break
                 page += 1
+            rows = distinct(rows)
             rows = rows[:query.limit] if query.limit else rows
             complete = completeness(total=None, returned=len(rows), limit=query.limit, short_page=stopped or short)
             match = "native" if query.native is not None else self.match

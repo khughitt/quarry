@@ -4,7 +4,8 @@ from datetime import date
 import pytest
 
 from quarry.query import Query, parse_when
-from quarry.search import completeness
+from quarry.results import Result
+from quarry.search import completeness, distinct
 from quarry.errors import QuarryError
 
 
@@ -64,6 +65,14 @@ def test_incomplete_listing_is_a_failure(args):
     with pytest.raises(QuarryError) as caught:
         completeness(**args)
     assert caught.value.kind == "incomplete_listing"
+
+
+def test_distinct_passes_unique_rows_and_fails_on_a_repeated_id():
+    rows = [Result(id=f"x:{i}", resource="x", kind="dataset", title="t") for i in (1, 2)]
+    assert distinct(rows) == rows
+    with pytest.raises(QuarryError) as caught:
+        distinct([*rows, rows[0]])
+    assert caught.value.kind == "incomplete_listing" and "x:1" in caught.value.detail
 
 
 @pytest.mark.parametrize("text", ["999999d", "999999999999d"])
