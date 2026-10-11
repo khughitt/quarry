@@ -38,9 +38,9 @@ def test_quotes_and_backslashes_are_refused_in_prepare(phrase):
     assert caught.value.kind == "unsupported_filter"
 
 
-def record(n, related=(), files=(), doi=True):
+def record(n, related=(), files=(), doi=True, access="open"):
     return {"id": n, "doi": f"10.5281/zenodo.{n}" if doi else None,
-            "metadata": {"title": f"r{n}", "publication_date": "2026-07-27", "description": "<p>d</p>",
+            "metadata": {"title": f"r{n}", "publication_date": "2026-07-27", "description": "<p>d</p>", "access_right": access,
                          "resource_type": {"type": "dataset", "title": "Dataset"}, "related_identifiers": list(related)},
             "files": list(files)}
 
@@ -105,6 +105,17 @@ def test_publication_is_the_first_paper_and_the_rest_are_xrefs_with_a_warning():
     assert cov.warnings == ("zenodo.record:1 names 2 papers; doi:10.1038/a is its publication and the rest are xrefs",)
 
 
+def test_the_publication_doi_is_never_also_an_xref():
+    paper = {"identifier": "10.1038/a", "relation": "isSupplementTo", "resource_type": "publication-article", "scheme": "doi"}
+    again = {**paper, "relation": "isDescribedBy"}
+    cites = {**paper, "relation": "references", "resource_type": "dataset"}
+    q = zenodo.compile_query(Query(phrases=("x",)))
+    client = replay_client(ReplayTransport([page(q, 1, [record(1, related=[paper, again, cites])], 1)]))
+    cov, rows = ZEN.search(client, Query(phrases=("x",)))
+    assert rows[0].publication == "doi:10.1038/a" and rows[0].xrefs == ("doi:10.5281/zenodo.1",)
+    assert cov.warnings == ()
+
+
 @pytest.mark.parametrize("body", ["<html>", '{"hits": []}', json.dumps({"hits": {"hits": [{"id": "x"}], "total": 1}}),
                                   json.dumps({"hits": {"hits": [{**record(1), "metadata": "x"}], "total": 1}}),
                                   json.dumps({"hits": {"hits": [record(1)], "total": "1"}}),
@@ -152,6 +163,30 @@ def test_malformed_files_are_upstream_errors(bad):
     assert caught.value.kind == "upstream_failed"
 
 
+@pytest.mark.parametrize("access", ["restricted", "embargoed", "closed"])
+def test_a_withheld_record_without_files_is_restricted_and_show_still_works(access, monkeypatch):
+    body = json.dumps(record(15025566, access=access))
+    with pytest.raises(QuarryError) as caught:
+        ZEN.files(replay_client(ReplayTransport([one(15025566, body)])), Curie("zenodo.record", "15025566"))
+    assert caught.value.kind == "restricted"
+    assert caught.value.detail == (f"zenodo.record:15025566: Zenodo withholds its files (access_right {access}); "
+                                   "nothing to list or acquire")
+    assert ZEN.show(replay_client(ReplayTransport([one(15025566, body)])), Curie("zenodo.record", "15025566")).title == "r15025566"
+
+
+def test_an_open_record_without_files_lists_nothing():
+    assert ZEN.files(replay_client(ReplayTransport([one(1, json.dumps(record(1)))])), Curie("zenodo.record", "1"))[1] == []
+
+
+@pytest.mark.parametrize("access", [None, 7])
+def test_files_needs_access_right_as_text(access):
+    doc = record(1, files=[FILE])
+    doc["metadata"] = {k: v for k, v in doc["metadata"].items() if k != "access_right"} | ({} if access is None else {"access_right": access})
+    with pytest.raises(QuarryError) as caught:
+        ZEN.files(replay_client(ReplayTransport([one(1, json.dumps(doc))])), Curie("zenodo.record", "1"))
+    assert caught.value.kind == "upstream_failed"
+
+
 def replay(*names):
     return replay_client(ReplayTransport.from_files([FX / f"{n}.json" for n in names]))
 
@@ -173,9 +208,11 @@ def test_recorded_open_record_has_an_md5_file_and_no_paper(monkeypatch):
     assert out.exit_code == 0 and request["locator"] == "accession:zenodo.record:21628233" and "expected" not in request["resources"][0]
 
 
-def test_recorded_restricted_record_has_a_paper_and_no_files(monkeypatch):
+def test_recorded_restricted_record_has_a_paper_and_withholds_its_files(monkeypatch):
     assert ZEN.show(replay("show-restricted"), RESTRICTED).publication == "doi:10.1038/s43018-025-01072-4"
-    assert ZEN.files(replay("files-restricted"), RESTRICTED)[1] == []
+    with pytest.raises(QuarryError) as caught:
+        ZEN.files(replay("files-restricted"), RESTRICTED)
+    assert caught.value.kind == "restricted" and "access_right restricted" in caught.value.detail
     monkeypatch.setattr(context, "make_client", lambda trace: replay("files-restricted"))
     out = CliRunner().invoke(main, ["--json", "files", str(RESTRICTED), "--acquisition"], catch_exceptions=False)
-    assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == "no_files"
+    assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == "restricted"

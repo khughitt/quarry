@@ -28,5 +28,10 @@ evidence = "Zenodo REST API documentation (the Elasticsearch result window)"
 
 [[pitfalls]]
 summary = "a record's own DOI and its paper's DOI are both DOIs"
-handling = "a related identifier whose relation is isSupplementTo, isDescribedBy or isCitedBy and whose resource type is a publication gives the publication; the record's DOI and every other related DOI are xrefs"
+handling = "a related identifier whose relation is isSupplementTo, isDescribedBy or isCitedBy and whose resource type is a publication gives the publication; the record's DOI and every other related DOI are xrefs, and the publication's DOI is never also an xref"
 evidence = "record 15025566: isDescribedBy 10.1038/s43018-025-01072-4 beside doi 10.5281/zenodo.15025566"
+
+[[pitfalls]]
+summary = "a restricted, embargoed or closed record answers with an empty files list, which reads like a record with no files"
+handling = "files refuses a record whose access_right is not open and whose files list is empty with restricted, naming the access_right; show still reads it; a missing access_right is upstream_failed"
+evidence = "zenodo.record:15025566 is restricted and lists no files (recorded 2026-10-10)"

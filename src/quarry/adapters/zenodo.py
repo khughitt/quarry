@@ -76,7 +76,8 @@ def _row(h: dict) -> tuple[Result, str | None]:
         is_paper = (str(rel.get("relation", "")).lower() in PAPER_RELATIONS
                     and str(rel.get("resource_type", "")).startswith("publication"))
         (papers if is_paper else others).append(f"doi:{rel['identifier']}")
-    xrefs = ([f"doi:{h['doi']}"] if h.get("doi") else []) + papers[1:] + others
+    papers = list(dict.fromkeys(papers))          # one paper under two relations is one paper
+    xrefs = [x for x in ([f"doi:{h['doi']}"] if h.get("doi") else []) + papers[1:] + others if not papers or x != papers[0]]
     result = Result(id=f"zenodo.record:{h['id']}", resource="zenodo", kind="dataset", title=m.get("title") or "",
                     date=m.get("publication_date") or None, summary=TAGS.sub("", m.get("description") or "").strip() or None,
                     xrefs=tuple(dict.fromkeys(xrefs)), publication=papers[0] if papers else None)
@@ -158,7 +159,14 @@ class Zenodo:
 
     def files(self, client: Client, curie: Curie) -> tuple[Result, list[File]]:
         doc = self._record(client, curie)
-        return _row(doc)[0], _files(doc)
+        record = _row(doc)[0]
+        access = doc["metadata"].get("access_right")
+        if type(access) is not str:
+            raise UpstreamError("zenodo record: access_right is not text")
+        files = _files(doc)
+        if access != "open" and not files:
+            raise QuarryError("restricted", f"{curie}: Zenodo withholds its files (access_right {access}); nothing to list or acquire")
+        return record, files
 
 
 def make(resource: Resource) -> Zenodo:
