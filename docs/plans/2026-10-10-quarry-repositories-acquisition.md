@@ -42,7 +42,7 @@ differently while recording stops and notes it on the task rather than guessing.
 | Resource | Search endpoint and total | Dates | Organism | `show` | `files` and checksum | Auth, rate, page cap |
 |---|---|---|---|---|---|---|
 | GEO | E-utilities `esearch.fcgi` db=gds (`count`) + `esummary.fcgi` POST by uid | `("Y/M/D"[PDAT] : "Y/M/D"[PDAT])` | `"Homo sapiens"[ORGN]`; `txid9606[ORGN]` gives the same count | esearch `GSEn[ACCN] AND gse[ETYP]` then esummary; brief SOFT text (`acc.cgi?targ=self&form=text&view=brief`) adds `!Series_relation` and `!Series_sample_taxid` | brief text `!Series_supplementary_file = ftp://ftp.ncbi.nlm.nih.gov/geo/…`, served at `https://ftp.ncbi.nlm.nih.gov/…`; `suppl/filelist.txt` is not universal (404 for GSE193531); no checksum published | optional `NCBI_API_KEY` as `api_key`; 0.34 s, keyed 0.1 s; esearch serves at most 10,000 ids |
-| PubMed | same E-utilities, db=pubmed; `count` | `[PDAT]` range | none | esummary by uid; a missing uid answers `{"error": …}` under HTTP 200 | none: a publication has no files | as GEO; same `ncbi-eutils` throttle |
+| PubMed | same E-utilities, db=pubmed; `count` | `[PDAT]` range | none | esummary by uid; a missing uid answers, under HTTP 200, `{"result": {"uids": ["<uid>"], "<uid>": {"uid": "<uid>", "error": "cannot get document summary"}}}` (per-uid, not top-level); the `show-missing` scenario pins it | none: a publication has no files | as GEO; same `ncbi-eutils` throttle |
 | BioStudies | `api/v1/search?query=…&pageSize=100&page=n`; `totalHits` with `isTotalHitsExact` (false on large sets) | `release_date=[a TO b]` parameter, also valid inside `query` | `facet.organism=<name>` parameter; names only; hits carry no organism | `api/v1/studies/<acc>`: `attributes` (ReleaseDate), `section.attributes` (Title, Description, Organism), `section.links` (type GEO), files in `section.files` or nested `subsections[].files` (lists of lists); 404 `Study not found` | `api/v1/studies/<acc>/info` → `httpLink`; a file is `<httpLink>/Files/<path>` (200); `path`, `size`, `type` (`file` or `directory`); no checksum | none; 0.5 s; 100 per page |
 | Zenodo | `api/records?q=…&type=dataset&size=25&page=n&sort=mostrecent`; `hits.total` | `publication_date:[a TO b]` inside `q` | none | `api/records/<id>`; 404 | same JSON `files[]`: `key`, `size`, `checksum: "md5:…"`, `links.self` (https `…/content`) | optional `ZENODO_TOKEN` as `access_token`; 1.0 s; size > 25 is HTTP 400 unauthenticated; a 10,000-result window |
 | figshare | POST `v2/articles/search` `{search_for, item_type: 3, page_size, page, order, order_direction}`; no total; `published_since`/`published_until` are **not applied** (2026 items came back under `published_until: 2020-01-01`) | client-side on `published_date` with `order=published_date`: `desc` and stop below `--since`; `asc` and stop above `--until` when only it is given | none | `v2/articles/<id>`; 404 `EntityNotFound` | same JSON `files[]`: `name`, `size`, `download_url` (figshare's https download for a hosted file; the external location, any scheme, for a link-only one), `computed_md5`, `mimetype`, `is_link_only` | none; 1.0 s; 100 per page |
@@ -261,6 +261,7 @@ def test_build_lowercases_an_uppercase_sha256():
     ([File("z.txt", urls=("https://h:0/x",))], "unsupported_transport", "z.txt"),             # port 0
     ([File("v.txt", urls=("https://[/x",))], "unsupported_transport", "v.txt"),               # unbalanced bracket
     ([File("n.txt", urls=("https://[h]/x",))], "unsupported_transport", "n.txt"),             # bracketed non-IPv6
+    ([File("i.txt", urls=("https://[v1.fe80::a]/x",))], "unsupported_transport", "i.txt"),    # IPvFuture, which the kernel refuses
     ([File("e.txt", urls=("https://h/x%ZZ",))], "unsupported_transport", "e.txt"),            # malformed escape
     ([File("d.txt", urls=("https://h/x",), checksums={"sha256": "garbage"})], "upstream_failed", "d.txt"),
 ])
@@ -333,6 +334,7 @@ mirror the kernel's validators (beliefs `holdings/records.py`: `_canonical_url`,
 names the file here instead of failing there."""
 from __future__ import annotations
 
+import ipaddress
 import re
 from urllib.parse import urlsplit
 
@@ -361,6 +363,11 @@ def _fault(url: str) -> str | None:
         return "carries userinfo"
     if not parts.hostname:
         return "names no host"
+    if parts.netloc.startswith("["):
+        try:
+            ipaddress.IPv6Address(parts.hostname)      # urlsplit also lets an IPvFuture literal through; the kernel does not
+        except ValueError:
+            return "brackets a host that is not an IPv6 literal"
     if port == 0:
         return "names port 0"
     if BAD_ESCAPE.search(parts.path):
@@ -410,7 +417,7 @@ def build(record: Result, curie: Curie, files: list[File]) -> dict:
 - [ ] **Step 4: Run the tests to see them pass**
 
 Run: `just test-one tests/test_files.py`
-Expected: PASS (7 test functions, 20 cases).
+Expected: PASS (7 test functions, 21 cases).
 
 - [ ] **Step 5: Add `Coverage.warnings` and `accept`, with their tests**
 
@@ -1567,6 +1574,7 @@ class Geo:
         summary = eutils.esummary(client, self.eutils, "gds", ids)[0]
         text = client.request(self.web, "GET", "acc.cgi",
                               params={"acc": curie.local, "targ": "self", "form": "text", "view": "brief"}).text
+        text = text.replace("\r\n", "\n")           # the line-anchored patterns below must not die quietly on CRLF
         if f"!Series_geo_accession = {curie.local}" not in text:
             raise UpstreamError("geo brief: not the series' SOFT text")
         return summary, text
@@ -1692,7 +1700,7 @@ from quarry.http import Client, Throttle
 from quarry.ids import Curie
 from quarry.query import Query
 from quarry.testing import ReplayTransport, VirtualClock, exchange, replay_client
-from tests.recordings.pubmed import SMOLDERING
+from tests.recordings.pubmed import MISSING, SMOLDERING
 
 FX = Path(__file__).parent / "fixtures" / "pubmed"
 CAT = catalog_mod.load()
@@ -1811,6 +1819,12 @@ def test_recorded_show_first():
     with replay("show-first") as client:
         _, rows = PUBMED.search(client, SMOLDERING)
         assert PUBMED.show(client, Curie("pubmed", rows[0].id.split(":", 1)[1])).id == rows[0].id
+
+
+def test_recorded_missing_uid_is_not_found():       # pins the live shape of E-utilities' per-uid error object
+    with pytest.raises(QuarryError) as caught:
+        PUBMED.show(replay("show-missing"), Curie("pubmed", MISSING))
+    assert caught.value.kind == "not_found"
 ```
 
 `tests/recordings/pubmed.py`:
@@ -1819,10 +1833,12 @@ def test_recorded_show_first():
 """The PubMed exchanges tests/test_pubmed.py replays."""
 from datetime import date
 
+from quarry.errors import QuarryError
 from quarry.ids import Curie
 from quarry.query import Query
 
 SMOLDERING = Query(phrases=("smoldering myeloma",), since=date(2024, 1, 1), until=date(2024, 1, 31))
+MISSING = "999999999"          # far above any PubMed uid issued so far (about 41 million in 2026)
 
 
 def show_first(adapter, client):
@@ -1832,9 +1848,21 @@ def show_first(adapter, client):
     adapter.show(client, Curie("pubmed", rows[0].id.split(":", 1)[1]))
 
 
+def show_missing(adapter, client):
+    """The recording must end in not_found: any other outcome means the missing-uid shape changed."""
+    try:
+        adapter.show(client, Curie("pubmed", MISSING))
+    except QuarryError as exc:
+        if exc.kind == "not_found":
+            return
+        raise
+    raise ValueError(f"PubMed answered a record for uid {MISSING}; pick a uid it does not hold")
+
+
 SCENARIOS = {
     "search-smoldering": lambda adapter, client: adapter.search(client, SMOLDERING),
     "show-first": show_first,
+    "show-missing": show_missing,
 }
 ```
 
