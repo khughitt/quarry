@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: heliophysics-domain
 created: 2026-10-11T19:01:36Z
-updated: 2026-10-11T20:43:43Z
+updated: 2026-10-11T20:43:44Z
 started: 2026-10-11T19:02:03Z
 depends: [quarry-bc633c]
 tags: [heliophysics]
@@ -39,3 +39,5 @@ The first domain outside biology and the first §14 test. The design spec, writt
 - 2026-10-11T20:43:40Z (heliophysics-domain): resumed
   provenance: {"harness_session":"claude-code:4a219dfe-7cba-478e-84d8-8594adc7dd5d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-11T20:43:41Z (heliophysics-domain): review: spec round 3 — verdict: accept; findings: none; reviewer: codex/gpt-6-astra (relayed by the user). The user explicitly accepted the spec for implementation planning. Conditions: keep the coverage-filter decision (quarry-bc633c) and §9's unresolved choices explicit in the plan; the plan has its own review gate.
+- 2026-10-11T20:43:43Z (heliophysics-domain): parked (waiting on agent, dependency): decide quarry-bc633c (the coverage domain filter), then write the implementation plan for the heliophysics catalog files and adapters in .worktrees/heliophysics-domain (writing-plans; the plan keeps §9's open choices explicit and is reviewed before implementation)
+  provenance: {"harness_session":"claude-code:4a219dfe-7cba-478e-84d8-8594adc7dd5d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
