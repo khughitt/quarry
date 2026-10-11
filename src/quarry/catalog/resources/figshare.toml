@@ -1,0 +1,33 @@
+id = "figshare"
+name = "figshare"
+roles = ["repository"]
+adapter = "quarry.adapters.figshare"
+
+[local_prefixes.figshare]
+pattern = "^\\d+$"
+uri_format = "https://figshare.com/articles/dataset/_/$1"
+why = "Bioregistry has no figshare prefix (checked 2026-10-10); items are numbered and resolve by number"
+
+[[routes]]
+kind = "rest"
+url = "https://api.figshare.com/v2"
+min_interval = 1.0
+service = "figshare"
+auth = "none"
+reports_total = false
+page_cap = 100
+
+[[pitfalls]]
+summary = "the search endpoint reports no total"
+handling = "paging ends on the first short page and coverage says complete: short-page"
+evidence = "mm-159cb7"
+
+[[pitfalls]]
+summary = "published_since and published_until on articles/search are not applied"
+handling = "--since and --until order the listing by published_date and bound it on the client: newest first, stopping below --since; oldest first, stopping above --until, when only --until is given"
+evidence = "probe 2026-10-10: published_until 2020-01-01 returned items published 2026-10-10"
+
+[[pitfalls]]
+summary = "a publisher supplement is one item per table or figure, each with its own DOI beside the paper's"
+handling = "the item keeps its own id (figshare:n) with its DOI in xrefs; resource_doi is the publication; grouping supplements under their paper is the consumer's step"
+evidence = "figshare:34254439 has doi 10.1371/journal.pone.0360063.t007 and resource_doi 10.1371/journal.pone.0360063"
