@@ -7,7 +7,7 @@ size: m
 complexity: mid
 process: planned
 created: 2026-10-11T18:56:50Z
-updated: 2026-10-11T18:56:55Z
+updated: 2026-10-11T18:57:38Z
 depends: []
 tags: [heliophysics]
 source: sun-374ea3
@@ -19,3 +19,4 @@ Finding 2 of the sun phase-1 survey (source goal sci-ba7150; findings.md in the 
 ## Notes
 
 - 2026-10-11T18:56:55Z (main): concerns: none — filed from the sun phase-1 survey (sun-374ea3) as a finding against the quarry contract
+- 2026-10-11T18:57:38Z (main): correction: the 'concerns:' line above was written in error and names no closed task; this task concerns no closed work. It is a finding filed from the sun phase-1 survey (sun-374ea3).
