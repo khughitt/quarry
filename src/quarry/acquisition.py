@@ -12,7 +12,6 @@ from urllib.parse import urlsplit
 from quarry.errors import QuarryError
 from quarry.files import File, http_url
 from quarry.http import UpstreamError
-from quarry.ids import Curie
 from quarry.results import Result
 
 BAD_ESCAPE = re.compile(r"%(?![0-9A-Fa-f]{2})")
@@ -58,28 +57,29 @@ def _retrievable(file: File) -> str:
     return url
 
 
-def _expected(file: File, curie: Curie) -> str | None:
+def _expected(file: File, record: Result) -> str | None:
     """`sha256:<64 lowercase hex>` when the resource published a sha256; a malformed one is the resource's fault."""
     digest = file.checksums.get("sha256")
     if digest is None:
         return None
     if not SHA256.match(digest.lower()):
-        raise UpstreamError(f"{curie}: {file.name} carries a malformed sha256 digest {digest!r}")
+        raise UpstreamError(f"{record.id}: {file.name} carries a malformed sha256 digest {digest!r}")
     return f"sha256:{digest.lower()}"
 
 
-def build(record: Result, curie: Curie, files: list[File]) -> dict:
+def build(record: Result, files: list[File]) -> dict:
+    """The locator names the record's canonical CURIE, so every accession of one record maps to one dataset."""
     if not files:
-        raise QuarryError("no_files", f"{curie} has no files to acquire")
+        raise QuarryError("no_files", f"{record.id} has no files to acquire")
     seen: set[str] = set()
     resources = []
     for file in files:
         if file.name in seen:
-            raise QuarryError("duplicate_file_name", f"{curie} lists {file.name!r} twice; narrow the list with --file")
+            raise QuarryError("duplicate_file_name", f"{record.id} lists {file.name!r} twice; narrow the list with --file")
         seen.add(file.name)
         resource = {"name": file.name, "url": _retrievable(file)}
-        expected = _expected(file, curie)
+        expected = _expected(file, record)
         if expected:
             resource["expected"] = expected
         resources.append(resource)
-    return {"title": record.title or str(curie), "locator": f"accession:{curie}", "resources": resources}
+    return {"title": record.title or record.id, "locator": f"accession:{record.id}", "resources": resources}

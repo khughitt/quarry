@@ -357,10 +357,10 @@ def files_command(ctx: click.Context, curie: str, globs: tuple[str, ...], as_req
         record, listed = adapter_base.make(owner).files(client, parsed)
     listed = files_mod.select(listed, globs)
     if as_request:
-        request = acquisition.build(record, parsed, listed)
+        request = acquisition.build(record, listed)
         emit(ctx, request, json.dumps(request, indent=1))
         return
-    emit(ctx, {"id": str(parsed), "resource": owner.id, "files": [f.as_dict() for f in listed]}, _pretty_files(listed))
+    emit(ctx, {"id": record.id, "resource": owner.id, "files": [f.as_dict() for f in listed]}, _pretty_files(listed))
 
 
 if __name__ == "__main__":
