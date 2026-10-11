@@ -1,0 +1,21 @@
+---
+id: quarry-695d0a
+title: "Decide whether --organism includes subtaxa, and make GEO and ENA agree"
+status: todo
+priority: 2
+size: s
+complexity: mid
+process: planned
+created: 2026-10-11T15:28:21Z
+updated: 2026-10-11T15:28:28Z
+depends: []
+tags: []
+source: quarry-3f4c3b
+agent: claude-code/claude-opus-5-5
+---
+
+GEO compiles txidN[ORGN], which includes subtaxa; ENA compiles tax_eq(N), exact. Both report match: exact, so --organism ncbitaxon:10088 (Mus) merges every Mus species from GEO with almost nothing from ENA. §8.2 leaves the meaning open: pick one (ENA tax_tree, or GEO [ORGN:noexp]), state it in the spec, and test both adapters. Post-merge plan review 2026-10-11.
+
+## Notes
+
+- 2026-10-11T15:28:28Z (main): concerns: quarry-3f4c3b defect — post-merge plan review found this behaviour shipped in the remaining-adapters milestone

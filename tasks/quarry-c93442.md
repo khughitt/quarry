@@ -7,7 +7,7 @@ size: s
 complexity: mid
 process: planned
 created: 2026-10-11T13:06:57Z
-updated: 2026-10-11T13:06:58Z
+updated: 2026-10-11T15:29:04Z
 depends: []
 tags: []
 source: quarry-3f4c3b
@@ -19,3 +19,4 @@ Amend spec §8.2/§8.3 (docs/specs/2026-10-10-quarry-domain-layers-design.md in 
 ## Notes
 
 - 2026-10-11T13:06:57Z (main): concerns: quarry-3f4c3b change — the milestone followed spec §8.2 (refuse a default-set resource that cannot express a filter); the user now wants implicit members skipped with a reported coverage row and only explicit --in selections refused
+- 2026-10-11T15:29:04Z (main): Spec amended in science ee9ccff (§8.2 'Refusal and skipping', §8.3 'Skipped'; also §9's checksum sentence: GEO and BioStudies publish none, ENA/Zenodo/figshare MD5). An all-skipped search fails unsupported_filter naming every resource. Remaining: implement and test in quarry, README sentence.
