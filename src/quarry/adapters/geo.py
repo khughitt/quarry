@@ -121,10 +121,12 @@ class Geo:
         """The esummary record and the brief SOFT text of one series; refusals come first."""
         if not GSE.match(curie.local):
             raise QuarryError("unsupported_id", f"{curie}: quarry covers GEO series (GSE) only")
-        _, ids = eutils.esearch(client, self.eutils, "gds", f"{curie.local}[ACCN] AND gse[ETYP]", 1)
-        if not ids:
+        # [ACCN] is not one-to-one (related series match too), so take the hits and pick the requested one.
+        _, ids = eutils.esearch(client, self.eutils, "gds", f"{curie.local}[ACCN] AND gse[ETYP]", 20)
+        summaries = eutils.esummary(client, self.eutils, "gds", ids) if ids else []
+        summary = next((d for d in summaries if d.get("accession") == curie.local), None)
+        if summary is None:
             raise QuarryError("not_found", f"{curie} is not a GEO series")
-        summary = eutils.esummary(client, self.eutils, "gds", ids)[0]
         text = client.request(self.web, "GET", "acc.cgi",
                               params={"acc": curie.local, "targ": "self", "form": "text", "view": "brief"}).text
         text = text.replace("\r\n", "\n")           # the line-anchored patterns below must not die quietly on CRLF

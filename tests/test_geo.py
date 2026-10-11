@@ -108,7 +108,7 @@ def test_native_query_matching_samples_is_refused_as_unsupported_id():
 
 
 def fetch(summary=SUMMARY, text=BRIEF):
-    return ReplayTransport([esearch("GSE24080[ACCN] AND gse[ETYP]", 1, ["200024080"], retmax=1), esummary([summary]),
+    return ReplayTransport([esearch("GSE24080[ACCN] AND gse[ETYP]", 1, ["200024080"], retmax=20), esummary([summary]),
                             brief("GSE24080", text)])
 
 
@@ -141,7 +141,7 @@ def test_series_without_supplementary_files_lists_nothing_and_cannot_be_acquired
 
 
 def test_missing_series_is_not_found_and_other_geo_ids_are_refused_first():
-    client = replay_client(ReplayTransport([esearch("GSE9[ACCN] AND gse[ETYP]", 0, [], retmax=1)]))
+    client = replay_client(ReplayTransport([esearch("GSE9[ACCN] AND gse[ETYP]", 0, [], retmax=20)]))
     with pytest.raises(QuarryError) as caught:
         GEO.show(client, Curie("geo", "GSE9"))
     assert caught.value.kind == "not_found"
@@ -150,6 +150,21 @@ def test_missing_series_is_not_found_and_other_geo_ids_are_refused_first():
     with pytest.raises(QuarryError) as caught:
         GEO.show(client, Curie("geo", "GSM1"))
     assert caught.value.kind == "unsupported_id" and seen == []
+
+
+def test_show_picks_the_requested_series_among_the_hits():
+    other = {**SUMMARY, "uid": "200024079", "accession": "GSE24079", "title": "other"}
+    client = replay_client(ReplayTransport([esearch("GSE24080[ACCN] AND gse[ETYP]", 2, ["200024079", "200024080"], retmax=20),
+                                            esummary([other, SUMMARY]), brief("GSE24080", BRIEF)]))
+    assert GEO.show(client, Curie("geo", "GSE24080")).id == "geo:GSE24080"
+
+
+def test_hits_that_name_only_other_series_are_not_found():
+    other = {**SUMMARY, "uid": "200024079", "accession": "GSE24079"}
+    client = replay_client(ReplayTransport([esearch("GSE24080[ACCN] AND gse[ETYP]", 1, ["200024079"], retmax=20), esummary([other])]))
+    with pytest.raises(QuarryError) as caught:
+        GEO.show(client, Curie("geo", "GSE24080"))
+    assert caught.value.kind == "not_found"
 
 
 def test_brief_that_is_not_soft_is_an_upstream_error():
