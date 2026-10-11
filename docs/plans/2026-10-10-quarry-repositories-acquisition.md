@@ -45,7 +45,7 @@ differently while recording stops and notes it on the task rather than guessing.
 | PubMed | same E-utilities, db=pubmed; `count` | `[PDAT]` range | none | esummary by uid; a missing uid answers `{"error": …}` under HTTP 200 | none: a publication has no files | as GEO; same `ncbi-eutils` throttle |
 | BioStudies | `api/v1/search?query=…&pageSize=100&page=n`; `totalHits` with `isTotalHitsExact` (false on large sets) | `release_date=[a TO b]` parameter, also valid inside `query` | `facet.organism=<name>` parameter; names only; hits carry no organism | `api/v1/studies/<acc>`: `attributes` (ReleaseDate), `section.attributes` (Title, Description, Organism), `section.links` (type GEO), files in `section.files` or nested `subsections[].files` (lists of lists); 404 `Study not found` | `api/v1/studies/<acc>/info` → `httpLink`; a file is `<httpLink>/Files/<path>` (200); `path`, `size`, `type` (`file` or `directory`); no checksum | none; 0.5 s; 100 per page |
 | Zenodo | `api/records?q=…&type=dataset&size=25&page=n&sort=mostrecent`; `hits.total` | `publication_date:[a TO b]` inside `q` | none | `api/records/<id>`; 404 | same JSON `files[]`: `key`, `size`, `checksum: "md5:…"`, `links.self` (https `…/content`) | optional `ZENODO_TOKEN` as `access_token`; 1.0 s; size > 25 is HTTP 400 unauthenticated; a 10,000-result window |
-| figshare | POST `v2/articles/search` `{search_for, item_type: 3, page_size, page, order, order_direction}`; no total; `published_since`/`published_until` are **not applied** (2026 items came back under `published_until: 2020-01-01`) | client-side on `published_date` with `order=published_date`: `desc` and stop below `--since`; `asc` and stop above `--until` when only it is given | none | `v2/articles/<id>`; 404 `EntityNotFound` | same JSON `files[]`: `name`, `size`, `download_url` (https), `computed_md5`, `mimetype`, `is_link_only` | none; 1.0 s; 100 per page |
+| figshare | POST `v2/articles/search` `{search_for, item_type: 3, page_size, page, order, order_direction}`; no total; `published_since`/`published_until` are **not applied** (2026 items came back under `published_until: 2020-01-01`) | client-side on `published_date` with `order=published_date`: `desc` and stop below `--since`; `asc` and stop above `--until` when only it is given | none | `v2/articles/<id>`; 404 `EntityNotFound` | same JSON `files[]`: `name`, `size`, `download_url` (figshare's https download for a hosted file; the external location, any scheme, for a link-only one), `computed_md5`, `mimetype`, `is_link_only` | none; 1.0 s; 100 per page |
 | ENA (files only here) | existing | existing | existing | existing | `filereport?accession=<PRJ or SRP>&result=read_run&fields=run_accession,fastq_ftp,fastq_md5,fastq_bytes,submitted_ftp,submitted_md5,submitted_bytes,sra_ftp,sra_md5,sra_bytes&format=json&limit=0`; `;`-separated paths under `ftp.sra.ebi.ac.uk/vol1/…`, served at `https://ftp.sra.ebi.ac.uk/vol1/…`; md5 only | existing |
 
 Consequences fixed here, not open for the implementer:
@@ -93,7 +93,7 @@ likely to bite first. Each line names the owning task, whose steps now include t
 
 1. A BioStudies file whose `path` carries a space or a non-ASCII character: `--acquisition` must emit a percent-encoded URL the kernel's URL check accepts (it refuses whitespace and non-ASCII bytes). Task 5.
 2. A GEO series whose brief text lists no `!Series_supplementary_file`: `files` prints an empty list and exits 0; `--acquisition` fails with `no_files`. Task 3.
-3. A figshare item with a link-only file (`is_link_only: true`): `files` lists it with no URL; `--acquisition` fails with `unsupported_transport` naming it, and `--file` excluding it succeeds. Task 7.
+3. A figshare item with a link-only file (`is_link_only: true`): `files` lists it with the location figshare supplies (any scheme, or none); `--acquisition` fails with `unsupported_transport` naming it when that location is not http(s), `--file` excluding it succeeds, and a linked https file is acquired like a hosted one. Task 7.
 4. A bare numeric accession once `pubmed`, `zenodo.record` and `figshare` are owned (`id normalize 12345`, `show 12345`): `ambiguous_id` naming all three, not a guess. Task 8.
 5. A PubMed or GEO count above 10,000 without `-n`: `too_many_results` before any esummary request; with `-n 50` the listing is `limited`. Task 3 (the shared helper's tests and the GEO CLI test).
 
@@ -243,6 +243,11 @@ def test_build_titles_an_untitled_record_by_its_curie():
     assert acquisition.build(untitled, CURIE, [C])["title"] == "alpha:GSE5"
 
 
+def test_build_lowercases_an_uppercase_sha256():
+    upper = File("u.txt", urls=("https://h/u",), checksums={"sha256": "AB" * 32})
+    assert acquisition.build(RECORD, CURIE, [upper])["resources"][0]["expected"] == "sha256:" + "ab" * 32
+
+
 @pytest.mark.parametrize("files, kind, named", [
     ([], "no_files", "alpha:GSE5"),
     ([A, A], "duplicate_file_name", "a.txt"),
@@ -251,6 +256,13 @@ def test_build_titles_an_untitled_record_by_its_curie():
     ([File("u.txt", urls=("https://h/é.txt",))], "unsupported_transport", "u.txt"),
     ([File("f.txt", urls=("https://h/x#part",))], "unsupported_transport", "f.txt"),
     ([File("w.txt", urls=("https://user@h/x",))], "unsupported_transport", "w.txt"),
+    ([File("h.txt", urls=("https://",))], "unsupported_transport", "h.txt"),                   # no host
+    ([File("p.txt", urls=("https://h:99999/x",))], "unsupported_transport", "p.txt"),         # port out of range
+    ([File("z.txt", urls=("https://h:0/x",))], "unsupported_transport", "z.txt"),             # port 0
+    ([File("v.txt", urls=("https://[/x",))], "unsupported_transport", "v.txt"),               # unbalanced bracket
+    ([File("n.txt", urls=("https://[h]/x",))], "unsupported_transport", "n.txt"),             # bracketed non-IPv6
+    ([File("e.txt", urls=("https://h/x%ZZ",))], "unsupported_transport", "e.txt"),            # malformed escape
+    ([File("d.txt", urls=("https://h/x",), checksums={"sha256": "garbage"})], "upstream_failed", "d.txt"),
 ])
 def test_build_refusals_name_the_file(files, kind, named):
     with pytest.raises(QuarryError) as caught:
@@ -315,15 +327,45 @@ def http_url(file: File) -> str | None:
 
 ```python
 """The request the kernel's acquisition takes (spec §9), built from a record and its files.
-quarry emits it; the kernel retrieves the bytes and mints the dataset."""
+quarry emits it; the kernel retrieves the bytes and mints the dataset. The URL and digest checks
+mirror the kernel's validators (beliefs `holdings/records.py`: `_canonical_url`,
+`require_canonical_digest`) so a request quarry prints is one the kernel takes, and a refusal
+names the file here instead of failing there."""
 from __future__ import annotations
 
+import re
 from urllib.parse import urlsplit
 
 from quarry.errors import QuarryError
 from quarry.files import File, http_url
+from quarry.http import UpstreamError
 from quarry.ids import Curie
 from quarry.results import Result
+
+BAD_ESCAPE = re.compile(r"%(?![0-9A-Fa-f]{2})")
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+
+def _fault(url: str) -> str | None:
+    """Why the kernel would refuse this http(s) URL, or None when it would take it."""
+    if any(not (0x21 <= ord(c) <= 0x7E) for c in url):
+        return "carries whitespace, a control byte or a non-ASCII character (the adapter must percent-encode it)"
+    if "#" in url:
+        return "carries a fragment"
+    try:
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError as exc:          # an unbalanced or non-IPv6 bracket, a port that is not a number in 0-65535
+        return f"does not parse ({exc})"
+    if "@" in parts.netloc:
+        return "carries userinfo"
+    if not parts.hostname:
+        return "names no host"
+    if port == 0:
+        return "names port 0"
+    if BAD_ESCAPE.search(parts.path):
+        return "carries a malformed percent escape in its path"
+    return None
 
 
 def _retrievable(file: File) -> str:
@@ -332,13 +374,20 @@ def _retrievable(file: File) -> str:
         where = ", ".join(file.urls) or "no location"
         raise QuarryError("unsupported_transport",
                           f"{file.name} has no http(s) location ({where}); the kernel retrieves over http and https only")
-    if any(c.isspace() or not c.isprintable() or ord(c) > 126 for c in url):
-        raise QuarryError("unsupported_transport", f"{file.name}: its URL carries whitespace or a non-ASCII character, "
-                                                   f"which the kernel refuses; the adapter must percent-encode it")
-    parts = urlsplit(url)
-    if "#" in url or parts.username is not None or parts.password is not None:
-        raise QuarryError("unsupported_transport", f"{file.name}: its URL carries a fragment or userinfo, which the kernel refuses")
+    fault = _fault(url)
+    if fault:
+        raise QuarryError("unsupported_transport", f"{file.name}: its URL {fault}, which the kernel refuses")
     return url
+
+
+def _expected(file: File, curie: Curie) -> str | None:
+    """`sha256:<64 lowercase hex>` when the resource published a sha256; a malformed one is the resource's fault."""
+    digest = file.checksums.get("sha256")
+    if digest is None:
+        return None
+    if not SHA256.match(digest.lower()):
+        raise UpstreamError(f"{curie}: {file.name} carries a malformed sha256 digest {digest!r}")
+    return f"sha256:{digest.lower()}"
 
 
 def build(record: Result, curie: Curie, files: list[File]) -> dict:
@@ -351,8 +400,9 @@ def build(record: Result, curie: Curie, files: list[File]) -> dict:
             raise QuarryError("duplicate_file_name", f"{curie} lists {file.name!r} twice; narrow the list with --file")
         seen.add(file.name)
         resource = {"name": file.name, "url": _retrievable(file)}
-        if "sha256" in file.checksums:
-            resource["expected"] = f"sha256:{file.checksums['sha256']}"
+        expected = _expected(file, curie)
+        if expected:
+            resource["expected"] = expected
         resources.append(resource)
     return {"title": record.title or str(curie), "locator": f"accession:{curie}", "resources": resources}
 ```
@@ -360,7 +410,7 @@ def build(record: Result, curie: Curie, files: list[File]) -> dict:
 - [ ] **Step 4: Run the tests to see them pass**
 
 Run: `just test-one tests/test_files.py`
-Expected: PASS (9 tests).
+Expected: PASS (7 test functions, 20 cases).
 
 - [ ] **Step 5: Add `Coverage.warnings` and `accept`, with their tests**
 
@@ -461,8 +511,9 @@ def catalog(make_catalog):
     return make_catalog(fakes, ["alpha", "beta", "expanding", "onto"], ["alpha", "beta"])
 ```
 
-and in the same file: `invoke("show", "ALPHA:GSE5")` becomes `invoke("show", "ALPHA:GSE5")` with its
-expected id `"alpha:GSE5"`; the `test_show_refusals` cases become
+and in the same file, `test_show_routes_by_prefix_owner`'s `invoke("show", "GEO:GSE5")` becomes
+`invoke("show", "alpha:GSE5")` with its expected id `"alpha:GSE5"` (left as `GEO:GSE5`, the lookup has
+no owner after this step and routes to the real GEO adapter after Task 3); the `test_show_refusals` cases become
 `[("doi:10.1000/x", "no_owner"), ("onto:0008150", "unsupported_role"), ("GSE5", "ambiguous_id")]`
 (spec §7: `doi:` has no owner in the first version); the pretty assertion becomes
 `"alpha:GSE1\t-\trow 1\n# alpha: 1 of 3 (limited, exact)\n"`.
@@ -817,7 +868,7 @@ git commit -m "feat(files): list a record's files and emit the kernel's acquisit
 
 **Interfaces:**
 - Consumes: Task 2's `File`, `Adapter.files`, `Coverage.warnings`; `Client.request`, `completeness`, `Query`, `Result`, `Curie`, `QuarryError`, `UpstreamError`.
-- Produces, for Task 4: `quarry.adapters.eutils` with `WINDOW = 10_000`, `BATCH = 500`, `phrase(text) -> str`, `phrases(query) -> str`, `dates(query) -> str | None`, `iso_date(text) -> str | None`, `esearch(client, route, db, term, limit) -> tuple[int, list[str]]`, `esummary(client, route, db, ids) -> list[dict]`, `esummary_one(client, route, db, uid) -> dict | None`. For Task 8: resource `geo` owning prefix `geo`; `quarry.adapters.geo.compile_query`, class `Geo` (`match = "exact"`, `filters = frozenset({"organism"})`), `make`.
+- Produces, for Task 4: `quarry.adapters.eutils` with `WINDOW = 10_000`, `BATCH = 500`, `phrase(text) -> str`, `literal(text, what) -> str`, `phrases(query) -> str`, `dates(query) -> str | None`, `iso_date(text) -> str | None`, `esearch(client, route, db, term, limit) -> tuple[int, list[str]]`, `esummary(client, route, db, ids) -> list[dict]`, `esummary_one(client, route, db, uid) -> dict | None`. For Task 8: resource `geo` owning prefix `geo`; `quarry.adapters.geo.compile_query`, class `Geo` (`match = "exact"`, `filters = frozenset({"organism"})`), `make`.
 
 - [ ] **Step 1: Write the resource file and list GEO in biology**
 
@@ -895,12 +946,16 @@ from quarry.testing import replay_client
 ROUTE = catalog_mod.load().resources["geo"].routes[0]
 
 
-def test_phrases_are_quoted_all_fields_or_clauses_and_refuse_quotes():
+def test_phrases_are_quoted_all_fields_or_clauses():
     assert eutils.phrases(Query(phrases=("multiple myeloma", "MGUS"))) == \
         '("multiple myeloma"[All Fields] OR "MGUS"[All Fields])'
+
+
+@pytest.mark.parametrize("text", ['the "MM" cohort', "transcript*"])
+def test_phrases_refuse_entrez_syntax(text):        # §8.2: a phrase is literal; a quote or a wildcard would widen it
     with pytest.raises(QuarryError) as caught:
-        eutils.phrases(Query(phrases=('the "MM" cohort',)))
-    assert caught.value.kind == "unsupported_filter"
+        eutils.phrases(Query(phrases=(text,)))
+    assert caught.value.kind == "unsupported_filter" and "--native" in caught.value.detail
 
 
 def test_dates_are_pdat_ranges_with_open_ends():
@@ -1032,10 +1087,16 @@ SLASH_DATE = re.compile(r"^(\d{4})/(\d{2})/(\d{2})")
 
 
 def phrase(text: str) -> str:
-    """A literal phrase: Entrez reads a double quote as syntax and documents no escape."""
-    if '"' in text:
-        raise QuarryError("unsupported_filter", f"an E-utilities phrase cannot contain a double quote: {text!r}; use --native")
-    return f'"{text}"[All Fields]'
+    """A literal phrase: Entrez reads a double quote as syntax and a star as a wildcard, and documents no escape."""
+    return f'"{literal(text, "an E-utilities phrase")}"[All Fields]'
+
+
+def literal(text: str, what: str) -> str:
+    """`text` when Entrez would read every character of it literally inside double quotes."""
+    for char, name in (('"', "a double quote"), ("*", "a wildcard star")):
+        if char in text:
+            raise QuarryError("unsupported_filter", f"{what} cannot contain {name}: {text!r}; use --native")
+    return text
 
 
 def phrases(query: Query) -> str:
@@ -1173,8 +1234,10 @@ def test_compile_phrases_organism_and_dates():
     assert geo.compile_query(Query(native="GSE1[ACCN]")) == "GSE1[ACCN]"
 
 
-@pytest.mark.parametrize("query", [Query(phrases=('a "b"',)), Query(phrases=("x",), filters={"organism": 'Homo "sapiens"'})])
-def test_quotes_are_refused_before_any_request(query):
+@pytest.mark.parametrize("query", [Query(phrases=('a "b"',)), Query(phrases=("myelom*",)),
+                                   Query(phrases=("x",), filters={"organism": 'Homo "sapiens"'}),
+                                   Query(phrases=("x",), filters={"organism": "Homo*"})])
+def test_entrez_syntax_is_refused_before_any_request(query):
     with pytest.raises(QuarryError) as caught:
         GEO.prepare(query)
     assert caught.value.kind == "unsupported_filter"
@@ -1406,9 +1469,7 @@ STRINGS = ("title", "summary", "taxon", "pdat", "bioproject")
 
 
 def _plain(text: str) -> str:
-    if '"' in text:
-        raise QuarryError("unsupported_filter", f"a GEO organism name cannot contain a double quote: {text!r}; use --native")
-    return text
+    return eutils.literal(text, "a GEO organism name")
 
 
 def compile_query(query: Query) -> str:
@@ -1668,12 +1729,22 @@ def test_synthetic_search_rows_are_publications_with_doi_and_pmc_xrefs():
                                  "xrefs": ["doi:10.1038/s41582-023-00915-x", "pmc:PMC1234567"], "domain_fields": {}}
 
 
-@pytest.mark.parametrize("field, value", [("uid", 7), ("title", 7), ("sortpubdate", "Feb 2024"), ("articleids", "doi")])
+@pytest.mark.parametrize("field, value", [("title", 7), ("sortpubdate", "Feb 2024"), ("articleids", "doi")])
 def test_malformed_summaries_are_upstream_errors(field, value):
     q = pubmed.compile_query(Query(phrases=("x",)))
     client = replay_client(ReplayTransport([esearch(q, 1, ["38195712"]), esummary([{**SUMMARY, field: value}])]))
     with pytest.raises(QuarryError) as caught:
         PUBMED.search(client, Query(phrases=("x",)))
+    assert caught.value.kind == "upstream_failed"
+
+
+def test_a_summary_whose_uid_is_not_a_string_is_an_upstream_error():
+    # the request names a valid uid; only the answering record is corrupt (the `esummary` helper joins request ids)
+    q = pubmed.compile_query(Query(phrases=("x",)))
+    bad = exchange("POST", f"{EU}/esummary.fcgi", form={"db": "pubmed", "retmode": "json", "id": "38195712"},
+                   body=json.dumps({"result": {"uids": ["38195712"], "38195712": {**SUMMARY, "uid": 7}}}))
+    with pytest.raises(QuarryError) as caught:
+        PUBMED.search(replay_client(ReplayTransport([esearch(q, 1, ["38195712"]), bad])), Query(phrases=("x",)))
     assert caught.value.kind == "upstream_failed"
 
 
@@ -2083,6 +2154,14 @@ def test_show_404_is_not_found():
     assert caught.value.kind == "not_found"
 
 
+@pytest.mark.parametrize("body", ["{}", json.dumps({"accno": "S-OTHER1", "section": {"type": "Study"}}),
+                                  json.dumps({"accno": "S-BSST1234", "section": []}), json.dumps({"accno": "S-BSST1234"})])
+def test_a_200_that_is_not_the_study_is_an_upstream_error(body):     # a blank document is never a blank record
+    with pytest.raises(QuarryError) as caught:
+        BS.show(replay_client(ReplayTransport([study("S-BSST1234", body)])), Curie("biostudies", "S-BSST1234"))
+    assert caught.value.kind == "upstream_failed"
+
+
 def test_files_walk_nested_sections_skip_directories_and_percent_encode_paths(monkeypatch):     # Review Focus 1
     transport = ReplayTransport([study("S-BSST1234", json.dumps(STUDY)), info("S-BSST1234", json.dumps(INFO))])
     record, files = BS.files(replay_client(transport), Curie("biostudies", "S-BSST1234"))
@@ -2333,8 +2412,9 @@ class Biostudies:
         if response.status_code == 404:
             raise QuarryError("not_found", f"{curie} is not in BioStudies")
         doc = _json(response.text, "study")
-        attrs = _attributes(doc.get("attributes")) | _attributes(doc.get("section", {}).get("attributes")
-                                                                 if type(doc.get("section")) is dict else None)
+        if type(doc.get("accno")) is not str or doc["accno"].upper() != curie.local.upper() or type(doc.get("section")) is not dict:
+            raise UpstreamError(f"biostudies study: the document for {curie.local} does not name it (accno) with a section")
+        attrs = _attributes(doc.get("attributes")) | _attributes(doc["section"].get("attributes"))
         xrefs = [f"geo:GSE{m.group(1)}" for m in [EGEOD.match(curie.local)] if m]
         xrefs += [f"geo:{link['url']}" for link in _collect(doc, "links")
                   if _attributes(link.get("attributes")).get("Type") == "GEO" and type(link.get("url")) is str
@@ -2591,7 +2671,9 @@ def test_publication_is_the_first_paper_and_the_rest_are_xrefs_with_a_warning():
 
 @pytest.mark.parametrize("body", ["<html>", '{"hits": []}', json.dumps({"hits": {"hits": [{"id": "x"}], "total": 1}}),
                                   json.dumps({"hits": {"hits": [{**record(1), "metadata": "x"}], "total": 1}}),
-                                  json.dumps({"hits": {"hits": [record(1)], "total": "1"}})])
+                                  json.dumps({"hits": {"hits": [record(1)], "total": "1"}}),
+                                  json.dumps({"hits": {"hits": [None], "total": 1}}),
+                                  json.dumps({"hits": {"hits": [record(1), "x"], "total": 2}})])
 def test_malformed_pages_are_upstream_errors(body):
     q = zenodo.compile_query(Query(phrases=("x",)))
     client = replay_client(ReplayTransport([exchange("GET", f"{BASE}/records", {"q": q, "type": "dataset", "sort": "mostrecent",
@@ -2797,8 +2879,9 @@ class Zenodo:
                 data = _json(client.request(self.route, "GET", "records", params={
                     "q": q, "type": "dataset", "sort": "mostrecent", "size": size, "page": page}).text, "search")
                 hits = data.get("hits")
-                if type(hits) is not dict or type(hits.get("hits")) is not list or type(hits.get("total")) is not int:
-                    raise UpstreamError("zenodo search: expected hits.hits and hits.total")
+                if type(hits) is not dict or type(hits.get("hits")) is not list or type(hits.get("total")) is not int \
+                        or any(type(h) is not dict for h in hits["hits"]):
+                    raise UpstreamError("zenodo search: expected hits.hits, a list of objects, and hits.total")
                 total = hits["total"]
                 if total > WINDOW and (query.limit is None or query.limit > WINDOW):
                     raise QuarryError("too_many_results", f"{total} records match, more than the {WINDOW} Zenodo serves "
@@ -3028,7 +3111,11 @@ ARTICLE = {**item(34254439, "2026-10-08", doi="10.1371/journal.pone.0360063.t007
            "files": [{"id": 69801769, "name": "Table 7.xls", "size": 5632, "is_link_only": False,
                       "download_url": "https://ndownloader.figshare.com/files/69801769",
                       "supplied_md5": "e9c5", "computed_md5": "e9c501729209a445c78cfd70d7a30f7a", "mimetype": "application/vnd.ms-excel"},
-                     {"id": 1, "name": "elsewhere.bam", "size": 0, "is_link_only": True, "download_url": "", "computed_md5": "", "mimetype": ""}]}
+                     {"id": 1, "name": "elsewhere.bam", "size": 0, "is_link_only": True, "download_url": "ftp://mirror.example/elsewhere.bam",
+                      "computed_md5": "", "mimetype": ""},
+                     {"id": 2, "name": "linked.vcf", "size": 0, "is_link_only": True, "download_url": "https://mirror.example/linked.vcf",
+                      "computed_md5": "", "mimetype": ""},
+                     {"id": 3, "name": "nowhere.txt", "size": 0, "is_link_only": True, "download_url": "", "computed_md5": "", "mimetype": ""}]}
 
 
 def one(n, body, status=200):
@@ -3041,19 +3128,23 @@ def test_show_has_the_description_and_the_two_dois_apart():                 # th
     assert shown.xrefs == ("doi:10.1371/journal.pone.0360063.t007",)
 
 
-def test_files_carry_md5_media_type_and_no_url_for_link_only(monkeypatch):     # Review Focus 3
+def test_files_keep_link_only_locations_and_acquisition_judges_the_transport(monkeypatch):     # Review Focus 3
     _, files = FIG.files(replay_client(ReplayTransport([one(34254439, json.dumps(ARTICLE))])), SUPPLEMENT)
     assert [f.as_dict() for f in files] == [
         {"name": "Table 7.xls", "urls": ["https://ndownloader.figshare.com/files/69801769"], "size": 5632,
          "checksums": {"md5": "e9c501729209a445c78cfd70d7a30f7a"}, "media_type": "application/vnd.ms-excel"},
-        {"name": "elsewhere.bam", "urls": [], "size": 0}]
+        {"name": "elsewhere.bam", "urls": ["ftp://mirror.example/elsewhere.bam"], "size": 0},
+        {"name": "linked.vcf", "urls": ["https://mirror.example/linked.vcf"], "size": 0},
+        {"name": "nowhere.txt", "urls": [], "size": 0}]
     monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport([one(34254439, json.dumps(ARTICLE))])))
     out = CliRunner().invoke(main, ["--json", "files", "figshare:34254439", "--acquisition"], catch_exceptions=False)
     assert out.exit_code == 1 and "elsewhere.bam" in json.loads(out.stderr)["error"]["detail"]
     monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport([one(34254439, json.dumps(ARTICLE))])))
-    out = CliRunner().invoke(main, ["--json", "files", "figshare:34254439", "--acquisition", "--file", "*.xls"], catch_exceptions=False)
+    out = CliRunner().invoke(main, ["--json", "files", "figshare:34254439", "--acquisition", "--file", "*.xls", "--file", "*.vcf"],
+                             catch_exceptions=False)
     assert out.exit_code == 0 and json.loads(out.stdout)["resources"] == [
-        {"name": "Table 7.xls", "url": "https://ndownloader.figshare.com/files/69801769"}]
+        {"name": "Table 7.xls", "url": "https://ndownloader.figshare.com/files/69801769"},
+        {"name": "linked.vcf", "url": "https://mirror.example/linked.vcf"}]
 
 
 def test_show_404_is_not_found():
@@ -3164,8 +3255,8 @@ def _files(h: dict) -> list[File]:
             raise UpstreamError("figshare files: a file has no name")
         if f.get("size") is not None and (type(f["size"]) is not int or f["size"] < 0):
             raise UpstreamError("figshare files: a size is not a number")
-        url = f.get("download_url")
-        urls = (url,) if not f.get("is_link_only") and type(url) is str and url.startswith("https://") else ()
+        url = f.get("download_url")        # hosted: figshare's https download; link-only: wherever figshare points, any scheme
+        urls = (url,) if type(url) is str and url else ()
         md5 = f.get("computed_md5")
         files.append(File(name=f["name"], urls=urls, size=f.get("size"),
                           checksums={"md5": md5} if type(md5) is str and md5 else {},
