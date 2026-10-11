@@ -1,18 +1,20 @@
 ---
 id: quarry-3f4c3b
 title: Build the remaining repository adapters and acquisition requests
-status: doing
+status: done
 priority: 2
 size: l
 complexity: mid
 process: planned
 owner: adapters-acquisition
 created: 2026-10-10T21:52:21Z
-updated: 2026-10-11T11:08:46Z
+updated: 2026-10-11T11:40:55Z
 started: 2026-10-11T01:28:29Z
+completed: 2026-10-11T11:40:55Z
 depends: []
 tags: []
 source: sci-ba7150
+model: claude-fable-5-1
 agent: codex
 plan: docs/plans/2026-10-10-quarry-repositories-acquisition.md
 ---
@@ -39,3 +41,7 @@ Next approved-design milestone after the foundation: GEO, BioStudies, Zenodo, fi
 - 2026-10-11T10:14:50Z (adapters-acquisition): review: plan round 3 — verdict: accept; findings: P3 3; reviewer: claude-code subagent (general-purpose; model not verified)
 - 2026-10-11T10:15:56Z (adapters-acquisition): Plan round 3 disposition: 3 of 3 P3 folded (commit 00d0c47): acquisition refuses an IPvFuture bracketed host as the kernel does; GEO normalizes CRLF in the brief SOFT text before its line-anchored patterns; PubMed records a show-missing scenario (uid 999999999) pinning the per-uid error object as not_found, and the probe table states that shape. Plan accepted; execution starts with Task 1 (quarry-a29490).
 - 2026-10-11T11:08:46Z (adapters-acquisition): Execution: all 8 step tasks done and closed on branch adapters-acquisition (head 26d5abb; suite 489 green; quarry check clean). Per-task reviews: T1,T2,T4,T5,T7,T8 clean; T3 and T6 clean after one fix round each. Final whole-branch review dispatched.
+- 2026-10-11T11:40:55Z (adapters-acquisition): done
+  provenance: {"harness_session":"claude-code:cbc5639a-25c5-4d58-9460-4b8e834fa0bc","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T11:40:55Z (adapters-acquisition): GEO, PubMed, BioStudies, Zenodo and figshare adapters; files and files --acquisition (kernel request mirroring the kernel's URL/digest validators); core searches zenodo+figshare, biology geo+ena+biostudies; recorded fixtures for every resource; plan reviewed 3 rounds, 8 tasks each reviewed, final whole-branch review with one fix wave re-reviewed clean. Follow-ups: quarry-fcd1ac, quarry-5f2956. Open for the user: figshare landing uri_format unconfirmed behind the bot challenge; spec §8.2 --organism refusal ruling.
+  provenance: {"harness_session":"claude-code:cbc5639a-25c5-4d58-9460-4b8e834fa0bc","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
