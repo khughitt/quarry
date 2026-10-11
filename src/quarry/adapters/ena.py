@@ -153,6 +153,9 @@ class Ena:
     def search(self, client: Client, query: Query) -> tuple[Coverage, list[Result]]:
         return self.prepare(query)(client)
 
+    def unexpressed(self, query: Query) -> str | None:
+        return None
+
     def prepare(self, query: Query) -> Callable[[Client], tuple[Coverage, list[Result]]]:
         q = compile_query(query)
 

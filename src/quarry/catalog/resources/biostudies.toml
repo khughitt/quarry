@@ -20,7 +20,7 @@ evidence = "mm-159cb7; the search answer lists expandedEfoTerms and expandedSyno
 
 [[pitfalls]]
 summary = "search hits omit the organism"
-handling = "--organism becomes the facet.organism parameter (a taxon name; an ncbitaxon: CURIE is refused) and every hit then carries it; show reads the study's Organism attribute"
+handling = "--organism becomes the facet.organism parameter (a taxon name) and every hit then carries it; an ncbitaxon: CURIE skips biostudies from a default set and is refused under --in; show reads the study's Organism attribute"
 evidence = "mm-159cb7 read one facet listing and one filtered pass per organism value"
 
 [[pitfalls]]

@@ -340,6 +340,9 @@ def test_later_ena_compilation_refusal_prevents_earlier_accepting_adapter_http(a
         def search(self, client, query):
             return self.prepare(query)(client)
 
+        def unexpressed(self, query):
+            return None
+
     def ok(request):
         seen.append(request)
         return httpx.Response(200)

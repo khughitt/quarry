@@ -17,6 +17,9 @@ class Fake:
     def search(self, client, query):
         return self.prepare(query)(client)
 
+    def unexpressed(self, query):
+        return None
+
     def prepare(self, query):
         native = query.native or " OR ".join(query.phrases)
 

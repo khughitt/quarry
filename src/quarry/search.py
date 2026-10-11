@@ -43,6 +43,9 @@ def _unexpressed(adapter, query: Query) -> str | None:
     missing = set(query.filters) - adapter.filters
     if missing:
         return f"{rid} cannot filter by {', '.join(sorted(missing))}"
+    reason = adapter.unexpressed(query)
+    if reason is not None:
+        return reason
     if query.exact and adapter.match != "exact":
         return f"{rid} expands phrases and cannot match exactly"
     return None
