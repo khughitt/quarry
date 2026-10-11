@@ -7,7 +7,7 @@ size: m
 complexity: mid
 process: planned
 created: 2026-10-11T18:56:49Z
-updated: 2026-10-11T18:57:37Z
+updated: 2026-10-11T19:37:39Z
 depends: []
 tags: [heliophysics]
 source: sun-374ea3
@@ -20,3 +20,4 @@ Finding 1 of the sun phase-1 survey (sci-ba7150 is the source goal; report docs/
 
 - 2026-10-11T18:56:55Z (main): concerns: none — filed from the sun phase-1 survey (sun-374ea3) as a finding against the quarry contract
 - 2026-10-11T18:57:37Z (main): correction: the 'concerns:' line above was written in error and names no closed task; this task concerns no closed work. It is a finding filed from the sun phase-1 survey (sun-374ea3).
+- 2026-10-11T19:37:39Z (main): reassessment after review round 1 of the survey (sun-e7bfb6): applying the design's procedure as written, finding 1 is NOT CONFIRMED. JSOC's record-set specifier sits in the locator and resolves to the file list (probes/jsoc/19); HAPI's data URL encodes dataset, parameters, interval and format in one stable GET URL (probes/cdaweb/16), which the spec §9 request carries as a resource URL with no new field; SOAR items are deposits as written. The residual cases (CDAWeb's REST data job at a temporary URL, probes/cdaweb/05, 19; a day of SOAR items as one dataset) are describable with the cut in the URL list and the title. A structured cut field is therefore an improvement to consider, not a contract gap; priority lowered and title softened.
