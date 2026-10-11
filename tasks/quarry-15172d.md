@@ -6,9 +6,9 @@ priority: 2
 size: s
 complexity: mid
 process: direct
-owner: main
+owner: fix/search-unique-ids
 created: 2026-10-11T15:28:20Z
-updated: 2026-10-11T16:22:27Z
+updated: 2026-10-11T16:22:33Z
 started: 2026-10-11T16:22:27Z
 depends: []
 tags: []
@@ -22,4 +22,6 @@ Zenodo, figshare and BioStudies prove completeness by len(rows) == total. Offset
 
 - 2026-10-11T15:28:28Z (main): concerns: quarry-3f4c3b defect — post-merge plan review found this behaviour shipped in the remaining-adapters milestone
 - 2026-10-11T16:22:27Z (main): started
+  provenance: {"harness_session":"claude-code:3372c373-34b3-4b18-ad87-45995d054cdd","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T16:22:33Z (fix/search-unique-ids): resumed
   provenance: {"harness_session":"claude-code:3372c373-34b3-4b18-ad87-45995d054cdd","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
