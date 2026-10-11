@@ -1,13 +1,13 @@
 ---
 id: quarry-b794e6
-title: "Carry a time cut in the acquisition request: series repositories cut by interval, not fixed file lists"
+title: Consider a structured cut field in the acquisition request (series cut by interval; not a contract gap)
 status: todo
-priority: 2
+priority: 3
 size: m
 complexity: mid
 process: planned
 created: 2026-10-11T18:56:49Z
-updated: 2026-10-11T19:37:39Z
+updated: 2026-10-11T19:37:40Z
 depends: []
 tags: [heliophysics]
 source: sun-374ea3
