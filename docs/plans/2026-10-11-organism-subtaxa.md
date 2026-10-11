@@ -40,8 +40,10 @@ warning travels through `Coverage.warnings` into the report.
    other resources still run. Pinned in Task 2.
 4. A CURIE in another case (`NCBITaxon:10088`) skips BioStudies just as `ncbitaxon:` does
    (`TAXON` is case-insensitive). Pinned in Task 1.
-5. A name ENA cannot carry (`"` or `*`) is refused before any request, the lookup included.
-   Pinned in Task 2.
+5. A phrase or a name ENA cannot carry (`"` or `*`) is refused before any request, the
+   name lookup and every other resource's requests included, even when the organism is a
+   name whose compilation waits for the lookup. Pinned in Task 2 by the extended ordering
+   regression.
 
 ---
 
@@ -53,6 +55,7 @@ warning travels through `Coverage.warnings` into the report.
 - Modify: `src/quarry/adapters/biostudies.py` (`compile_query`, `Biostudies`)
 - Modify: `src/quarry/adapters/geo.py`, `ena.py`, `zenodo.py`, `figshare.py`, `pubmed.py` (a `None` method each)
 - Modify: `tests/fake_adapter.py` (`Fake.unexpressed`)
+- Modify: `tests/test_ena.py` (the inline `Accepting` adapter in `test_later_ena_compilation_refusal_prevents_earlier_accepting_adapter_http`)
 - Modify: `src/quarry/catalog/resources/biostudies.toml` (the "search hits omit the organism" pitfall)
 - Test: `tests/test_domains.py`
 
@@ -175,10 +178,20 @@ def unexpressed(query: Query) -> str | None:
 ```
 
 - [ ] **Step 5: Every other adapter.** Add this method to `Geo`, `Ena`, `Zenodo`, `Figshare` and
-  `Pubmed` (after `search`), and to `tests/fake_adapter.py`'s `Fake` (without annotations, matching that file):
+  `Pubmed` (after `search`):
 
 ```python
     def unexpressed(self, query: Query) -> str | None:
+        return None
+```
+
+  Test adapters implement the contract too, without annotations as their files do. Add this to
+  `tests/fake_adapter.py`'s `Fake`, and to the inline `class Accepting` in
+  `tests/test_ena.py::test_later_ena_compilation_refusal_prevents_earlier_accepting_adapter_http`
+  (after its `search`). Without it, `search._unexpressed` raises `AttributeError` there:
+
+```python
+    def unexpressed(self, query):
         return None
 ```
 
@@ -190,15 +203,16 @@ handling = "--organism becomes the facet.organism parameter (a taxon name) and e
 ```
 
 - [ ] **Step 7: Run to verify they pass.**
-  Run: `just test-one tests/test_domains.py tests/test_biostudies.py tests/test_search.py`
-  Expected: PASS. `test_biostudies.py::test_refusals_happen_in_prepare` still expects
+  Run: `just test-one tests/test_domains.py tests/test_biostudies.py tests/test_search.py tests/test_ena.py`
+  Expected: PASS, including the existing `test_later_ena_compilation_refusal_prevents_earlier_accepting_adapter_http`
+  (four cases). `test_biostudies.py::test_refusals_happen_in_prepare` still expects
   `unsupported_filter` from `prepare` for the CURIE, and gets it.
 
 - [ ] **Step 8: Fast suite and commit.**
   Run: `just test-fast` (expect all green), then:
 
 ```bash
-git add src/quarry/adapters src/quarry/search.py src/quarry/catalog/resources/biostudies.toml tests/fake_adapter.py tests/test_domains.py
+git add src/quarry/adapters src/quarry/search.py src/quarry/catalog/resources/biostudies.toml tests/fake_adapter.py tests/test_domains.py tests/test_ena.py
 git commit -m "feat(search): skip biostudies for a taxon CURIE in a default set through adapter.unexpressed"
 ```
 
@@ -206,7 +220,7 @@ git commit -m "feat(search): skip biostudies for a taxon CURIE in a default set 
 
 **Files:**
 - Modify: `src/quarry/catalog/resources/ena.toml` (a second route; a pitfall)
-- Modify: `src/quarry/adapters/ena.py` (`compile_query`, `_name`, `resolve_taxon`, `Ena`)
+- Modify: `src/quarry/adapters/ena.py` (`compile_query`, `_deferred_name`, `resolve_taxon`, `Ena`)
 - Modify: `tests/recordings/ena.py` (a scenario); re-record `tests/fixtures/ena/*.json`
 - Test: `tests/test_ena.py`
 
@@ -341,9 +355,45 @@ def test_a_failed_lookup_under_allow_partial_is_enas_failed_row():              
     assert report["warnings"] == ["ena failed: ENA's taxonomy has no taxon named 'Nonexistus fakeus'"]
 ```
 
+  Extend the existing ordering regression in `tests/test_ena.py` so a deferred name cannot let a
+  request precede a phrase refusal (Review Focus 5). Its decorators and opening become the block
+  below. `Accepting` now declares `organism` so that search.run does not refuse it for the filter
+  first, and the refusal asserted is ENA's phrase refusal:
+
+```python
+@pytest.mark.parametrize("allow_partial", [False, True])
+@pytest.mark.parametrize("organism", [None, "Mus", "ncbitaxon:10088"])
+@pytest.mark.parametrize("phrase", ['the "MM" cohort', "ARP1*"])
+def test_later_ena_compilation_refusal_prevents_earlier_accepting_adapter_http(allow_partial, organism, phrase):
+```
+
+  Inside it, `class Accepting` gets `filters = frozenset({"organism"})`. The `search.run` call
+  passes `query=Query(phrases=(phrase,), filters={"organism": organism} if organism else {})`.
+  The assertions become:
+
+```python
+    assert caught.value.kind == "unsupported_filter" and "an ENA phrase cannot contain" in caught.value.detail
+    assert seen == []
+```
+
+  The two credential tests replace the portal route and must keep the taxonomy route that
+  `Ena.__init__` now reads. In `test_parser_diagnostics_never_echo_keys_through_cli`:
+
+```python
+    monkeypatch.setattr(ena, "make", lambda resource: ena.Ena(replace(resource, routes=(route, *resource.routes[1:]))))
+```
+
+  and in `test_successful_scientific_content_is_not_scrubbed`:
+
+```python
+    adapter = ena.Ena(replace(ENA.resource, routes=(route, *ENA.resource.routes[1:])))
+```
+
 - [ ] **Step 3: Run to verify they fail.**
   Run: `just test-one tests/test_ena.py`
   Expected: FAIL. `tax_eq` is still compiled, `compile_query` takes no `taxon`, and no `any-name` request is made.
+  The extended ordering regression passes already for every case, because today ENA compiles
+  in prepare. It is there to fail if Step 4 defers phrase validation.
 
 - [ ] **Step 4: Implement.** In `src/quarry/adapters/ena.py`, add `from urllib.parse import quote` and
   `from quarry.catalog import Resource, Route` (Route beside Resource). Update the module
@@ -371,12 +421,15 @@ def compile_query(query: Query, taxon: str | None = None) -> str:
     return " AND ".join(clauses)
 
 
-def _name(query: Query) -> str | None:
-    """The organism name to resolve, refused now when ENA could not carry it; None for a CURIE or none."""
+def _deferred_name(query: Query) -> str | None:
+    """The organism name execute resolves before compiling, or None for a CURIE or no organism.
+    compile_query then runs only after a request, so every refusal it would make is made here
+    first: each phrase and the name pass _quote (spec §8.2, static refusals precede requests)."""
     organism = query.filters.get("organism")
     if not organism or TAXON.match(organism):
         return None
-    _quote(organism)
+    for text in (*query.phrases, organism):
+        _quote(text)
     return organism
 
 
@@ -408,7 +461,7 @@ def resolve_taxon(client: Client, route: Route, name: str) -> str:
         self.route, self.taxonomy = resource.routes[0], resource.routes[1]
 
     def prepare(self, query: Query) -> Callable[[Client], tuple[Coverage, list[Result]]]:
-        name = _name(query)
+        name = _deferred_name(query)
         compiled = None if name else compile_query(query)
 
         def execute(client: Client) -> tuple[Coverage, list[Result]]:
@@ -426,7 +479,7 @@ def resolve_taxon(client: Client, route: Route, name: str) -> str:
 
 - [ ] **Step 5: Run the replayed tests.**
   Run: `just test-one tests/test_ena.py -k "not recorded"`
-  Expected: PASS. The recorded tests still replay `tax_eq` exchanges and fail until Step 7.
+  Expected: PASS, the 12 ordering cases and both credential tests included. The recorded tests still replay `tax_eq` exchanges and fail until Step 7.
 
 - [ ] **Step 6: A recorded name scenario.** In `tests/recordings/ena.py`, add after `HYPHEN`:
 
