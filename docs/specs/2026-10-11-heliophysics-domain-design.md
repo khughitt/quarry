@@ -1,7 +1,8 @@
 # quarry: the heliophysics domain
 
-Status: draft 2026-10-11, revised after review round 1 (codex/gpt-6-astra, relayed by
-the user), for review. Written from the sun program's phase-1 resource
+Status: draft 2026-10-11, revised after review rounds 1 and 2 (codex/gpt-6-astra,
+relayed by the user; round 2 accepted the catalog corrections); awaiting the user's
+approval for planning. Written from the sun program's phase-1 resource
 survey (sun repository, `docs/reports/2026-10-10-phase-1-survey/`, task `sun-374ea3`),
 against the approved quarry spec (`2026-10-10-quarry-domain-layers-design.md`) and the
 catalog as implemented in `src/quarry/catalog.py` on 2026-10-11. Source goal
@@ -19,8 +20,9 @@ in every `evidence` field); the quarry spec §4 (model), §6 (catalog format), �
 
 The first quarry domain outside biology and the first test of the spec's §14: the Sun
 and the solar wind's data resources as a lens over one CLI. Twenty-one resources,
-twenty-one with a resource file (`arxiv` included, since `core` has none yet); four
-domain filters; eight pitfall families observed live.
+nineteen with a resource file here (`arxiv` included, since `core` has none yet;
+`noaa-ar` is a local prefix on `swpc-events` and `sunpy` is a set of `local-tool`
+routes); four domain filters; eight pitfall families observed live.
 Magnetospheric and ionospheric resources (Kp, Dst) are out of scope through the sun
 program's phase 3 and are not listed.
 
