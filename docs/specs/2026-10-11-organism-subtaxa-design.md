@@ -67,10 +67,31 @@ filter is for.
   the compiled query, so it shows the `tax_tree(<id>)` that ran. `prepare` keeps refusing
   a name containing `"` or `*`, as ENA phrases already do.
 - **BioStudies.** Its `facet.organism` matches one exact label and cannot include
-  subtaxa. It is not skipped: it stays in biology's default set, since dropping it would
-  lose ArrayExpress from every organism search. Instead, its coverage row carries a
-  warning, which the report repeats: "biostudies matches the organism label X only, not
-  its subtaxa". Normalising the label (case, common names) remains quarry-f992fd.
+  subtaxa. For a name it stays in biology's default set, since dropping it would lose
+  ArrayExpress from every organism search. Instead, its execute step adds a warning to
+  the report's `warnings`: "biostudies matches the organism label X only, not its
+  subtaxa". It travels through `Coverage.warnings`, which the report collects and the
+  coverage object keeps out of its JSON (an existing test pins that). The coverage JSON
+  does not change. Normalising the label (case, common names) remains quarry-f992fd.
+
+  BioStudies cannot filter by an `ncbitaxon:` CURIE at all. Today `prepare` refuses one,
+  so a default biology search with `--organism ncbitaxon:10088` fails before GEO or ENA
+  runs, `--allow-partial` or not, and the CURIE remedy that `ambiguous_id` names hits the
+  same wall. A CURIE is a filter value BioStudies cannot express, and it is handled like
+  a filter it lacks (§8.2, Refusal and skipping):
+  - In a default search set, BioStudies is skipped: `"complete": "skipped"`, reason
+    "biostudies filters organisms by name, not ncbitaxon:10088", plus the usual
+    `biostudies skipped: …` warning. GEO and ENA run.
+  - Named with `--in biostudies`, the search refuses with `unsupported_filter` before any
+    request, as now.
+
+  The mechanism: the adapter contract (`adapters/base.py`) gains
+  `unexpressed(query) -> str | None`, the static reason an adapter cannot carry the
+  query's filter values, or None. `search._unexpressed` consults it after the
+  filter-name check, so the existing skip-or-refuse branch handles the result. Every
+  adapter implements it. BioStudies returns the reason for a CURIE and its `prepare`
+  raises `unsupported_filter` with that same reason, so a direct `prepare` call still
+  refuses. The others return None.
 
 GEO and ENA can still part on a homonym: GEO unions the taxa and ENA refuses with
 `ambiguous_id`. That disagreement is loud: without `--allow-partial` the search fails
@@ -84,7 +105,9 @@ Replace the Domain filters bullet with:
 >   taxon name or `ncbitaxon:` CURIE and matches that taxon and every taxon below it).
 >   A resource that resolves names to taxa refuses a name naming no taxon (`not_found`)
 >   or more than one (`ambiguous_id`, listing the CURIEs). BioStudies matches its
->   organism label only, and its coverage row warns that subtaxa are not included.
+>   organism label only: for a name the report warns that subtaxa are not included,
+>   and a CURIE, which it cannot filter by, skips it from a default set and is refused
+>   under `--in`.
 
 The catalog gets an ENA pitfall: "tax_eq matches one taxon node and tax_tree takes ids
 only"; handling: "a CURIE compiles to tax_tree; a name is resolved through the taxonomy
@@ -100,7 +123,14 @@ No test reaches the network (AGENTS.md):
   coverage `native`); an empty list is `not_found`; two hits are `ambiguous_id` naming
   both CURIEs; a malformed body is `upstream_failed`. A `--allow-partial` run turns a
   lookup failure into ENA's failed row.
-- BioStudies: with `--organism`, the coverage row and the report carry the subtaxa warning.
+- BioStudies: with `--organism <name>`, the report's `warnings` carry the subtaxa warning
+  naming biostudies, and the coverage object still has no `warnings` key.
+- Regression for the CURIE wall: a default biology search with `--organism
+  ncbitaxon:10088` (replayed GEO and ENA exchanges) succeeds. BioStudies' coverage row is
+  `skipped` with the CURIE reason, GEO and ENA rows are `total`, and no BioStudies request
+  is made. The same search with `--in biostudies` refuses with `unsupported_filter` and
+  makes no request. A unit test pins `unexpressed` on each adapter that declares
+  `organism`.
 - A recorded scenario (`just record ena`) captures one real `any-name` lookup, so the
   response shape is pinned against the live service.
 
