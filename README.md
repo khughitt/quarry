@@ -31,9 +31,13 @@ The first version's repositories are GEO, ENA and BioStudies (biology) and Zenod
 figshare (core), with PubMed as a literature index named with `--in`. A biology search
 covers all five repositories; a domain filter such as `--organism` needs `--in` naming the
 resources that express it, since a resource that cannot is refused rather than skipped.
+A listing shorter than the resource's reported total fails rather than returning part of
+the answer, and `-n` limits the results explicitly, reporting the coverage as `limited` when
+it cuts the listing short.
 `files` lists a record's files with every location the
 resource gives; `files --acquisition` prints the request the kernel's acquisition takes
-(title, `accession:<CURIE>` locator, one http(s) URL per file). Ontology terms, agent
+(title, `accession:<CURIE>` locator, one http(s) URL per file). quarry downloads no bytes:
+`files --acquisition` emits the kernel's request only. Ontology terms, agent
 skills and live checks are the next milestone.
 
 ## Layout
