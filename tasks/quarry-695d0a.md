@@ -1,13 +1,15 @@
 ---
 id: quarry-695d0a
 title: "Decide whether --organism includes subtaxa, and make GEO and ENA agree"
-status: todo
+status: doing
 priority: 2
 size: s
 complexity: mid
 process: planned
+owner: main
 created: 2026-10-11T15:28:21Z
-updated: 2026-10-11T15:28:28Z
+updated: 2026-10-11T16:44:19Z
+started: 2026-10-11T16:44:19Z
 depends: []
 tags: []
 source: quarry-3f4c3b
@@ -19,3 +21,5 @@ GEO compiles txidN[ORGN], which includes subtaxa; ENA compiles tax_eq(N), exact.
 ## Notes
 
 - 2026-10-11T15:28:28Z (main): concerns: quarry-3f4c3b defect — post-merge plan review found this behaviour shipped in the remaining-adapters milestone
+- 2026-10-11T16:44:19Z (main): started
+  provenance: {"harness_session":"claude-code:3372c373-34b3-4b18-ad87-45995d054cdd","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
