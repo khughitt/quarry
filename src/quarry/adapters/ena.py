@@ -1,4 +1,4 @@
-"""ENA portal API, result=study (spec §13). Phrases compile to exact-equality clauses: a
+"""ENA portal API, result=study (spec §13); --organism searches the taxon's subtree (tax_tree), a name resolved to its id through ENA's taxonomy first. Phrases compile to exact-equality clauses: a
 wildcard cannot contain '-', '.' or a space and matches substrings. Every search asks the
 count endpoint too, and a listing shorter than the count fails."""
 from __future__ import annotations
@@ -6,8 +6,9 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable
+from urllib.parse import quote
 
-from quarry.catalog import Resource
+from quarry.catalog import Resource, Route
 from quarry.errors import QuarryError
 from quarry.files import File
 from quarry.http import Client, UpstreamError
@@ -32,20 +33,56 @@ def _quote(text: str) -> str:
     return f'"{text}"'
 
 
-def compile_query(query: Query) -> str:
+def compile_query(query: Query, taxon: str | None = None) -> str:
+    """`taxon` is the id an organism name resolved to (resolve_taxon); a CURIE carries its own.
+    tax_tree reaches the taxon and every taxon below it (spec 2026-10-11 §2)."""
     if query.native is not None:
         return query.native
     terms = " OR ".join(f"study_title={q} OR study_description={q}" for q in map(_quote, query.phrases))
     clauses = [f"({terms})"]
     organism = query.filters.get("organism")
     if organism:
-        taxon = TAXON.match(organism)
-        clauses.append(f"tax_eq({taxon.group(1)})" if taxon else f"scientific_name={_quote(organism)}")
+        curie = TAXON.match(organism)
+        if curie is None and taxon is None:
+            raise ValueError(f"the organism name {organism!r} compiles only after resolve_taxon")
+        clauses.append(f"tax_tree({curie.group(1) if curie else taxon})")
     if query.since:
         clauses.append(f"first_public>={query.since.isoformat()}")
     if query.until:
         clauses.append(f"first_public<={query.until.isoformat()}")
     return " AND ".join(clauses)
+
+
+def _deferred_name(query: Query) -> str | None:
+    """The organism name execute resolves before compiling, or None for a CURIE or no organism.
+    compile_query then runs only after a request, so every refusal it would make is made here
+    first: each phrase and the name pass _quote (spec §8.2, static refusals precede requests)."""
+    organism = query.filters.get("organism")
+    if not organism or TAXON.match(organism):
+        return None
+    for text in (*query.phrases, organism):
+        _quote(text)
+    return organism
+
+
+def resolve_taxon(client: Client, route: Route, name: str) -> str:
+    """The one taxon id ENA's taxonomy gives a scientific or common name, case-insensitively:
+    not_found for none, ambiguous_id naming each candidate for several."""
+    text = client.request(route, "GET", f"any-name/{quote(name, safe='')}").text
+    try:
+        taxa = json.loads(text)
+    except ValueError:
+        raise UpstreamError("ena taxonomy: not JSON") from None
+    if type(taxa) is not list or any(
+            type(t) is not dict or type(t.get("taxId")) is not str or not re.fullmatch(r"[0-9]+", t["taxId"])
+            or type(t.get("scientificName")) is not str or type(t.get("rank", "")) is not str for t in taxa):
+        raise UpstreamError("ena taxonomy: expected a list of taxa with a numeric taxId and a scientificName")
+    if not taxa:
+        raise QuarryError("not_found", f"ENA's taxonomy has no taxon named {name!r}")
+    if len(taxa) > 1:
+        named = ", ".join(f"ncbitaxon:{t['taxId']} ({t['scientificName']}, {t.get('rank') or 'no rank'})" for t in taxa)
+        raise QuarryError("ambiguous_id", f"{name!r} names {len(taxa)} taxa: {named}; pass one as --organism")
+    return taxa[0]["taxId"]
 
 
 OPTIONAL_TEXT = ("secondary_study_accession", "study_alias", "study_title", "study_description",
@@ -148,7 +185,7 @@ class Ena:
 
     def __init__(self, resource: Resource):
         self.resource = resource
-        self.route = resource.routes[0]
+        self.route, self.taxonomy = resource.routes[0], resource.routes[1]
 
     def search(self, client: Client, query: Query) -> tuple[Coverage, list[Result]]:
         return self.prepare(query)(client)
@@ -157,9 +194,11 @@ class Ena:
         return None
 
     def prepare(self, query: Query) -> Callable[[Client], tuple[Coverage, list[Result]]]:
-        q = compile_query(query)
+        name = _deferred_name(query)
+        compiled = None if name else compile_query(query)
 
         def execute(client: Client) -> tuple[Coverage, list[Result]]:
+            q = compiled if compiled is not None else compile_query(query, resolve_taxon(client, self.taxonomy, name))
             total = _count(client.request(self.route, "GET", "count", params={"result": "study", "query": q}).text)
             listing = client.request(self.route, "GET", "search", params={
                 "result": "study", "query": q, "fields": FIELDS, "format": "json", "limit": query.limit or 0}).text

@@ -12,6 +12,14 @@ service = "ebi-ena"
 auth = "none"
 reports_total = true
 
+[[routes]]                             # the taxonomy service: an organism name to its taxon id
+kind = "rest"
+url = "https://www.ebi.ac.uk/ena/taxonomy/rest"
+min_interval = 0.5
+service = "ebi-ena"
+auth = "none"
+reports_total = false
+
 [[pitfalls]]
 summary = "a wildcard cannot contain '-', '.' or a space, and matches substrings (ARP1 finds PARP1)"
 handling = "phrases compile to exact-equality clauses on study_title and study_description; no wildcard is generated"
@@ -26,3 +34,8 @@ evidence = "mm-159cb7: a re-harvest saw a short listing beside HTTP 500s"
 summary = "the count endpoint returns HTTP 500 under load"
 handling = "the client retries 5xx with backoff, then the search fails rather than report no count"
 evidence = "mm-159cb7: HTTP 500 on the count endpoint during a re-harvest"
+
+[[pitfalls]]
+summary = "tax_eq matches one taxon node, and tax_tree, which includes subtaxa, takes ids only"
+handling = "--organism includes subtaxa: an ncbitaxon: CURIE compiles to tax_tree; a name is first resolved through the taxonomy service's any-name lookup, refused when it names no taxon (not_found) or several (ambiguous_id)"
+evidence = "probe 2026-10-11: tax_eq(10088) 226 studies, tax_tree(10088) 94,364; tax_tree(\"Mus\") is refused; any-name/mouse lists Mus musculus and Mus"
