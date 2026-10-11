@@ -25,3 +25,8 @@ evidence = "PubMed help: automatic term mapping and phrase searching"
 summary = "esearch serves at most 10,000 ids per query without the history server"
 handling = "a count above the window is refused with too_many_results before any summary request; -n inside the window is served"
 evidence = "E-utilities documentation; mm-159cb7's reviews search capped retmax by hand"
+
+[[pitfalls]]
+summary = "Entrez drops a term it has no records for (or a field tag it does not know) and answers for the rest, never widening the query"
+handling = "esearch reads errorlist and warninglist; each term Entrez found nothing for or ignored becomes a warning in the search report, in NCBI's spelling"
+evidence = "probe 2026-10-11 (db=gds, the same esearch): unknown phrases are named in warninglist.quotedphrasesnotfound and errorlist.phrasesnotfound, unknown field tags in errorlist.fieldsnotfound"

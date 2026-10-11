@@ -43,3 +43,8 @@ evidence = "probe 2026-10-10: GSE24080 has filelist.txt, GSE193531 answers 404; 
 summary = "a series names several papers"
 handling = "the first PubMed id is the publication, the rest are xrefs, and the search report warns"
 evidence = "GSE24080 lists three PubMed ids"
+
+[[pitfalls]]
+summary = "Entrez drops a term it has no records for (or a field tag it does not know) and answers for the rest, never widening the query"
+handling = "esearch reads errorlist and warninglist; each term Entrez found nothing for or ignored becomes a warning in the search report, in NCBI's spelling"
+evidence = "probe 2026-10-11: an unknown quoted phrase or [ORGN] term is named in warninglist.quotedphrasesnotfound, an unknown txid in errorlist.phrasesnotfound, an unknown --native field tag in errorlist.fieldsnotfound"

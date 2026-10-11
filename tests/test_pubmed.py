@@ -36,9 +36,9 @@ def test_compile_phrases_and_dates_without_organism():
     assert PUBMED.filters == frozenset() and PUBMED.match == "expanded"
 
 
-def esearch(term, count, ids, retmax=10000):
+def esearch(term, count, ids, retmax=10000, **notices):
     return exchange("GET", f"{EU}/esearch.fcgi", {"db": "pubmed", "term": term, "retmode": "json", "retstart": 0, "retmax": retmax},
-                    body=json.dumps({"esearchresult": {"count": str(count), "idlist": ids}}))
+                    body=json.dumps({"esearchresult": {"count": str(count), "idlist": ids, **notices}}))
 
 
 def esummary(records):
@@ -53,6 +53,13 @@ def test_synthetic_search_rows_are_publications_with_doi_and_pmc_xrefs():
     assert rows[0].as_dict() == {"id": "pubmed:38195712", "resource": "pubmed", "kind": "publication", "title": "Inflammasomes.",
                                  "date": "2024-02-01", "summary": "Nature reviews. Neurology",
                                  "xrefs": ["doi:10.1038/s41582-023-00915-x", "pmc:PMC1234567"], "domain_fields": {}}
+
+
+def test_unknown_phrase_is_a_warning():
+    q = pubmed.compile_query(Query(phrases=("qwzx",)))
+    client = replay_client(ReplayTransport([esearch(q, 0, [], warninglist={"quotedphrasesnotfound": ['"qwzx"[All Fields]']})]))
+    cov, rows = PUBMED.search(client, Query(phrases=("qwzx",)))
+    assert rows == [] and cov.complete == "total" and cov.warnings == ('Entrez has no records for: "qwzx"[All Fields]',)
 
 
 @pytest.mark.parametrize("field, value", [("title", 7), ("sortpubdate", "Feb 2024"), ("articleids", "doi")])

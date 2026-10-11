@@ -16,7 +16,7 @@ from quarry.http import Client, Throttle
 from quarry.ids import Curie
 from quarry.query import Query
 from quarry.testing import RecordingTransport, ReplayTransport, VirtualClock, exchange, replay_client, secret_params
-from tests.recordings.geo import GSE24080, MYELOMA
+from tests.recordings.geo import GSE24080, MYELOMA, UNKNOWN
 
 FX = Path(__file__).parent / "fixtures" / "geo"
 CAT = catalog_mod.load()
@@ -53,9 +53,9 @@ def test_entrez_syntax_is_refused_before_any_request(query):
     assert caught.value.kind == "unsupported_filter"
 
 
-def esearch(term, count, ids, retmax=10000):
+def esearch(term, count, ids, retmax=10000, **notices):
     return exchange("GET", f"{EU}/esearch.fcgi", {"db": "gds", "term": term, "retmode": "json", "retstart": 0, "retmax": retmax},
-                    body=json.dumps({"esearchresult": {"count": str(count), "idlist": ids}}))
+                    body=json.dumps({"esearchresult": {"count": str(count), "idlist": ids, **notices}}))
 
 
 def esummary(records):
@@ -79,6 +79,18 @@ def test_synthetic_search_rows_publication_xrefs_and_warning():
     assert row.xrefs == ("bioproject:PRJNA130207", "insdc.sra:SRP000001", "pubmed:20676074")
     assert row.domain_fields == {"biology": {"organism": "Homo sapiens"}}
     assert cov.warnings == ("geo:GSE24080 names 2 papers; pubmed:20064235 is its publication and the rest are xrefs",)
+
+
+def test_unknown_phrase_is_a_warning_after_the_multi_paper_warning():
+    query = Query(phrases=("x", "qwzx"))
+    q = geo.compile_query(query)
+    notices = {"warninglist": {"quotedphrasesnotfound": ['"qwzx"[All Fields]'], "phrasesignored": []},
+               "errorlist": {"phrasesnotfound": [], "fieldsnotfound": []}}
+    client = replay_client(ReplayTransport([esearch(q, 1, ["200024080"], **notices), esummary([SUMMARY])]))
+    cov, rows = GEO.search(client, query)
+    assert cov.complete == "total" and len(rows) == 1
+    assert cov.warnings == ("geo:GSE24080 names 2 papers; pubmed:20064235 is its publication and the rest are xrefs",
+                            'Entrez has no records for: "qwzx"[All Fields]')
 
 
 def test_synthetic_limit_is_limited():
@@ -213,6 +225,12 @@ def test_recorded_search_is_complete_human_and_canonical():
     assert all(r.id.startswith("geo:GSE") and r.resource == "geo" for r in rows)
     assert all("Homo sapiens" in r.domain_fields["biology"]["organism"].split("; ") for r in rows)   # mixed series list several
     assert all(r.publication is None or r.publication.startswith("pubmed:") for r in rows)
+
+
+def test_recorded_unknown_phrase_is_an_empty_total_with_a_warning():
+    cov, rows = GEO.search(replay("search-unknown-phrase"), UNKNOWN)
+    assert rows == [] and cov.complete == "total" and cov.total == 0
+    assert any("qwzx myeloma zzq" in w for w in cov.warnings)
 
 
 def test_recorded_show_gse24080():

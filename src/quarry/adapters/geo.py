@@ -104,7 +104,7 @@ class Geo:
         q = compile_query(query)
 
         def execute(client: Client) -> tuple[Coverage, list[Result]]:
-            count, ids = eutils.esearch(client, self.eutils, "gds", q, query.limit)
+            count, ids, notices = eutils.esearch(client, self.eutils, "gds", q, query.limit)
             rows, warnings = [], []
             for d in eutils.esummary(client, self.eutils, "gds", ids):
                 result, warning = _row(d)
@@ -113,7 +113,8 @@ class Geo:
                     warnings.append(warning)
             complete = completeness(total=count, returned=len(rows), limit=query.limit, short_page=False)
             match = "native" if query.native is not None else self.match
-            return Coverage(self.resource.id, q, match, count, len(rows), complete, warnings=tuple(warnings)), rows
+            return Coverage(self.resource.id, q, match, count, len(rows), complete,
+                            warnings=tuple(warnings) + notices), rows
 
         return execute
 
@@ -122,7 +123,7 @@ class Geo:
         if not GSE.match(curie.local):
             raise QuarryError("unsupported_id", f"{curie}: quarry covers GEO series (GSE) only")
         # [ACCN] is not one-to-one (related series match too), so take the hits and pick the requested one.
-        _, ids = eutils.esearch(client, self.eutils, "gds", f"{curie.local}[ACCN] AND gse[ETYP]", 20)
+        _, ids, _ = eutils.esearch(client, self.eutils, "gds", f"{curie.local}[ACCN] AND gse[ETYP]", 20)
         summaries = eutils.esummary(client, self.eutils, "gds", ids) if ids else []
         summary = next((d for d in summaries if d.get("accession") == curie.local), None)
         if summary is None:

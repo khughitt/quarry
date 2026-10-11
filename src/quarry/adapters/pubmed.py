@@ -66,11 +66,11 @@ class Pubmed:
         q = compile_query(query)
 
         def execute(client: Client) -> tuple[Coverage, list[Result]]:
-            count, ids = eutils.esearch(client, self.route, "pubmed", q, query.limit)
+            count, ids, notices = eutils.esearch(client, self.route, "pubmed", q, query.limit)
             rows = [_row(d) for d in eutils.esummary(client, self.route, "pubmed", ids)]
             complete = completeness(total=count, returned=len(rows), limit=query.limit, short_page=False)
             match = "native" if query.native is not None else self.match
-            return Coverage(self.resource.id, q, match, count, len(rows), complete), rows
+            return Coverage(self.resource.id, q, match, count, len(rows), complete, warnings=notices), rows
 
         return execute
 

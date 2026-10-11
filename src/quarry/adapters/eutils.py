@@ -65,15 +65,48 @@ def _object(text: str, key: str) -> dict:
     return data[key]
 
 
-def esearch(client: Client, route: Route, db: str, term: str, limit: int | None) -> tuple[int, list[str]]:
-    """(count, ids): every matching id, or the first `limit`, paged by retstart. A count the window
-    cannot hold is refused before anything else is asked (spec §8.3: no silent truncation)."""
+# (container, list, sentence): what Entrez names when it drops part of a query. It never widens
+# one, so a dropped term narrows the answer silently unless the report says so.
+NOTICES = (("errorlist", "phrasesnotfound", "Entrez has no records for"),
+           ("errorlist", "fieldsnotfound", "Entrez ignored unknown fields"),
+           ("warninglist", "quotedphrasesnotfound", "Entrez has no records for"),
+           ("warninglist", "phrasesignored", "Entrez ignored phrases"))
+
+
+def _notices(result: dict) -> list[str]:
+    """One sentence per non-empty notice list, in NCBI's own spellings of the terms."""
+    if "ERROR" in result:
+        raise UpstreamError(f"eutils esearch: {result['ERROR']}")
+    sentences = []
+    for container, key, sentence in NOTICES:
+        lists = result.get(container)
+        if lists is None:
+            continue
+        if type(lists) is not dict:
+            raise UpstreamError(f"eutils esearch: {container} is not an object")
+        terms = lists.get(key)
+        if terms is None:
+            continue
+        if type(terms) is not list or any(type(t) is not str for t in terms):
+            raise UpstreamError(f"eutils esearch: {container}.{key} is not a list of text")
+        if terms:
+            sentences.append(f"{sentence}: {', '.join(terms)}")
+    return sentences
+
+
+def esearch(client: Client, route: Route, db: str, term: str,
+            limit: int | None) -> tuple[int, list[str], tuple[str, ...]]:
+    """(count, ids, warnings): every matching id, or the first `limit`, paged by retstart, and a
+    sentence for each term Entrez found nothing for or ignored. A count the window cannot hold is
+    refused before anything else is asked (spec §8.3: no silent truncation)."""
     ids: list[str] = []
+    warnings: list[str] = []
     wanted = WINDOW if limit is None else min(limit, WINDOW)
     while True:
         result = _object(client.request(route, "GET", "esearch.fcgi", params={
             "db": db, "term": term, "retmode": "json", "retstart": len(ids), "retmax": wanted - len(ids)}).text,
             "esearchresult")
+        warnings += _notices(result)
         page = result.get("idlist")
         if (type(page) is not list or any(type(i) is not str or not UID.match(i) for i in page)
                 or type(result.get("count")) is not str or not UID.match(result["count"])):
@@ -84,7 +117,7 @@ def esearch(client: Client, route: Route, db: str, term: str, limit: int | None)
                                                   f"per query; narrow the query or pass -n")
         ids += page
         if not page or len(ids) >= min(count, wanted):
-            return count, ids
+            return count, ids, tuple(dict.fromkeys(warnings))
 
 
 def esummary(client: Client, route: Route, db: str, ids: list[str]) -> list[dict]:

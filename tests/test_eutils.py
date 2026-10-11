@@ -64,13 +64,13 @@ def service(count, uids, summaries=None):
 
 def test_esearch_returns_every_id_in_one_window():
     seen, client = service(3, ["1", "2", "3"])
-    assert eutils.esearch(client, ROUTE, "gds", "t", None) == (3, ["1", "2", "3"])
+    assert eutils.esearch(client, ROUTE, "gds", "t", None) == (3, ["1", "2", "3"], ())
     assert len(seen) == 1 and seen[0].url.params["retmax"] == "10000" and seen[0].url.params["retstart"] == "0"
 
 
 def test_esearch_limit_asks_for_the_limit_and_stops_there():
     seen, client = service(50, [str(i) for i in range(50)])
-    assert eutils.esearch(client, ROUTE, "gds", "t", 5) == (50, ["0", "1", "2", "3", "4"])
+    assert eutils.esearch(client, ROUTE, "gds", "t", 5) == (50, ["0", "1", "2", "3", "4"], ())
     assert seen[0].url.params["retmax"] == "5"
 
 
@@ -83,7 +83,7 @@ def test_esearch_pages_by_retstart_when_a_page_comes_back_short():
         start = int(request.url.params["retstart"])
         return httpx.Response(200, json={"esearchresult": {"count": "30", "idlist": uids[start:start + 20]}})
     client = replay_client(httpx.MockTransport(handle))
-    assert eutils.esearch(client, ROUTE, "gds", "t", None) == (30, uids)
+    assert eutils.esearch(client, ROUTE, "gds", "t", None) == (30, uids, ())
     assert [r.url.params["retstart"] for r in seen] == ["0", "20"]
 
 
@@ -118,9 +118,40 @@ def test_esummary_one_is_none_for_an_unknown_uid():
 
 
 @pytest.mark.parametrize("body", ["<html>busy</html>", '{"error": "x"}', '{"esearchresult": {"count": "x", "idlist": []}}',
-                                  '{"esearchresult": {"count": "1", "idlist": [7]}}', '{"esearchresult": []}'])
+                                  '{"esearchresult": {"count": "1", "idlist": [7]}}', '{"esearchresult": []}',
+                                  '{"esearchresult": {"count": "0", "idlist": [], "warninglist": {"quotedphrasesnotfound": "x"}}}',
+                                  '{"esearchresult": {"count": "0", "idlist": [], "errorlist": {"phrasesnotfound": [7]}}}',
+                                  '{"esearchresult": {"count": "0", "idlist": [], "errorlist": []}}'])
 def test_malformed_esearch_is_an_upstream_error(body):
     client = replay_client(httpx.MockTransport(lambda r: httpx.Response(200, text=body)))
     with pytest.raises(QuarryError) as caught:
         eutils.esearch(client, ROUTE, "gds", "t", None)
     assert caught.value.kind == "upstream_failed"
+
+
+def answer(result):
+    return replay_client(httpx.MockTransport(lambda r: httpx.Response(200, json={"esearchresult": result})))
+
+
+def test_esearch_reports_terms_entrez_did_not_find_or_ignored():         # Entrez narrows silently; quarry says so
+    client = answer({"count": "0", "idlist": [],
+                     "errorlist": {"phrasesnotfound": ["txid999999999[ORGN]"], "fieldsnotfound": ["NOPE"]},
+                     "warninglist": {"quotedphrasesnotfound": ['"Zorblax qwzx"[ORGN]'], "phrasesignored": ["and"],
+                                     "outputmessages": ["No items found."]}})
+    count, ids, warnings = eutils.esearch(client, ROUTE, "gds", "t", None)
+    assert (count, ids) == (0, [])
+    assert warnings == ("Entrez has no records for: txid999999999[ORGN]", "Entrez ignored unknown fields: NOPE",
+                        'Entrez has no records for: "Zorblax qwzx"[ORGN]', "Entrez ignored phrases: and")
+
+
+def test_esearch_empty_lists_are_no_warnings():
+    client = answer({"count": "1", "idlist": ["1"], "errorlist": {"phrasesnotfound": [], "fieldsnotfound": []},
+                     "warninglist": {"quotedphrasesnotfound": [], "phrasesignored": []}})
+    assert eutils.esearch(client, ROUTE, "gds", "t", None) == (1, ["1"], ())
+
+
+def test_esearch_error_is_an_upstream_error_carrying_ncbi_text():
+    client = answer({"ERROR": "Invalid query syntax near x", "count": "0", "idlist": []})
+    with pytest.raises(QuarryError) as caught:
+        eutils.esearch(client, ROUTE, "gds", "t", None)
+    assert caught.value.kind == "upstream_failed" and caught.value.detail == "eutils esearch: Invalid query syntax near x"
