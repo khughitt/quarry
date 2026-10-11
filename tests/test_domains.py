@@ -72,24 +72,47 @@ def test_core_search_replays_zenodo_then_figshare(monkeypatch):
     assert all(r["resource"] in ("zenodo", "figshare") for r in report["results"])
 
 
-def test_exact_biology_search_names_biostudies_before_any_request(monkeypatch):
-    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport([])))   # any request would fail
+@pytest.fixture
+def stub_searches(monkeypatch):
+    """Every shipped adapter keeps its capabilities but answers with an empty listing; no request is sent."""
+    from quarry import search as search_mod
+    from quarry.results import Coverage
+    real_make = search_mod.base.make
+
+    def make(resource):
+        adapter = real_make(resource)
+        adapter.prepare = lambda query: lambda client: (Coverage(resource.id, "q", adapter.match, 0, 0, "total"), [])
+        return adapter
+
+    monkeypatch.setitem(search_mod.run.__kwdefaults__, "make", make)
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport([])))
+
+
+def test_exact_biology_search_skips_biostudies(stub_searches):
+    """Spec §8.2: a default-set resource that cannot match exactly is left out, never searched loosely;
+    naming it with --in is refused."""
     out = invoke("search", "--domain", "biology", "--exact", "x")
+    assert out.exit_code == 0, out.stderr
+    coverage = json.loads(out.stdout)["coverage"]
+    assert [c["complete"] for c in coverage] == ["total", "total", "skipped", "total", "total"]
+    assert coverage[2]["resource"] == "biostudies" and "cannot match exactly" in coverage[2]["reason"]
+    out = invoke("search", "--domain", "biology", "--exact", "--in", "biostudies", "x")
     assert out.exit_code == 1 and "biostudies" in json.loads(out.stderr)["error"]["detail"]
 
 
-def test_organism_on_the_biology_default_set_names_the_first_core_resource(monkeypatch):
-    """Spec §8.2: a filter a resource cannot express is refused, never dropped. Zenodo and figshare
-    sit in biology's search set through core and have no organism, so --organism needs --in."""
-    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport([])))
+def test_organism_on_the_biology_default_set_skips_zenodo_and_figshare(stub_searches):
+    """Spec §8.2: Zenodo and figshare sit in biology's search set through core and have no organism,
+    so --organism leaves them out with a skipped coverage row; naming one with --in is refused."""
     out = invoke("search", "--domain", "biology", "--organism", "Homo sapiens", "x")
-    assert out.exit_code == 1 and "zenodo" in json.loads(out.stderr)["error"]["detail"]
-    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport.from_files(
-        [FX / "geo" / "search-myeloma.json"])))
-    from tests.recordings.geo import MYELOMA
-    out = invoke("search", "--domain", "biology", "--in", "geo", "--organism", MYELOMA.filters["organism"],
-                 "--since", MYELOMA.since.isoformat(), "--until", MYELOMA.until.isoformat(), *MYELOMA.phrases)
     assert out.exit_code == 0, out.stderr
+    report = json.loads(out.stdout)
+    assert [c["resource"] for c in report["coverage"]] == ["geo", "ena", "biostudies", "zenodo", "figshare"]
+    assert [c["complete"] for c in report["coverage"]] == ["total", "total", "total", "skipped", "skipped"]
+    assert report["coverage"][3]["reason"] == "zenodo cannot filter by organism"
+    assert report["warnings"] == ["zenodo skipped: zenodo cannot filter by organism",
+                                  "figshare skipped: figshare cannot filter by organism"]
+    out = invoke("search", "--domain", "biology", "--in", "zenodo", "--organism", "Homo sapiens", "x")
+    assert out.exit_code == 1 and "zenodo" in json.loads(out.stderr)["error"]["detail"]
 
 
 def test_taxon_curie_in_biology_names_biostudies_before_any_request(monkeypatch):

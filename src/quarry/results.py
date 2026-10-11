@@ -35,11 +35,18 @@ class Coverage:
     match: str                          # exact | expanded | native (sent as written, not compiled)
     total: int | None
     returned: int
-    complete: str                       # total | short-page | limited | failed
+    complete: str                       # total | short-page | limited | failed | skipped
     error: Mapping[str, str] | None = None
     warnings: tuple[str, ...] = ()      # what the adapter wants the report to say; never in as_dict
+    reason: str | None = None           # why a skipped resource was not searched
+
+    @classmethod
+    def skipped(cls, resource: str, match: str, reason: str) -> Coverage:
+        return cls(resource, None, match, None, 0, "skipped", reason=reason)
 
     def as_dict(self) -> dict:
+        if self.complete == "skipped":
+            return {"resource": self.resource, "match": self.match, "complete": "skipped", "reason": self.reason}
         out = {"resource": self.resource, "native": self.native, "match": self.match, "total": self.total,
                "returned": self.returned, "complete": self.complete}
         if self.error is not None:

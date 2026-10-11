@@ -197,3 +197,55 @@ def test_adapter_warnings_reach_the_report_but_not_the_coverage_object(catalog):
     report = json.loads(invoke("search", "--domain", "biology", "--in", "alpha", "warn").stdout)
     assert report["warnings"] == ["alpha warns"]
     assert "warnings" not in report["coverage"][0]
+
+
+@pytest.fixture
+def mixed(make_catalog):
+    """A default set holding one resource that cannot express --organism or --exact (spec §8.2)."""
+    fakes = {rid: FAKE.format(id=rid, role="repository", prefix="") for rid in ("alpha", "expanding")}
+    return make_catalog(fakes, ["alpha", "expanding"], ["alpha", "expanding"])
+
+
+@pytest.mark.parametrize("args, reason", [
+    (["--organism", "ncbitaxon:9606"], "cannot filter by organism"),
+    (["--exact"], "expands phrases and cannot match exactly"),
+])
+def test_default_set_member_that_cannot_express_the_query_is_skipped(mixed, args, reason):
+    out = invoke("search", "--domain", "biology", *args, "x")
+    assert out.exit_code == 0, out.stderr
+    report = json.loads(out.stdout)
+    assert report["coverage"][1] == {"resource": "expanding", "match": "expanded", "complete": "skipped",
+                                     "reason": f"expanding {reason}"}
+    assert [c["complete"] for c in report["coverage"]] == ["total", "skipped"]
+    assert {r["resource"] for r in report["results"]} == {"alpha"}
+    assert report["warnings"] == [f"expanding skipped: expanding {reason}"]
+
+
+def test_skipped_resource_is_never_prepared(mixed, monkeypatch):
+    prepare = Fake.prepare
+    monkeypatch.setattr(Fake, "prepare", lambda self, query: pytest.fail("a skipped resource must not start")
+                        if self.resource.id == "expanding" else prepare(self, query))
+    assert invoke("search", "--domain", "biology", "--exact", "x").exit_code == 0
+
+
+def test_skipped_resource_in_pretty_output(mixed):
+    out = CliRunner().invoke(main, ["search", "--domain", "biology", "--exact", "x"])
+    assert out.exit_code == 0
+    assert out.stdout.splitlines()[-2:] == ["# expanding: skipped (expanding expands phrases and cannot match exactly)",
+                                            "warning: expanding skipped: expanding expands phrases and cannot match exactly"]
+
+
+def test_named_resource_that_cannot_express_the_query_is_still_refused(mixed, monkeypatch):
+    monkeypatch.setattr(Fake, "prepare", lambda *args: pytest.fail("a refused search must not start any adapter"))
+    out = invoke("search", "--domain", "biology", "--in", "alpha", "--in", "expanding", "--exact", "x")
+    assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == "unsupported_filter"
+
+
+def test_all_skipped_default_set_fails_naming_every_resource(make_catalog, monkeypatch):
+    fakes = {rid: FAKE.format(id=rid, role="repository", prefix="") for rid in ("expanding", "expanding2")}
+    make_catalog(fakes, ["expanding", "expanding2"], ["expanding", "expanding2"])
+    monkeypatch.setattr(Fake, "prepare", lambda *args: pytest.fail("a refused search must not start any adapter"))
+    out = invoke("search", "--domain", "biology", "--exact", "x")
+    error = json.loads(out.stderr)["error"]
+    assert out.exit_code == 1 and out.stdout == "" and error["kind"] == "unsupported_filter"
+    assert "expanding expands" in error["detail"] and "expanding2 expands" in error["detail"]
