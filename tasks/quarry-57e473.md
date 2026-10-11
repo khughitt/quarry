@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: heliophysics-domain
 created: 2026-10-11T19:01:36Z
-updated: 2026-10-11T19:42:09Z
+updated: 2026-10-11T20:38:49Z
 started: 2026-10-11T19:02:03Z
 depends: []
 tags: [heliophysics]
@@ -31,3 +31,4 @@ The first domain outside biology and the first §14 test. The design spec, writt
 - 2026-10-11T19:42:08Z (heliophysics-domain): revised for round 1: identifier templates fixed (goes path below /goes/, spase CURIE without the scheme, donki lands on the application) and every template run through quarry.ids.resolve against the spec's TOML loaded with quarry.catalog.load (§8 records the run: only missing_adapter findings remain; search set vso, cdaweb, hek, zenodo, figshare); arxiv resource file supplied and proposed for core; HAPI is rest; NCEI HTTPS mirror route for swpc-events; the cut field is a consideration (survey finding 1 reassessed to not confirmed).
 - 2026-10-11T19:42:08Z (heliophysics-domain): parked (waiting on user, review): user reviews round 2 of docs/specs/2026-10-11-heliophysics-domain-design.md on branch heliophysics-domain (worktree .worktrees/heliophysics-domain); on approval: merge to main, then a writing-plans pass for the catalog files and adapters, sequenced after quarry-bc633c is decided
   provenance: {"harness_session":"claude-code:4a219dfe-7cba-478e-84d8-8594adc7dd5d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T20:38:49Z (heliophysics-domain): review: spec round 2 — verdict: accept (the catalog corrections accepted; one count to fix: the introduction says 21 resource files, the blocks hold 19); reviewer: codex/gpt-6-astra (relayed by the user)
