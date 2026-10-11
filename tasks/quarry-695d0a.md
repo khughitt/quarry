@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/organism-subtaxa
 created: 2026-10-11T15:28:21Z
-updated: 2026-10-11T17:10:39Z
+updated: 2026-10-11T17:11:21Z
 started: 2026-10-11T16:44:19Z
 depends: []
 tags: []
@@ -31,3 +31,4 @@ GEO compiles txidN[ORGN], which includes subtaxa; ENA compiles tax_eq(N), exact.
 - 2026-10-11T17:09:11Z (feat/organism-subtaxa): review: spec round 1 — verdict: revise; findings: P2 2; reviewer: codex
 - 2026-10-11T17:10:39Z (feat/organism-subtaxa): resumed
   provenance: {"harness_session":"claude-code:3372c373-34b3-4b18-ad87-45995d054cdd","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T17:11:21Z (feat/organism-subtaxa): Spec round 1 disposition: 2 of 2 folded. BioStudies skips from a default set and refuses under --in for an ncbitaxon CURIE, through a new adapter-contract unexpressed(query) consulted by search._unexpressed, with a default-set regression test; the subtaxa warning is report-level through Coverage.warnings, coverage JSON unchanged.
