@@ -85,7 +85,8 @@ def test_an_exactly_full_last_page_needs_one_more_empty_page():
     assert cov.complete == "short-page" and len(rows) == 100
 
 
-@pytest.mark.parametrize("body", ["<html>", '{"items": []}', json.dumps([{"id": "x"}]), json.dumps([{**item(1, "2026-01-01"), "published_date": "yesterday"}])])
+@pytest.mark.parametrize("body", ["<html>", '{"items": []}', json.dumps([{"id": "x"}]), json.dumps([{**item(1, "2026-01-01"), "published_date": "yesterday"}]),
+                                  json.dumps([item(1, "2026-13-45")])])
 def test_malformed_pages_are_upstream_errors(body):
     q = figshare.compile_query(Query(phrases=("x",)))
     bad = exchange("POST", f"{BASE}/articles/search", json_body={"search_for": q, "item_type": 3, "page_size": 100, "page": 1,
@@ -93,6 +94,8 @@ def test_malformed_pages_are_upstream_errors(body):
     with pytest.raises(QuarryError) as caught:
         FIG.search(replay_client(ReplayTransport([bad])), Query(phrases=("x",)))
     assert caught.value.kind == "upstream_failed"
+    if "2026-13-45" in body:
+        assert caught.value.detail == "figshare search: a published_date is not a calendar date"
 
 
 ARTICLE = {**item(34254439, "2026-10-08", doi="10.1371/journal.pone.0360063.t007", resource_doi="10.1371/journal.pone.0360063"),

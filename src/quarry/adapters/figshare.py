@@ -41,7 +41,8 @@ def _json(text: str, what: str):
         raise UpstreamError(f"figshare {what}: not JSON") from None
 
 
-def _valid(h: dict) -> dict:
+def _valid(h: dict) -> date:
+    """The item's published date, once every field _row reads has been checked."""
     if type(h.get("id")) is not int:
         raise UpstreamError("figshare item: id is not a number")
     for name in STRINGS:
@@ -49,18 +50,26 @@ def _valid(h: dict) -> dict:
             raise UpstreamError(f"figshare item: {name} is not text")
     if type(h.get("published_date")) is not str or not ISO.match(h["published_date"]):
         raise UpstreamError("figshare item: published_date is not an ISO date")
+    try:
+        published = date.fromisoformat(h["published_date"][:10])
+    except ValueError:
+        raise UpstreamError("figshare search: a published_date is not a calendar date") from None
     if h.get("files") is not None and (type(h["files"]) is not list or any(type(f) is not dict for f in h["files"])):
         raise UpstreamError("figshare item: files is not a list")
-    return h
+    return published
 
 
 def _row(h: dict) -> Result:
-    h = _valid(h)
+    return _dated(h)[0]
+
+
+def _dated(h: dict) -> tuple[Result, date]:
+    published = _valid(h)
     return Result(id=f"figshare:{h['id']}", resource="figshare", kind="dataset",
-                  title=TAGS.sub("", h.get("title") or "").strip(), date=ISO.match(h["published_date"]).group(1),
+                  title=TAGS.sub("", h.get("title") or "").strip(), date=published.isoformat(),
                   summary=TAGS.sub("", h.get("description") or "").strip() or None,
                   xrefs=(f"doi:{h['doi']}",) if h.get("doi") else (),
-                  publication=f"doi:{h['resource_doi']}" if h.get("resource_doi") else None)
+                  publication=f"doi:{h['resource_doi']}" if h.get("resource_doi") else None), published
 
 
 def _files(h: dict) -> list[File]:
@@ -104,8 +113,7 @@ class Figshare:
                 if type(items) is not list or any(type(h) is not dict for h in items):
                     raise UpstreamError("figshare search: expected a list of items")
                 for h in items:
-                    result = _row(h)
-                    when = date.fromisoformat(result.date)
+                    result, when = _dated(h)
                     if newest_first:
                         if query.until and when > query.until:
                             continue
