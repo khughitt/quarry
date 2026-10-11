@@ -1,18 +1,20 @@
 ---
 id: quarry-0619df
 title: "BioStudies search: emit hits from other archives under their own prefixes"
-status: doing
+status: done
 priority: 1
 size: s
 complexity: mid
 process: direct
 owner: main
 created: 2026-10-11T15:28:20Z
-updated: 2026-10-11T15:32:10Z
+updated: 2026-10-11T15:40:06Z
 started: 2026-10-11T15:32:10Z
+completed: 2026-10-11T15:40:06Z
 depends: []
 tags: []
 source: quarry-3f4c3b
+model: claude-opus-5-5
 agent: claude-code/claude-opus-5-5
 ---
 
@@ -22,4 +24,8 @@ BioStudies _id raises upstream_failed for any accession matching neither the bio
 
 - 2026-10-11T15:28:28Z (main): concerns: quarry-3f4c3b defect — post-merge plan review found this behaviour shipped in the remaining-adapters milestone
 - 2026-10-11T15:32:10Z (main): started
+  provenance: {"harness_session":"claude-code:a908c050-dadc-4389-be2a-5467ea9fa9f5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T15:40:06Z (main): done
+  provenance: {"harness_session":"claude-code:a908c050-dadc-4389-be2a-5467ea9fa9f5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T15:40:06Z (main): BioStudies search maps MODELn/BIOMDn/BMIDn to biomodels.db: and EMPIAR-n to empiar:n (canonical, cross-reference-only per §7); any other accession shape stays upstream_failed and now names the accession. Tests: other-archive mapping, unknown shape named; catalog pitfall added (4a90928). Suite 515 green; live 'search myeloma --in biostudies -n 100' failed before (upstream_failed) and returns 100 rows after, incl. biomodels.db:MODEL1908290002.
   provenance: {"harness_session":"claude-code:a908c050-dadc-4389-be2a-5467ea9fa9f5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
