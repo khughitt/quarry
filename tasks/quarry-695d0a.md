@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/organism-subtaxa
 created: 2026-10-11T15:28:21Z
-updated: 2026-10-11T17:49:26Z
+updated: 2026-10-11T17:50:46Z
 started: 2026-10-11T16:44:19Z
 depends: []
 tags: []
@@ -43,3 +43,4 @@ GEO compiles txidN[ORGN], which includes subtaxa; ENA compiles tax_eq(N), exact.
 - 2026-10-11T17:47:46Z (feat/organism-subtaxa): review: plan round 1 — verdict: revise; findings: P2 3; reviewer: codex
 - 2026-10-11T17:49:26Z (feat/organism-subtaxa): resumed
   provenance: {"harness_session":"claude-code:3372c373-34b3-4b18-ad87-45995d054cdd","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T17:50:46Z (feat/organism-subtaxa): Plan round 1 disposition: 3 of 3 folded. ENA's prepare validates every phrase and the name before deferring the lookup (_deferred_name); the ordering regression gains organism None/name/CURIE across both partial modes, Accepting declares organism so the asserted refusal is ENA's phrase refusal; Task 1 adds Accepting.unexpressed and runs that regression; the credential tests keep routes[1:].
