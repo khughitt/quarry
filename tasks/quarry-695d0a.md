@@ -8,12 +8,13 @@ complexity: mid
 process: planned
 owner: feat/organism-subtaxa
 created: 2026-10-11T15:28:21Z
-updated: 2026-10-11T16:44:32Z
+updated: 2026-10-11T16:49:59Z
 started: 2026-10-11T16:44:19Z
 depends: []
 tags: []
 source: quarry-3f4c3b
 agent: claude-code/claude-opus-5-5
+spec: docs/specs/2026-10-11-organism-subtaxa-design.md
 ---
 
 GEO compiles txidN[ORGN], which includes subtaxa; ENA compiles tax_eq(N), exact. Both report match: exact, so --organism ncbitaxon:10088 (Mus) merges every Mus species from GEO with almost nothing from ENA. §8.2 leaves the meaning open: pick one (ENA tax_tree, or GEO [ORGN:noexp]), state it in the spec, and test both adapters. Post-merge plan review 2026-10-11.
