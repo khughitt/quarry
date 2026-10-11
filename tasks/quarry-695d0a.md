@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/organism-subtaxa
 created: 2026-10-11T15:28:21Z
-updated: 2026-10-11T18:05:48Z
+updated: 2026-10-11T18:08:52Z
 started: 2026-10-11T16:44:19Z
 depends: []
 tags: []
@@ -50,3 +50,4 @@ GEO compiles txidN[ORGN], which includes subtaxa; ENA compiles tax_eq(N), exact.
 - 2026-10-11T17:57:54Z (feat/organism-subtaxa): resumed
   provenance: {"harness_session":"claude-code:3192b6f1-599f-4529-a94c-d834e6fd2af9","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-11T18:05:48Z (feat/organism-subtaxa): Implementation complete inline (Tasks 1-3, commits 14a94b2, 77aa3f2, a9fd766; test-fast 570 passed, just check clean); final whole-branch review dispatched
+- 2026-10-11T18:08:52Z (feat/organism-subtaxa): review: impl round 1 — verdict: revise; findings: Important 1, Minor 4; reviewer: claude-code/claude-opus-5-5
