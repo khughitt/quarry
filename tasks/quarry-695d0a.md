@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/organism-subtaxa
 created: 2026-10-11T15:28:21Z
-updated: 2026-10-11T17:20:50Z
+updated: 2026-10-11T17:21:01Z
 started: 2026-10-11T16:44:19Z
 depends: []
 tags: []
@@ -37,4 +37,6 @@ GEO compiles txidN[ORGN], which includes subtaxa; ENA compiles tax_eq(N), exact.
   provenance: {"harness_session":"claude-code:3372c373-34b3-4b18-ad87-45995d054cdd","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-11T17:13:26Z (feat/organism-subtaxa): review: spec round 2 — verdict: accept; findings: none; reviewer: codex
 - 2026-10-11T17:15:04Z (feat/organism-subtaxa): resumed
+  provenance: {"harness_session":"claude-code:3372c373-34b3-4b18-ad87-45995d054cdd","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T17:21:01Z (feat/organism-subtaxa): parked (waiting on user, review): User reviews the plan at .worktrees/organism-subtaxa/docs/plans/2026-10-11-organism-subtaxa.md and picks an execution method; then the agent starts Task 1 (quarry-083465) in that worktree
   provenance: {"harness_session":"claude-code:3372c373-34b3-4b18-ad87-45995d054cdd","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
