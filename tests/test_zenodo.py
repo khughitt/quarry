@@ -66,6 +66,22 @@ def test_limit_asks_for_a_small_page_and_is_limited():
     assert cov.complete == "limited" and len(rows) == 2
 
 
+def test_short_listing_fails_rather_than_returning_a_partial_result():
+    q = zenodo.compile_query(Query(phrases=("x",)))
+    client = replay_client(ReplayTransport([page(q, 1, [record(i) for i in range(25)], 30), page(q, 2, [], 30)]))
+    with pytest.raises(QuarryError) as caught:
+        ZEN.search(client, Query(phrases=("x",)))
+    assert caught.value.kind == "incomplete_listing"
+
+
+def test_limit_above_a_page_keeps_pages_of_25_and_truncates():
+    query = Query(phrases=("x",), limit=30)
+    q = zenodo.compile_query(query)
+    transport = ReplayTransport([page(q, 1, [record(i) for i in range(25)], 60), page(q, 2, [record(i) for i in range(25, 50)], 60)])
+    cov, rows = ZEN.search(replay_client(transport), query)
+    assert (cov.complete, cov.returned, len(rows)) == ("limited", 30, 30)
+
+
 def test_total_beyond_the_window_is_refused_unless_limited():
     q = zenodo.compile_query(Query(phrases=("x",)))
     with pytest.raises(QuarryError) as caught:
