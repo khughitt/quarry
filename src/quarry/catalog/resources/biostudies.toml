@@ -20,7 +20,7 @@ evidence = "mm-159cb7; the search answer lists expandedEfoTerms and expandedSyno
 
 [[pitfalls]]
 summary = "search hits omit the organism"
-handling = "--organism becomes the facet.organism parameter (a taxon name; an ncbitaxon: CURIE is refused) and every hit then carries it; show reads the study's Organism attribute"
+handling = "--organism becomes the facet.organism parameter (a taxon name) and every hit then carries it; an ncbitaxon: CURIE skips biostudies from a default set and is refused under --in; show reads the study's Organism attribute"
 evidence = "mm-159cb7 read one facet listing and one filtered pass per organism value"
 
 [[pitfalls]]
@@ -47,3 +47,8 @@ evidence = "S-BSST1234 lists 'Raw datas.zip' as a 16,932,701,596-byte directory 
 summary = "a study may hold its files in File List attributes rather than inline (S-BIAD144: none inline, 223 in 'File list_1.json'), and the lists of large studies run to hundreds of MB"
 handling = "files follows each section's File List at <httpLink>/Files/<name> and fails incomplete_listing when the entries listed differ from info.files; a study needing file lists with more than 10,000 files is refused with too_many_results, naming the lists, before any is read"
 evidence = "probe 2026-10-11: S-BIAD144 info.files 223 with no inline entries; S-BIAD2's RawFiles.json is 944,806,735 bytes for 1,309,774 files"
+
+[[pitfalls]]
+summary = "facet.organism matches one exact label, so a taxon's subtaxa are not included"
+handling = "biostudies stays in an organism search, and the report warns that it matched the label only"
+evidence = "probe 2026-10-11: facet.organism 'Mus musculus' finds 2,784 cancer studies, 'Mus' and 'mus' find 0"

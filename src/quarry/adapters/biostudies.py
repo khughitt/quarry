@@ -38,12 +38,21 @@ def _quote(text: str) -> str:
     return f'"{text}"'
 
 
+def unexpressed(query: Query) -> str | None:
+    """facet.organism takes a label, so a taxon CURIE cannot be carried: skipped from a default set,
+    refused under --in (spec 2026-10-11 §3)."""
+    organism = query.filters.get("organism")
+    if organism and TAXON.match(organism):
+        return f"biostudies filters organisms by name, not {organism}"
+    return None
+
+
 def compile_query(query: Query) -> tuple[str, dict[str, str]]:
     """(the query string, the other search parameters)."""
     organism = query.filters.get("organism")
-    if organism and TAXON.match(organism):
-        raise QuarryError("unsupported_filter", f"biostudies filters organisms by name, not {organism!r}; "
-                                                "give the taxon name, or leave biostudies out with --in")
+    reason = unexpressed(query)
+    if reason is not None:
+        raise QuarryError("unsupported_filter", f"{reason}; give the taxon name")
     params = {"facet.organism": organism} if organism else {}
     if query.native is not None:
         return query.native, params
@@ -177,6 +186,9 @@ class Biostudies:
     def search(self, client: Client, query: Query) -> tuple[Coverage, list[Result]]:
         return self.prepare(query)(client)
 
+    def unexpressed(self, query: Query) -> str | None:
+        return unexpressed(query)
+
     def prepare(self, query: Query) -> Callable[[Client], tuple[Coverage, list[Result]]]:
         q, params = compile_query(query)
         organism = params.get("facet.organism")
@@ -199,7 +211,8 @@ class Biostudies:
             rows = rows[:query.limit] if query.limit else rows
             complete = completeness(total=exact_total, returned=len(rows), limit=query.limit, short_page=short)
             match = "native" if query.native is not None else self.match
-            return Coverage(self.resource.id, native, match, exact_total, len(rows), complete), rows
+            warnings = (f"biostudies matches the organism label {organism} only, not its subtaxa",) if organism else ()
+            return Coverage(self.resource.id, native, match, exact_total, len(rows), complete, warnings=warnings), rows
 
         return execute
 

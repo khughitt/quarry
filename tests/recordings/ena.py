@@ -7,6 +7,8 @@ from quarry.query import Query
 MYELOMA = Query(phrases=("myeloma",), filters={"organism": "ncbitaxon:9606"},
                 since=date(2024, 1, 1), until=date(2024, 3, 31))
 HYPHEN = Query(phrases=("RPMI-8226",), filters={"organism": "ncbitaxon:9606"})
+MUSCULUS_NAME = Query(phrases=("myeloma",), filters={"organism": "Mus musculus"},
+                      since=date(2024, 1, 1), until=date(2024, 3, 31))
 
 
 def show_first(adapter, client):
@@ -30,6 +32,7 @@ def files_first(adapter, client):
 SCENARIOS = {
     "search-myeloma": lambda adapter, client: adapter.search(client, MYELOMA),
     "search-hyphen": lambda adapter, client: adapter.search(client, HYPHEN),
+    "search-musculus-name": lambda adapter, client: adapter.search(client, MUSCULUS_NAME),
     "show-first": show_first,
     "files-first": files_first,
 }

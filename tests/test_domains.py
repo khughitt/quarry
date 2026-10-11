@@ -8,8 +8,10 @@ from click.testing import CliRunner
 
 from quarry import catalog as catalog_mod
 from quarry import context
+from quarry.adapters import base, ena, geo
 from quarry.cli import main
-from quarry.testing import ReplayTransport, replay_client
+from quarry.query import Query
+from quarry.testing import ReplayTransport, exchange, replay_client
 from tests.recordings.common import CORE_MYELOMA
 
 FX = Path(__file__).parent / "fixtures"
@@ -115,7 +117,49 @@ def test_organism_on_the_biology_default_set_skips_zenodo_and_figshare(stub_sear
     assert out.exit_code == 1 and "zenodo" in json.loads(out.stderr)["error"]["detail"]
 
 
-def test_taxon_curie_in_biology_names_biostudies_before_any_request(monkeypatch):
-    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport([])))   # any request would fail
-    out = invoke("search", "--domain", "biology", "--organism", "ncbitaxon:9606", "x")
-    assert out.exit_code == 1 and "biostudies" in json.loads(out.stderr)["error"]["detail"]
+EU = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+ENA_API = "https://www.ebi.ac.uk/ena/portal/api"
+
+
+def test_taxon_curie_on_the_biology_default_set_skips_biostudies_and_searches_geo_and_ena(monkeypatch):
+    """Spec 2026-10-11 §3: BioStudies cannot filter by a CURIE, so a default set leaves it out;
+    GEO and ENA run. A BioStudies request would find no recorded exchange and raise."""
+    query = Query(phrases=("x",), filters={"organism": "ncbitaxon:10088"})
+    q = ena.compile_query(query)
+    transport = ReplayTransport([
+        exchange("GET", f"{EU}/esearch.fcgi", {"db": "gds", "term": geo.compile_query(query), "retmode": "json",
+                                               "retstart": 0, "retmax": 10000},
+                 body=json.dumps({"esearchresult": {"count": "0", "idlist": []}})),
+        exchange("GET", f"{ENA_API}/count", {"result": "study", "query": q}, body="count\n0\n", content_type="text/plain"),
+        exchange("GET", f"{ENA_API}/search", {"result": "study", "query": q, "fields": ena.FIELDS, "format": "json",
+                                              "limit": 0}, body=""),
+    ])
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(transport))
+    out = invoke("search", "--domain", "biology", "--organism", "ncbitaxon:10088", "x")
+    assert out.exit_code == 0, out.stderr
+    report = json.loads(out.stdout)
+    assert [c["resource"] for c in report["coverage"]] == ["geo", "ena", "biostudies", "zenodo", "figshare"]
+    assert [c["complete"] for c in report["coverage"]] == ["total", "total", "skipped", "skipped", "skipped"]
+    assert report["coverage"][2]["reason"] == "biostudies filters organisms by name, not ncbitaxon:10088"
+    assert "biostudies skipped: biostudies filters organisms by name, not ncbitaxon:10088" in report["warnings"]
+    assert transport.pending == []
+
+
+def test_taxon_curie_with_in_biostudies_is_refused_before_any_request(monkeypatch):
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport([])))
+    out = invoke("search", "--domain", "biology", "--in", "biostudies", "--organism", "ncbitaxon:10088", "x")
+    error = json.loads(out.stderr)["error"]
+    assert out.exit_code == 1 and error["kind"] == "unsupported_filter"
+    assert error["detail"] == "biostudies filters organisms by name, not ncbitaxon:10088; leave it out of --in"
+
+
+@pytest.mark.parametrize("rid, organism, reason", [
+    ("biostudies", "ncbitaxon:10088", "biostudies filters organisms by name, not ncbitaxon:10088"),
+    ("biostudies", "NCBITaxon:10088", "biostudies filters organisms by name, not NCBITaxon:10088"),   # Review Focus 4
+    ("biostudies", "Mus musculus", None),
+    ("geo", "ncbitaxon:10088", None), ("geo", "Mus", None),
+    ("ena", "ncbitaxon:10088", None), ("ena", "Mus", None),
+])
+def test_unexpressed_names_only_what_an_adapter_cannot_filter_by(rid, organism, reason):
+    adapter = base.make(CAT.resources[rid])
+    assert adapter.unexpressed(Query(phrases=("x",), filters={"organism": organism})) == reason

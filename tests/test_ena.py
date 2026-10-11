@@ -18,7 +18,7 @@ from quarry.ids import Curie
 from quarry.query import Query
 from quarry.results import Coverage
 from quarry.testing import ReplayTransport, VirtualClock, exchange, replay_client
-from tests.recordings.ena import HYPHEN, MYELOMA
+from tests.recordings.ena import HYPHEN, MUSCULUS_NAME, MYELOMA
 
 FX = Path(__file__).parent / "fixtures" / "ena"
 CAT = catalog_mod.load()
@@ -32,7 +32,7 @@ def test_phrases_or_filters_and():
     assert ena.compile_query(q) == (
         '(study_title="myeloma" OR study_description="myeloma" OR '
         'study_title="plasmacytoma" OR study_description="plasmacytoma") '
-        'AND tax_eq(9606) AND first_public>=2024-01-01 AND first_public<=2024-03-31')
+        'AND tax_tree(9606) AND first_public>=2024-01-01 AND first_public<=2024-03-31')
 
 
 def test_hyphenated_terms_are_equality_not_wildcards():
@@ -40,10 +40,99 @@ def test_hyphenated_terms_are_equality_not_wildcards():
     assert compiled == '(study_title="RPMI-8226" OR study_description="RPMI-8226")' and "*" not in compiled
 
 
-def test_organism_by_name_and_native_passthrough():
-    assert ena.compile_query(Query(phrases=("x",), filters={"organism": "Homo sapiens"})).endswith(
-        'AND scientific_name="Homo sapiens"')
+TAXONOMY = "https://www.ebi.ac.uk/ena/taxonomy/rest"
+MUS = {"taxId": "10088", "scientificName": "Mus", "commonName": "mouse", "rank": "genus"}
+MUSCULUS = {"taxId": "10090", "scientificName": "Mus musculus", "commonName": "house mouse", "rank": "species"}
+FLU = "Influenza A virus (A/Puerto Rico/8/1934(H1N1))"
+
+
+def any_name(encoded, body):
+    return exchange("GET", f"{TAXONOMY}/any-name/{encoded}", body=body)
+
+
+def listing(q, total=0, body=""):
+    return [exchange("GET", f"{BASE}/count", {"result": "study", "query": q}, body=f"count\n{total}\n",
+                     content_type="text/plain"),
+            exchange("GET", f"{BASE}/search", {"result": "study", "query": q, "fields": ena.FIELDS, "format": "json",
+                                               "limit": 0}, body=body)]
+
+
+def test_a_resolved_name_compiles_to_its_subtree_and_an_unresolved_one_is_a_bug():
+    query = Query(phrases=("x",), filters={"organism": "Mus"})
+    assert ena.compile_query(query, "10088").endswith("AND tax_tree(10088)")
+    with pytest.raises(ValueError, match="resolve_taxon"):
+        ena.compile_query(query)
     assert ena.compile_query(Query(native='study_title="a*"')) == 'study_title="a*"'
+
+
+@pytest.mark.parametrize("name, encoded, taxon", [
+    ("mus musculus", "mus%20musculus", MUSCULUS),                                         # Review Focus 2
+    (FLU, "Influenza%20A%20virus%20%28A%2FPuerto%20Rico%2F8%2F1934%28H1N1%29%29",         # Review Focus 1
+     {"taxId": "211044", "scientificName": FLU, "rank": "no rank"}),
+])
+def test_a_name_resolves_to_one_taxon_then_searches_its_subtree(name, encoded, taxon):
+    query = Query(phrases=("x",), filters={"organism": name})
+    q = ena.compile_query(query, taxon["taxId"])
+    transport = ReplayTransport([any_name(encoded, json.dumps([taxon])), *listing(q)])
+    with replay_client(transport) as client:
+        cov, rows = ENA.search(client, query)
+    assert cov.native == q and q.endswith(f"AND tax_tree({taxon['taxId']})") and cov.complete == "total"
+    assert transport.pending == []
+
+
+def test_a_name_with_no_taxon_is_not_found():
+    query = Query(phrases=("x",), filters={"organism": "Nonexistus fakeus"})
+    with replay_client(ReplayTransport([any_name("Nonexistus%20fakeus", "[ ]")])) as client, \
+            pytest.raises(QuarryError) as caught:
+        ENA.search(client, query)
+    assert caught.value.kind == "not_found" and "Nonexistus fakeus" in caught.value.detail
+
+
+def test_a_name_with_several_taxa_is_ambiguous_and_names_each_curie():           # Review Focus 2
+    query = Query(phrases=("x",), filters={"organism": "mouse"})
+    with replay_client(ReplayTransport([any_name("mouse", json.dumps([MUSCULUS, MUS]))])) as client, \
+            pytest.raises(QuarryError) as caught:
+        ENA.search(client, query)
+    assert caught.value.kind == "ambiguous_id"
+    assert "ncbitaxon:10090 (Mus musculus, species)" in caught.value.detail
+    assert "ncbitaxon:10088 (Mus, genus)" in caught.value.detail
+
+
+@pytest.mark.parametrize("body", [
+    "<html>busy</html>",
+    '{"taxId": "10088"}',
+    '[{"taxId": 10088, "scientificName": "Mus"}]',
+    '[{"taxId": "x", "scientificName": "Mus"}]',
+    '[{"taxId": "10088"}]',
+    '[{"taxId": "10088", "scientificName": "Mus", "rank": 3}]',
+])
+def test_a_malformed_taxonomy_answer_is_an_upstream_error(body):
+    query = Query(phrases=("x",), filters={"organism": "Mus"})
+    with replay_client(ReplayTransport([any_name("Mus", body)])) as client, pytest.raises(QuarryError) as caught:
+        ENA.search(client, query)
+    assert caught.value.kind == "upstream_failed"
+
+
+@pytest.mark.parametrize("name", ['Mus "x"', "Mus*"])
+def test_a_name_ena_cannot_carry_is_refused_in_prepare(name):                       # Review Focus 5
+    """prepare takes no client, so a refusal there precedes every request, the lookup included."""
+    with pytest.raises(QuarryError) as caught:
+        ENA.prepare(Query(phrases=("x",), filters={"organism": name}))
+    assert caught.value.kind == "unsupported_filter"
+
+
+def test_prepare_defers_a_name_to_execute():
+    assert callable(ENA.prepare(Query(phrases=("x",), filters={"organism": "Mus"})))
+
+
+def test_a_failed_lookup_under_allow_partial_is_enas_failed_row():                  # Review Focus 3
+    query = Query(phrases=("x",), filters={"organism": "Nonexistus fakeus"})
+    with replay_client(ReplayTransport([any_name("Nonexistus%20fakeus", "[]")])) as client:
+        report = search.run(catalog=CAT, client=client, query=query, resource_ids=["ena"], domain="biology",
+                            allow_partial=True, from_defaults=False)
+    cov = report["coverage"][0]
+    assert cov["complete"] == "failed" and cov["error"]["kind"] == "not_found"
+    assert report["warnings"] == ["ena failed: ENA's taxonomy has no taxon named 'Nonexistus fakeus'"]
 
 
 @pytest.mark.parametrize("phrase", ['the "MM" cohort', "ARP1*"])
@@ -70,6 +159,12 @@ def test_recorded_hyphen_search_sends_equality():
     with replay("search-hyphen") as client:
         cov, _ = ENA.search(client, HYPHEN)
     assert 'study_title="RPMI-8226"' in cov.native and cov.complete == "total"
+
+
+def test_recorded_name_search_resolves_through_the_taxonomy_and_searches_the_subtree():
+    with replay("search-musculus-name") as client:
+        cov, rows = ENA.search(client, MUSCULUS_NAME)
+    assert "AND tax_tree(10090) AND first_public>=2024-01-01" in cov.native and cov.complete == "total"
 
 
 def test_recorded_show():
@@ -259,7 +354,7 @@ def test_malformed_compressed_response_is_a_cli_upstream_error(monkeypatch, allo
 def test_parser_diagnostics_never_echo_keys_through_cli(monkeypatch, allow_partial, malformed):
     sentinel = "PRJ-SYNTHETIC-PARSER-KEY"
     route = replace(ENA.route, auth="optional-key", key_env="TEST_KEY", key_param="api_key")
-    monkeypatch.setattr(ena, "make", lambda resource: ena.Ena(replace(resource, routes=(route,))))
+    monkeypatch.setattr(ena, "make", lambda resource: ena.Ena(replace(resource, routes=(route, *resource.routes[1:]))))
     count, listing = "count\n1", json.dumps([STUDY])
     if malformed == "count":
         count = f"upstream error echoed {sentinel}"
@@ -293,7 +388,7 @@ def test_parser_diagnostics_never_echo_keys_through_cli(monkeypatch, allow_parti
 def test_successful_scientific_content_is_not_scrubbed():
     title = "PRJ-SYNTHETIC-PARSER-KEY"
     route = replace(ENA.route, auth="optional-key", key_env="TEST_KEY", key_param="api_key")
-    adapter = ena.Ena(replace(ENA.resource, routes=(route,)))
+    adapter = ena.Ena(replace(ENA.resource, routes=(route, *ENA.resource.routes[1:])))
 
     def found(request):
         assert request.url.params["api_key"] == title
@@ -320,8 +415,9 @@ def test_library_blank_organism_is_refused_before_any_request(organism):
 
 
 @pytest.mark.parametrize("allow_partial", [False, True])
+@pytest.mark.parametrize("organism", [None, "Mus", "ncbitaxon:10088"])
 @pytest.mark.parametrize("phrase", ['the "MM" cohort', "ARP1*"])
-def test_later_ena_compilation_refusal_prevents_earlier_accepting_adapter_http(allow_partial, phrase):
+def test_later_ena_compilation_refusal_prevents_earlier_accepting_adapter_http(allow_partial, organism, phrase):
     first = replace(CAT.resources["ena"], id="accepting")
     catalog = replace(CAT, resources={**CAT.resources, first.id: first})
     seen = []
@@ -329,7 +425,7 @@ def test_later_ena_compilation_refusal_prevents_earlier_accepting_adapter_http(a
     class Accepting:
         resource = first
         match = "exact"
-        filters = frozenset()
+        filters = frozenset({"organism"})
 
         def prepare(self, query):
             def execute(client):
@@ -340,15 +436,19 @@ def test_later_ena_compilation_refusal_prevents_earlier_accepting_adapter_http(a
         def search(self, client, query):
             return self.prepare(query)(client)
 
+        def unexpressed(self, query):
+            return None
+
     def ok(request):
         seen.append(request)
         return httpx.Response(200)
 
     with replay_client(httpx.MockTransport(ok)) as client, pytest.raises(QuarryError) as caught:
-        search.run(catalog=catalog, client=client, query=Query(phrases=(phrase,)),
+        search.run(catalog=catalog, client=client,
+                   query=Query(phrases=(phrase,), filters={"organism": organism} if organism else {}),
                    resource_ids=[first.id, "ena"], domain="biology", allow_partial=allow_partial, from_defaults=False,
                    make=lambda resource: ena.make(resource) if resource.id == "ena" else Accepting())
-    assert caught.value.kind == "unsupported_filter"
+    assert caught.value.kind == "unsupported_filter" and "an ENA phrase cannot contain" in caught.value.detail
     assert seen == []
 
 

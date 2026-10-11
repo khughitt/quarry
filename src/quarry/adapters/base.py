@@ -22,6 +22,11 @@ class Adapter(Protocol):
         """Compile and refuse unsupported queries without I/O; return their execution."""
         ...
 
+    def unexpressed(self, query: Query) -> str | None:
+        """Why this adapter cannot carry the query's filter values, without I/O; None when it can.
+        Asked only after the filter names passed (spec §8.2), so a default set skips it."""
+        ...
+
     def search(self, client: Client, query: Query) -> tuple[Coverage, list[Result]]:
         """Prepare then execute a single-resource search."""
         ...

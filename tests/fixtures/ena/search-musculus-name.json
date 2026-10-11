@@ -1,0 +1,77 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [],
+   "url": "https://www.ebi.ac.uk/ena/taxonomy/rest/any-name/Mus%20musculus"
+  },
+  "response": {
+   "body": "[ {\n  \"taxId\" : \"10090\",\n  \"scientificName\" : \"Mus musculus\",\n  \"commonName\" : \"house mouse\",\n  \"formalName\" : \"true\",\n  \"rank\" : \"species\",\n  \"division\" : \"MUS\",\n  \"lineage\" : \"Eukaryota; Metazoa; Chordata; Craniata; Vertebrata; Euteleostomi; Mammalia; Eutheria; Euarchontoglires; Glires; Rodentia; Myomorpha; Muroidea; Muridae; Murinae; Mus; Mus; \",\n  \"geneticCode\" : \"1\",\n  \"mitochondrialGeneticCode\" : \"2\",\n  \"submittable\" : \"true\",\n  \"binomial\" : \"true\",\n  \"otherNames\" : [ \"Mus musculus Linnaeus, 1758:authority\", \"LK3 transgenic mice:includes\", \"Balb/c mouse:includes\", \"Mus sp. 129SV:includes\", \"transgenic mice:includes\", \"nude mice:includes\", \"house mouse:genbank common name\" ],\n  \"metagenome\" : \"false\"\n} ]",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "query",
+     "(study_title=\"myeloma\" OR study_description=\"myeloma\") AND tax_tree(10090) AND first_public>=2024-01-01 AND first_public<=2024-03-31"
+    ],
+    [
+     "result",
+     "study"
+    ]
+   ],
+   "url": "https://www.ebi.ac.uk/ena/portal/api/count"
+  },
+  "response": {
+   "body": "count\n3\n",
+   "headers": {
+    "content-type": "text/plain"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "fields",
+     "study_accession,secondary_study_accession,study_alias,study_title,study_description,tax_id,scientific_name,first_public"
+    ],
+    [
+     "format",
+     "json"
+    ],
+    [
+     "limit",
+     "0"
+    ],
+    [
+     "query",
+     "(study_title=\"myeloma\" OR study_description=\"myeloma\") AND tax_tree(10090) AND first_public>=2024-01-01 AND first_public<=2024-03-31"
+    ],
+    [
+     "result",
+     "study"
+    ]
+   ],
+   "url": "https://www.ebi.ac.uk/ena/portal/api/search"
+  },
+  "response": {
+   "body": "[\n{\"study_accession\":\"PRJNA1066812\",\"secondary_study_accession\":\"SRP484757\",\"study_alias\":\"PRJNA1066812\",\"study_title\":\"IRF4 requires ARID1A to establish plasma cell identity in multiple myeloma (CUT&RUN mouse 13)\",\"study_description\":\"Multiple myeloma (MM) is an incurable malignancy of plasma cells that exploits transcriptional networks underpinning normal plasma cell biology to drive malignant growth and survival. The transcription factor IRF4 serves as the principal architect of plasma cell identity, and MM cells are addicted to IRF4 expression for their survival. To discover unique molecular vulnerabilities in MM, we employ a multi-omics approach integrating functional genomics screening, spatial-proteomics, and global chromatin mapping. We find that ARID1A, a member of the SWI/SNF chromatin remodeling complex, is both required for IRF4 expression and functionally associated with IRF4 protein on chromatin. Conditional deletion of Arid1a in activated murine B cells thwarts subsequent plasma cell differentiation by disrupting IRF4-dependent transcriptional networks, thus defining ARID1A as a novel plasma cell vulnerability. Targeting ARID1A-dependent SWI/SNF activity via SMARCA2/4 inhibition induces a rapid loss of IRF4-target gene expression and quenches global oncogenic amplification of gene expression driven by MYC, resulting in profound toxicity to MM cells. Notably, SWI/SNF-dependent genes are upregulated in MM patients with aggressive disease, and SMARCA2/4 inhibitors retain their activity in immunomodulatory drug (IMiD)-resistant MM cells. To fully harness the potential of these drugs, we use combinatorial drug screens to uncover profound synergistic toxicity between SMARCA2/4 and MEK inhibitors. Thus, targeting SWI/SNF activity potently represses an IRF4-MYC feed forward loop and provides a feasible path forward to effectively treat this incurable disease. Overall design: Cut&Run analysis of ARID1A to determine chromatin binding in murine naive B cells, germinal center B cells, and plasma cells.\",\"tax_id\":\"10090\",\"scientific_name\":\"Mus musculus\",\"first_public\":\"2024-01-26\"}\n,\n{\"study_accession\":\"PRJNA1010938\",\"secondary_study_accession\":\"SRP457620\",\"study_alias\":\"PRJNA1010938\",\"study_title\":\"Single cell RNA sequencing of the in vivo mouse TME\",\"study_description\":\"CAR-T cell therapy has achieved remarkable clinical outcomes, yet the autologous nature of FDA-approved CAR-T products present significant challenges in manufacturing, cost, and patient selection. Therefore, there is a growing demand for off-the-shelf cell therapy. Here we introduce an ex vivo feeder-free culture to differentiate gene-engineered HSCs into allogeneic NKT cells, as well as their CAR-armed and IL-15-enhanced derivatives (Allo15CAR-NKT cells). In order to study the epigenetic regulation of the generated cells, we performed DNA methylation sequencing on both IL-15-enhanced and non-IL-15-engineered AlloCAR-NKT cells. Conventional CAR-T cells were included as a control. Overall design: Gene expression profiling of mouse immune cells in an in vivo study using an MM-FG human multiple myeloma xenograft NSG mouse model\",\"tax_id\":\"10090\",\"scientific_name\":\"Mus musculus\",\"first_public\":\"2024-03-30\"}\n,\n{\"study_accession\":\"PRJNA1021579\",\"secondary_study_accession\":\"SRP463513\",\"study_alias\":\"PRJNA1021579\",\"study_title\":\"Effect of Dis3 depletion on gene expression in hematopoietic stem cells of C57BL/6 mice\",\"study_description\":\"Multiple myeloma (MM) is a plasma cell neoplasm that remains incurable regardless of the introduction of novel agents. Therefore, it is of necessity to decode the molecular mechanisms of myelomagenesis to identify novel therapeutic strategies. Recent advances in next-generation sequencing technologies have not only reconfirmed the significance of known driver events in MM but also have identified novel genetic alterations in MM. Importantly, mutations of DIS3 genes have been identified in ~10% of MM patients, and loss of heterozygosity at chromosome 13q that leads to deletion of one allele of DIS3 has been observed in ~ 40% of MM patients. However, the roles of DIS3 in hematopoiesis and myelomagenesis remain incompletely understood. Here we show that Dis3 prevents accumulation of DNA damage in hematopoietic cells, thereby supporting hematopoiesis. We also show that loss of Dis3 alone and in combination with c-MAF transgene in GC B cells do not exhibit plasma cell neoplasm in mice. Overall design: Hematopoietic stem cells of wild type and hematopoietic cell-specific Dis3-/- mice were isolated and subjected to RNA-seq (n = 2 mice).\",\"tax_id\":\"10090\",\"scientific_name\":\"Mus musculus\",\"first_public\":\"2024-03-30\"}\n]\n",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ }
+]
