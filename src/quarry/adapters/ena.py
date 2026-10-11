@@ -106,6 +106,7 @@ def _rows(text: str) -> list[dict]:
 FILE_FIELDS = ("run_accession,fastq_ftp,fastq_md5,fastq_bytes,submitted_ftp,submitted_md5,submitted_bytes,"
                "sra_ftp,sra_md5,sra_bytes")
 FTP_HOST = "ftp.sra.ebi.ac.uk/"
+RUN = re.compile(r"^[SED]RR\d+$")
 
 
 def _split(d: dict, key: str) -> list[str]:
@@ -118,11 +119,12 @@ def _split(d: dict, key: str) -> list[str]:
 
 
 def _files(rows: list[dict]) -> list[File]:
-    """One File per path in the run's fastq, submitted and sra columns; md5 and bytes align by index."""
+    """One File per path in the run's fastq, submitted and sra columns, named <run>/<basename>; md5 and
+    bytes align by index."""
     files = []
     for d in rows:
-        if type(d.get("run_accession")) is not str:
-            raise UpstreamError("ena filereport: run_accession is not text")
+        if type(d.get("run_accession")) is not str or not RUN.match(d["run_accession"]):
+            raise UpstreamError("ena filereport: run_accession is not a run accession")
         for kind in ("fastq", "submitted", "sra"):
             paths, md5s, sizes = (_split(d, f"{kind}_{suffix}") for suffix in ("ftp", "md5", "bytes"))
             if not paths:
@@ -134,7 +136,8 @@ def _files(rows: list[dict]) -> list[File]:
                     raise UpstreamError("ena filereport: a file is not under ftp.sra.ebi.ac.uk")
                 if sizes and not re.fullmatch(r"[0-9]+", sizes[i]):
                     raise UpstreamError("ena filereport: a size is not a number")
-                files.append(File(name=path.rsplit("/", 1)[-1], urls=(f"https://{path}", f"ftp://{path}"),
+                # under the run: submitted basenames repeat across runs, and a request needs unique names
+                files.append(File(name=f"{d['run_accession']}/{path.rsplit('/', 1)[-1]}", urls=(f"https://{path}", f"ftp://{path}"),
                                   size=int(sizes[i]) if sizes else None, checksums={"md5": md5s[i]} if md5s else {}))
     return files
 
