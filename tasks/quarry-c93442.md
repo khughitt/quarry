@@ -5,10 +5,10 @@ status: doing
 priority: 2
 size: s
 complexity: mid
-process: planned
+process: direct
 owner: main
 created: 2026-10-11T13:06:57Z
-updated: 2026-10-11T16:02:12Z
+updated: 2026-10-11T16:02:41Z
 started: 2026-10-11T16:02:12Z
 depends: []
 tags: []
