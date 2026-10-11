@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: heliophysics-domain
 created: 2026-10-11T19:01:36Z
-updated: 2026-10-11T20:39:31Z
+updated: 2026-10-11T20:43:40Z
 started: 2026-10-11T19:02:03Z
 depends: []
 tags: [heliophysics]
@@ -35,4 +35,6 @@ The first domain outside biology and the first §14 test. The design spec, writt
 - 2026-10-11T20:38:49Z (heliophysics-domain): resumed
   provenance: {"harness_session":"claude-code:4a219dfe-7cba-478e-84d8-8594adc7dd5d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-11T20:39:31Z (heliophysics-domain): parked (waiting on user, approval): user approves docs/specs/2026-10-11-heliophysics-domain-design.md for planning (review round 2 accepted the catalog corrections) on branch heliophysics-domain (worktree .worktrees/heliophysics-domain); on approval: mark the status line approved, merge to main, then a writing-plans pass for the catalog files and adapters, sequenced after quarry-bc633c is decided
+  provenance: {"harness_session":"claude-code:4a219dfe-7cba-478e-84d8-8594adc7dd5d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-11T20:43:40Z (heliophysics-domain): resumed
   provenance: {"harness_session":"claude-code:4a219dfe-7cba-478e-84d8-8594adc7dd5d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
