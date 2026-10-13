@@ -1,13 +1,15 @@
 ---
 id: quarry-c7c98a
 title: "Harden ENA's taxonomy lookup: record the no-match answer and count distinct taxa"
-status: todo
+status: doing
 priority: 3
 size: xs
 complexity: low
 process: direct
+owner: main
 created: 2026-10-11T18:14:34Z
-updated: 2026-10-11T18:14:40Z
+updated: 2026-10-13T00:45:08Z
+started: 2026-10-13T00:45:08Z
 depends: []
 tags: []
 source: quarry-695d0a
@@ -18,3 +20,4 @@ From quarry-695d0a's final review. (1) test_a_name_with_no_taxon_is_not_found re
 ## Notes
 
 - 2026-10-11T18:14:40Z (main): concerns: quarry-695d0a extension — hardening the taxonomy lookup the final review flagged as pinned only by hand-made responses
+- 2026-10-13T00:45:08Z (main): started
