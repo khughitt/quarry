@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: ena-taxonomy-hardening
 created: 2026-10-11T18:14:34Z
-updated: 2026-10-13T00:52:36Z
+updated: 2026-10-13T00:57:29Z
 started: 2026-10-13T00:45:08Z
 completed: 2026-10-13T00:52:35Z
 depends: []
@@ -27,3 +27,4 @@ From quarry-695d0a's final review. (1) test_a_name_with_no_taxon_is_not_found re
 - 2026-10-13T00:52:35Z (ena-taxonomy-hardening): review: impl round 1 — verdict: accept; findings: minor 5; reviewer: claude-code
 - 2026-10-13T00:52:35Z (ena-taxonomy-hardening): done
 - 2026-10-13T00:52:35Z (ena-taxonomy-hardening): Pinned ENA's taxonomy no-match answer with a recorded fixture, accepted a 404 as not_found alongside the empty list, deduplicated taxonomy rows by taxId before the ambiguity check, and named the missing taxonomy route instead of a bare IndexError
+- 2026-10-13T00:57:29Z (main): review: impl round 2 — verdict: accept; findings: none; reviewer: codex
