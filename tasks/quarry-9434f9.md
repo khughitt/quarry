@@ -6,9 +6,9 @@ priority: 3
 size: xs
 complexity: low
 process: direct
-owner: main
+owner: quarry-9434f9
 created: 2026-10-10T23:00:53Z
-updated: 2026-10-13T00:59:48Z
+updated: 2026-10-13T01:00:03Z
 started: 2026-10-13T00:59:48Z
 depends: []
 tags: []
@@ -21,3 +21,5 @@ Deferred foundation Task 9 and final-review Minor: tests/test_cli_surface.py com
 ## Notes
 
 - 2026-10-13T00:59:48Z (main): started
+- 2026-10-13T01:00:03Z (quarry-9434f9): resumed
+- 2026-10-13T01:00:03Z (quarry-9434f9): took over Unix session (owner main, stale)
