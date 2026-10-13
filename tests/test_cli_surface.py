@@ -40,7 +40,9 @@ def test_help_on_every_command(path, tmp_path):
         out = run(*path, flag, cwd=tmp_path)
         assert (out.returncode, out.stderr) == (0, "") and out.stdout, (path, flag)
     if path:
-        assert run("help", *path, cwd=tmp_path).stdout == run(*path, "--help", cwd=tmp_path).stdout
+        help_out = run("help", *path, cwd=tmp_path)
+        assert (help_out.returncode, help_out.stderr) == (0, ""), ("help", path)
+        assert help_out.stdout == run(*path, "--help", cwd=tmp_path).stdout
 
 
 @pytest.mark.parametrize("args", [["bogus"], ["resources", "list", "--bogus"], ["resources", "list", "--role", "warehouse"],
