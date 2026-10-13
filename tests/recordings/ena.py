@@ -1,6 +1,7 @@
 """The ENA exchanges tests/test_ena.py replays."""
 from datetime import date
 
+from quarry.errors import QuarryError
 from quarry.ids import Curie
 from quarry.query import Query
 
@@ -9,6 +10,18 @@ MYELOMA = Query(phrases=("myeloma",), filters={"organism": "ncbitaxon:9606"},
 HYPHEN = Query(phrases=("RPMI-8226",), filters={"organism": "ncbitaxon:9606"})
 MUSCULUS_NAME = Query(phrases=("myeloma",), filters={"organism": "Mus musculus"},
                       since=date(2024, 1, 1), until=date(2024, 3, 31))
+NO_MATCH = Query(phrases=("myeloma",), filters={"organism": "Nonexistus fakeus"})
+
+
+def search_no_match(adapter, client):
+    """The recording must end in not_found: any other outcome means the no-match shape changed."""
+    try:
+        adapter.search(client, NO_MATCH)
+    except QuarryError as exc:
+        if exc.kind == "not_found":
+            return
+        raise
+    raise ValueError("ENA resolved 'Nonexistus fakeus' to a taxon; pick a name it does not hold")
 
 
 def show_first(adapter, client):
@@ -33,6 +46,7 @@ SCENARIOS = {
     "search-myeloma": lambda adapter, client: adapter.search(client, MYELOMA),
     "search-hyphen": lambda adapter, client: adapter.search(client, HYPHEN),
     "search-musculus-name": lambda adapter, client: adapter.search(client, MUSCULUS_NAME),
+    "no-match": search_no_match,
     "show-first": show_first,
     "files-first": files_first,
 }

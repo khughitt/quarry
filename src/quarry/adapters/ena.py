@@ -67,10 +67,12 @@ def _deferred_name(query: Query) -> str | None:
 
 def resolve_taxon(client: Client, route: Route, name: str) -> str:
     """The one taxon id ENA's taxonomy gives a scientific or common name, case-insensitively:
-    not_found for none, ambiguous_id naming each candidate for several."""
-    text = client.request(route, "GET", f"any-name/{quote(name, safe='')}").text
+    not_found for none (an empty list or a 404), ambiguous_id naming each candidate for several."""
+    response = client.request(route, "GET", f"any-name/{quote(name, safe='')}", accept=frozenset({404}))
+    if response.status_code == 404:
+        raise QuarryError("not_found", f"ENA's taxonomy has no taxon named {name!r}")
     try:
-        taxa = json.loads(text)
+        taxa = json.loads(response.text)
     except ValueError:
         raise UpstreamError("ena taxonomy: not JSON") from None
     if type(taxa) is not list or any(
@@ -79,10 +81,14 @@ def resolve_taxon(client: Client, route: Route, name: str) -> str:
         raise UpstreamError("ena taxonomy: expected a list of taxa with a numeric taxId and a scientificName")
     if not taxa:
         raise QuarryError("not_found", f"ENA's taxonomy has no taxon named {name!r}")
-    if len(taxa) > 1:
-        named = ", ".join(f"ncbitaxon:{t['taxId']} ({t['scientificName']}, {t.get('rank') or 'no rank'})" for t in taxa)
-        raise QuarryError("ambiguous_id", f"{name!r} names {len(taxa)} taxa: {named}; pass one as --organism")
-    return taxa[0]["taxId"]
+    distinct: dict[str, dict] = {}
+    for t in taxa:
+        distinct.setdefault(t["taxId"], t)                 # the same taxon can repeat under several names
+    if len(distinct) > 1:
+        named = ", ".join(f"ncbitaxon:{t['taxId']} ({t['scientificName']}, {t.get('rank') or 'no rank'})"
+                          for t in distinct.values())
+        raise QuarryError("ambiguous_id", f"{name!r} names {len(distinct)} taxa: {named}; pass one as --organism")
+    return next(iter(distinct.values()))["taxId"]
 
 
 OPTIONAL_TEXT = ("secondary_study_accession", "study_alias", "study_title", "study_description",
@@ -226,4 +232,7 @@ class Ena:
 
 
 def make(resource: Resource) -> Ena:
+    if len(resource.routes) < 2:
+        raise QuarryError("catalog_invalid", f"the {resource.id} resource has no taxonomy route: "
+                                             "the adapter resolves an --organism name to a taxon id through it")
     return Ena(resource)

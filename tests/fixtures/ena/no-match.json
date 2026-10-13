@@ -1,0 +1,17 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [],
+   "url": "https://www.ebi.ac.uk/ena/taxonomy/rest/any-name/Nonexistus%20fakeus"
+  },
+  "response": {
+   "body": "[ ]",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ }
+]

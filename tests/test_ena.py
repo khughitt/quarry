@@ -80,12 +80,36 @@ def test_a_name_resolves_to_one_taxon_then_searches_its_subtree(name, encoded, t
     assert transport.pending == []
 
 
-def test_a_name_with_no_taxon_is_not_found():
+@pytest.mark.parametrize("status, body", [(200, "[ ]"), (404, "Not Found")])
+def test_a_name_with_no_taxon_is_not_found(status, body):
     query = Query(phrases=("x",), filters={"organism": "Nonexistus fakeus"})
-    with replay_client(ReplayTransport([any_name("Nonexistus%20fakeus", "[ ]")])) as client, \
-            pytest.raises(QuarryError) as caught:
+    transport = ReplayTransport([exchange("GET", f"{TAXONOMY}/any-name/Nonexistus%20fakeus",
+                                          status=status, body=body)])
+    with replay_client(transport) as client, pytest.raises(QuarryError) as caught:
         ENA.search(client, query)
     assert caught.value.kind == "not_found" and "Nonexistus fakeus" in caught.value.detail
+    assert transport.pending == []
+
+
+def test_the_recorded_no_match_is_not_found():
+    query = Query(phrases=("myeloma",), filters={"organism": "Nonexistus fakeus"})
+    with replay("no-match") as client, pytest.raises(QuarryError) as caught:
+        ENA.search(client, query)
+    assert caught.value.kind == "not_found" and "Nonexistus fakeus" in caught.value.detail
+
+
+def test_repeated_taxId_rows_are_one_taxon_not_an_ambiguity():
+    route = CAT.resources["ena"].routes[1]
+    body = json.dumps([MUSCULUS, dict(MUSCULUS, commonName="laboratory mouse")])
+    with replay_client(ReplayTransport([any_name("mouse", body)])) as client:
+        assert ena.resolve_taxon(client, route, "mouse") == "10090"
+
+
+def test_a_resource_without_the_taxonomy_route_is_refused_by_name():
+    resource = replace(CAT.resources["ena"], routes=CAT.resources["ena"].routes[:1])
+    with pytest.raises(QuarryError) as caught:
+        ena.make(resource)
+    assert caught.value.kind == "catalog_invalid" and "taxonomy" in caught.value.detail
 
 
 def test_a_name_with_several_taxa_is_ambiguous_and_names_each_curie():           # Review Focus 2
