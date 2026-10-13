@@ -6,9 +6,9 @@ priority: 3
 size: xs
 complexity: low
 process: direct
-owner: main
+owner: ena-taxonomy-hardening
 created: 2026-10-11T18:14:34Z
-updated: 2026-10-13T00:45:08Z
+updated: 2026-10-13T00:46:04Z
 started: 2026-10-13T00:45:08Z
 depends: []
 tags: []
@@ -21,3 +21,5 @@ From quarry-695d0a's final review. (1) test_a_name_with_no_taxon_is_not_found re
 
 - 2026-10-11T18:14:40Z (main): concerns: quarry-695d0a extension — hardening the taxonomy lookup the final review flagged as pinned only by hand-made responses
 - 2026-10-13T00:45:08Z (main): started
+- 2026-10-13T00:46:04Z (ena-taxonomy-hardening): resumed
+- 2026-10-13T00:46:04Z (ena-taxonomy-hardening): took over Unix session (owner main, stale)
