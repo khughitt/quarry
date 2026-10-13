@@ -1,15 +1,16 @@
 ---
 id: quarry-9434f9
 title: Assert help-subcommand status and stderr in CLI conformance
-status: doing
+status: done
 priority: 3
 size: xs
 complexity: low
 process: direct
 owner: quarry-9434f9
 created: 2026-10-10T23:00:53Z
-updated: 2026-10-13T01:00:03Z
+updated: 2026-10-13T01:01:44Z
 started: 2026-10-13T00:59:48Z
+completed: 2026-10-13T01:01:44Z
 depends: []
 tags: []
 source: sci-ba7150
@@ -23,3 +24,5 @@ Deferred foundation Task 9 and final-review Minor: tests/test_cli_surface.py com
 - 2026-10-13T00:59:48Z (main): started
 - 2026-10-13T01:00:03Z (quarry-9434f9): resumed
 - 2026-10-13T01:00:03Z (quarry-9434f9): took over Unix session (owner main, stale)
+- 2026-10-13T01:01:44Z (quarry-9434f9): done
+- 2026-10-13T01:01:44Z (quarry-9434f9): Conformance test now captures each registered command path's help result and asserts returncode 0 with empty stderr before keeping the stdout equivalence with <path> --help; test-one, test-fast and tasks check all pass.
