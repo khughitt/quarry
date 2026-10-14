@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: heliophysics-domain
 created: 2026-10-11T19:01:36Z
-updated: 2026-10-14T00:18:01Z
+updated: 2026-10-14T00:18:10Z
 started: 2026-10-11T19:02:03Z
 depends: [quarry-bc633c]
 tags: [heliophysics]
@@ -42,3 +42,4 @@ The first domain outside biology and the first §14 test. The design spec, writt
 - 2026-10-11T20:43:43Z (heliophysics-domain): parked (waiting on agent, dependency): decide quarry-bc633c (the coverage domain filter), then write the implementation plan for the heliophysics catalog files and adapters in .worktrees/heliophysics-domain (writing-plans; the plan keeps §9's open choices explicit and is reviewed before implementation)
   provenance: {"harness_session":"claude-code:4a219dfe-7cba-478e-84d8-8594adc7dd5d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-14T00:18:01Z (main): attached: 2026-10-13-vso-probes.zip (4544 bytes): VSO directly, SunPy VSOClient, and Fido: identical five AIA records; GetData URL and HTTP 200 HEAD; raw provider counts retained
+- 2026-10-14T00:18:10Z (main): VSO follow-up at user request: direct SOAP, SunPy 8.0.1 VSOClient, and Fido.search all returned the same 5 JSOC AIA 193 Angstrom records for 2025-10-01 00:00–00:01 UTC. SunPy GetData resolved one record using URL-FILE_Rice with its default email value sunpy, without a registered JSOC email; HEAD returned HTTP 200 and an 11,905,920-byte FITS attachment. Evidence attached: 2026-10-13-vso-probes.zip. Recommendation: retain VSO as federated solar-data discovery and SunPy as an optional local-tool route; it may simplify acquisition for covered JSOC products, but does not establish full archive equivalence. SunPy high-level tables omit raw per-provider totals and provider errors may only warn: reports_total=true on the local-tool route requires raw response capture. Sources: https://docs.sunpy.org/en/stable/how_to/search_vso.html and https://raw.githubusercontent.com/sunpy/sunpy/v8.0.1/sunpy/net/vso/vso.py plus table_response.py. No full download or broad coverage/failure-path checks.
