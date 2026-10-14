@@ -7,7 +7,7 @@ size: m
 complexity: mid
 process: planned
 created: 2026-10-11T18:56:50Z
-updated: 2026-10-11T19:37:41Z
+updated: 2026-10-14T00:54:51Z
 depends: []
 tags: [heliophysics]
 source: sun-374ea3
@@ -21,3 +21,4 @@ Finding 2 of the sun phase-1 survey (source goal sci-ba7150; findings.md in the 
 - 2026-10-11T18:56:55Z (main): concerns: none — filed from the sun phase-1 survey (sun-374ea3) as a finding against the quarry contract
 - 2026-10-11T18:57:38Z (main): correction: the 'concerns:' line above was written in error and names no closed task; this task concerns no closed work. It is a finding filed from the sun phase-1 survey (sun-374ea3).
 - 2026-10-11T19:37:41Z (main): correction after review round 1 of the survey: ADS's publication-date query is now observed with the user's key (probes/ads/07: pubdate:[2012-01 TO 2012-12] on an instrument title query, numFound 8) and classifies shared; the counts are 16 resources with a time query, 14 bounding observation time, 2 of them also release/processing (jsoc, soar), 2 bounding release date alone (arxiv, ads). Verdict unchanged: confirmed with qualification.
+- 2026-10-14T00:54:51Z (main): VSO follow-up clarifies this task: the tested observation interval maps directly to SOAP time/start,end and SunPy attrs.Time; direct SOAP, VSOClient and Fido returned identical AIA records (evidence attached to quarry-57e473 as 2026-10-13-vso-probes.zip). Recommendation for the design: retain heliophysics-specific --coverage <start>/<end> and separate --at <instant>; keep --since/--until for release dates. Defer a shared cross-domain coverage filter until a second domain demonstrates the need. VSO provides a working backend mapping but the probe did not establish interval overlap or endpoint inclusivity; these semantics remain explicit design/verification work. Task remains open and planned; its design must be reviewed before implementation.
