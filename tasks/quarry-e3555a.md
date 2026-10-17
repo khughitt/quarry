@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: main
 created: 2026-10-11T15:28:21Z
-updated: 2026-10-17T20:17:38Z
+updated: 2026-10-17T20:17:39Z
 started: 2026-10-17T19:14:02Z
 depends: []
 tags: []
@@ -43,4 +43,6 @@ ENA files takes filereport as given; the catalog's own pitfall says the portal A
 - 2026-10-17T20:11:16Z (main): parked (waiting on agent, review): Controller: record exact set5 A=no B=yes C=no D=no and C inclusion=yes with full human reasons in pilot manifest, then prepare reviewed B integration and recoverable all4cleanup for person approval before merging/closing/discarding. A rejected for unreadable fixture formatting, not repaired during measurement; C/D captured uncommitted work retained. No source code change authorized yet.
   provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-17T20:17:38Z (main): resumed
+  provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-17T20:17:39Z (main): parked (waiting on user, decision): Person: approve prepared original B merge, source-task closure and recoverable all4attempt cleanup, explicitly including archived C4/D1 uncommitted-path discard, or retain/handback. Human A=no B=yes C=no D=no and C inclusion=yes already recorded c9575dc; 68file recovery archive and fourbundles verified. Agent then refreshes main/ownership/ref/digest checks before executing. No source code merged/discarded yet.
   provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
