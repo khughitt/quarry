@@ -1,15 +1,17 @@
 ---
 id: quarry-e3555a
 title: "ENA files: prove the filereport listing complete"
-status: doing
+status: done
 priority: 2
 size: xs
 complexity: low
 process: direct
 owner: main
 created: 2026-10-11T15:28:21Z
-updated: 2026-10-17T20:20:11Z
+updated: 2026-10-17T20:21:08Z
 started: 2026-10-17T19:14:02Z
+completed: 2026-10-17T20:21:08Z
+closed: 2026-10-17T20:21:08Z
 depends: []
 tags: []
 source: quarry-3f4c3b
@@ -47,4 +49,8 @@ ENA files takes filereport as given; the catalog's own pitfall says the portal A
 - 2026-10-17T20:17:39Z (main): parked (waiting on user, decision): Person: approve prepared original B merge, source-task closure and recoverable all4attempt cleanup, explicitly including archived C4/D1 uncommitted-path discard, or retain/handback. Human A=no B=yes C=no D=no and C inclusion=yes already recorded c9575dc; 68file recovery archive and fourbundles verified. Agent then refreshes main/ownership/ref/digest checks before executing. No source code merged/discarded yet.
   provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-17T20:20:11Z (main): resumed
+  provenance: {"harness_session":"codex:01a14608-a881-7550-aadb-5b0ad12a4c13","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-17T20:21:08Z (main): done
+  provenance: {"harness_session":"codex:01a14608-a881-7550-aadb-5b0ad12a4c13","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-17T20:21:08Z (main): Integrated person-selected original B0e02afc30f3d40ff2ec1fcde5e7b84e821d2f0dd via ancestry-preserving merge98f0e3cb967317a1750b27816c14bf904451165a, parents85a73e5+0e02afc, testedtree1effb143adda17f0cc34498b970537b31702ea96. Actual merged tree passed just test-fast576offline tests18.05s and justcheck0; no live ENA calls. Pilot manifestf7e5f19 records mergedB only after actualmerge, preserving full human A=no/B=yes/C=no/D=no note and C=yes full Audit sheet reason; sourcehumanreview already controller-recorded, no new independent review claimed. Explicit personapproval covers recoverable all4source5cleanup including C4/D1captured dirty discard after archiveverification; original68indexed evidence/bundles/fullpatches retained, transsource3four retained.
   provenance: {"harness_session":"codex:01a14608-a881-7550-aadb-5b0ad12a4c13","harness_session_source":"CODEX_THREAD_ID"}
