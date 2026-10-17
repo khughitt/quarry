@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: main
 created: 2026-10-11T15:28:21Z
-updated: 2026-10-17T20:17:39Z
+updated: 2026-10-17T20:20:11Z
 started: 2026-10-17T19:14:02Z
 depends: []
 tags: []
@@ -46,3 +46,5 @@ ENA files takes filereport as given; the catalog's own pitfall says the portal A
   provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-17T20:17:39Z (main): parked (waiting on user, decision): Person: approve prepared original B merge, source-task closure and recoverable all4attempt cleanup, explicitly including archived C4/D1 uncommitted-path discard, or retain/handback. Human A=no B=yes C=no D=no and C inclusion=yes already recorded c9575dc; 68file recovery archive and fourbundles verified. Agent then refreshes main/ownership/ref/digest checks before executing. No source code merged/discarded yet.
   provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-17T20:20:11Z (main): resumed
+  provenance: {"harness_session":"codex:01a14608-a881-7550-aadb-5b0ad12a4c13","harness_session_source":"CODEX_THREAD_ID"}
