@@ -510,13 +510,19 @@ def filereport(accession, body):
                                                  "format": "json", "limit": 0}, body=body)
 
 
+def run_count(field, local, total):
+    return exchange("GET", f"{BASE}/count", {"result": "read_run", "query": f'{field}="{local}"'},
+                    body=f"count\n{total}\n", content_type="text/plain")
+
+
 def shown(field, local, body=json.dumps([STUDY])):
     return exchange("GET", f"{BASE}/search", {"result": "study", "query": f'{field}="{local}"', "fields": ena.FIELDS,
                                              "format": "json", "limit": 2}, body=body)
 
 
 def test_files_split_paths_md5s_and_sizes_and_serve_https_first():
-    transport = ReplayTransport([shown("study_accession", "PRJNA1"), filereport("PRJNA1", json.dumps([FILE_ROW]))])
+    transport = ReplayTransport([shown("study_accession", "PRJNA1"), run_count("study_accession", "PRJNA1", 1),
+                                 filereport("PRJNA1", json.dumps([FILE_ROW]))])
     with replay_client(transport) as client:
         record, files = ENA.files(client, Curie("bioproject", "PRJNA1"))
     assert record.id == "bioproject:PRJNA1"
@@ -532,12 +538,14 @@ def test_a_submitted_basename_repeated_across_runs_stays_unique_under_its_run(mo
     rows = [{**empty, "run_accession": run, "submitted_ftp": f"ftp.sra.ebi.ac.uk/vol1/run/{run[:6]}/{run}/reads.bam",
              "submitted_md5": "m", "submitted_bytes": "5", "sra_ftp": f"ftp.sra.ebi.ac.uk/vol1/srr/{run}", "sra_md5": "s",
              "sra_bytes": "6"} for run in ("SRR10", "SRR11")]
-    transport = ReplayTransport([shown("study_accession", "PRJNA1"), filereport("PRJNA1", json.dumps(rows))])
+    transport = ReplayTransport([shown("study_accession", "PRJNA1"), run_count("study_accession", "PRJNA1", 2),
+                                 filereport("PRJNA1", json.dumps(rows))])
     with replay_client(transport) as client:
         _, files = ENA.files(client, Curie("bioproject", "PRJNA1"))
     assert [f.name for f in files] == ["SRR10/reads.bam", "SRR10/SRR10", "SRR11/reads.bam", "SRR11/SRR11"]
     monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport(
-        [shown("study_accession", "PRJNA1"), filereport("PRJNA1", json.dumps(rows))])))
+        [shown("study_accession", "PRJNA1"), run_count("study_accession", "PRJNA1", 2),
+         filereport("PRJNA1", json.dumps(rows))])))
     out = CliRunner().invoke(main, ["--json", "files", "bioproject:PRJNA1", "--acquisition"], catch_exceptions=False)
     assert out.exit_code == 0, out.stderr
     assert [r["name"] for r in json.loads(out.stdout)["resources"]] == [f.name for f in files]
@@ -546,7 +554,8 @@ def test_a_submitted_basename_repeated_across_runs_stays_unique_under_its_run(mo
 @pytest.mark.parametrize("acquire", [False, True])
 def test_files_named_by_a_secondary_accession_carry_the_canonical_curie(monkeypatch, acquire):
     monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport(
-        [shown("secondary_study_accession", "SRP1"), filereport("SRP1", json.dumps([FILE_ROW]))])))
+        [shown("secondary_study_accession", "SRP1"), run_count("secondary_study_accession", "SRP1", 1),
+         filereport("SRP1", json.dumps([FILE_ROW]))])))
     args = ["--json", "files", "insdc.sra:SRP1", *(["--acquisition"] if acquire else [])]
     out = CliRunner().invoke(main, args, catch_exceptions=False)
     assert out.exit_code == 0, out.stderr
@@ -555,7 +564,8 @@ def test_files_named_by_a_secondary_accession_carry_the_canonical_curie(monkeypa
 
 
 def test_files_of_a_study_without_runs_is_empty_and_a_missing_study_is_not_found():
-    with replay_client(ReplayTransport([shown("study_accession", "PRJNA1"), filereport("PRJNA1", "[\n\n]")])) as client:
+    with replay_client(ReplayTransport([shown("study_accession", "PRJNA1"), run_count("study_accession", "PRJNA1", 0),
+                                        filereport("PRJNA1", "[\n\n]")])) as client:
         assert ENA.files(client, Curie("bioproject", "PRJNA1"))[1] == []
     with replay_client(ReplayTransport([shown("study_accession", "PRJNA9", body="")])) as client, \
             pytest.raises(QuarryError) as caught:
@@ -572,7 +582,26 @@ def test_files_of_a_study_without_runs_is_empty_and_a_missing_study_is_not_found
     {**FILE_ROW, "fastq_ftp": ["x"]},
 ])
 def test_malformed_filereport_rows_are_upstream_errors(row):
-    transport = ReplayTransport([shown("study_accession", "PRJNA1"), filereport("PRJNA1", json.dumps([row]))])
+    transport = ReplayTransport([shown("study_accession", "PRJNA1"), run_count("study_accession", "PRJNA1", 1),
+                                 filereport("PRJNA1", json.dumps([row]))])
+    with replay_client(transport) as client, pytest.raises(QuarryError) as caught:
+        ENA.files(client, Curie("bioproject", "PRJNA1"))
+    assert caught.value.kind == "upstream_failed"
+
+
+def test_a_filereport_short_of_the_run_count_fails():
+    transport = ReplayTransport([shown("study_accession", "PRJNA1"), run_count("study_accession", "PRJNA1", 5),
+                                 filereport("PRJNA1", json.dumps([FILE_ROW]))])
+    with replay_client(transport) as client, pytest.raises(QuarryError) as caught:
+        ENA.files(client, Curie("bioproject", "PRJNA1"))
+    assert caught.value.kind == "incomplete_listing" and "bioproject:PRJNA1" in caught.value.detail
+    assert "1 of 5" in caught.value.detail
+
+
+def test_a_run_count_that_is_not_a_count_is_an_upstream_error():
+    transport = ReplayTransport([shown("study_accession", "PRJNA1"), run_count("study_accession", "PRJNA1", 1)])
+    transport.pending[1]["response"]["body"] = "<html>busy</html>"
+    transport.pending[1]["response"]["headers"] = {"content-type": "text/html"}
     with replay_client(transport) as client, pytest.raises(QuarryError) as caught:
         ENA.files(client, Curie("bioproject", "PRJNA1"))
     assert caught.value.kind == "upstream_failed"

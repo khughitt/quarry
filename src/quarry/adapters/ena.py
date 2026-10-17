@@ -1,6 +1,7 @@
 """ENA portal API, result=study (spec §13); --organism searches the taxon's subtree (tax_tree), a name resolved to its id through ENA's taxonomy first. Phrases compile to exact-equality clauses: a
 wildcard cannot contain '-', '.' or a space and matches substrings. Every search asks the
-count endpoint too, and a listing shorter than the count fails."""
+count endpoint too, and a listing shorter than the count fails; so does a filereport listing
+fewer run rows than the read_run count names."""
 from __future__ import annotations
 
 import json
@@ -226,9 +227,17 @@ class Ena:
 
     def files(self, client: Client, curie: Curie) -> tuple[Result, list[File]]:
         record = self.show(client, curie)             # not_found before the file report
+        # the filereport can come back short during an outage, and a short list taken for the
+        # study's whole set of files is a partial dataset acquired as the record: the portal's
+        # count of the study's read runs (result=read_run) names the rows a full listing holds.
+        total = _count(client.request(self.route, "GET", "count", params={
+            "result": "read_run", "query": f'{SHOW_FIELD[curie.prefix]}="{curie.local}"'}).text)
         listing = client.request(self.route, "GET", "filereport", params={
             "accession": curie.local, "result": "read_run", "fields": FILE_FIELDS, "format": "json", "limit": 0}).text
-        return record, _files(_rows(listing))
+        rows = _rows(listing)
+        if len(rows) != total:
+            raise QuarryError("incomplete_listing", f"{curie}: ENA's filereport listed {len(rows)} of {total} runs")
+        return record, _files(rows)
 
 
 def make(resource: Resource) -> Ena:
