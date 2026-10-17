@@ -6,9 +6,9 @@ priority: 2
 size: xs
 complexity: low
 process: direct
-owner: crew
+owner: main
 created: 2026-10-11T15:28:21Z
-updated: 2026-10-17T19:36:17Z
+updated: 2026-10-17T20:11:14Z
 started: 2026-10-17T19:14:02Z
 depends: []
 tags: []
@@ -37,3 +37,5 @@ ENA files takes filereport as given; the catalog's own pitfall says the portal A
 - 2026-10-17T19:27:28Z (crew): crew: attempt 01M55NA1999J8RM68ZQJP2X016 started — kind code-xs, worker openrouter/deepseek/deepseek-v4-flash-0731, worktree .worktrees/crew-qjp2x016
 - 2026-10-17T19:36:16Z (crew): crew: attempt 01M55NA1999J8RM68ZQJP2X016 — verdict not-passed (worker openrouter/deepseek/deepseek-v4-flash-0731, reviewer openrouter/openai/gpt-6.1-sol); report /home/keith/.local/state/crew/attempts/01M55NA1999J8RM68ZQJP2X016/attempt-report.md
 - 2026-10-17T19:36:17Z (crew): parked (waiting on user, review): review crew attempt 01M55NA1999J8RM68ZQJP2X016 (verdict not-passed): branch crew/quarry-e3555a-qjp2x016 in .worktrees/crew-qjp2x016; merge and close, or discard
+- 2026-10-17T20:11:14Z (main): resumed
+  provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
