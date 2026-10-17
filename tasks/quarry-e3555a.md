@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: main
 created: 2026-10-11T15:28:21Z
-updated: 2026-10-17T20:11:15Z
+updated: 2026-10-17T20:11:16Z
 started: 2026-10-17T19:14:02Z
 depends: []
 tags: []
@@ -40,3 +40,5 @@ ENA files takes filereport as given; the catalog's own pitfall says the portal A
 - 2026-10-17T20:11:14Z (main): resumed
   provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-17T20:11:15Z (main): review: impl round 1 — verdict: accept; findings: accepted 1, rejected 3; reviewer: human
+- 2026-10-17T20:11:16Z (main): parked (waiting on agent, review): Controller: record exact set5 A=no B=yes C=no D=no and C inclusion=yes with full human reasons in pilot manifest, then prepare reviewed B integration and recoverable all4cleanup for person approval before merging/closing/discarding. A rejected for unreadable fixture formatting, not repaired during measurement; C/D captured uncommitted work retained. No source code change authorized yet.
+  provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
