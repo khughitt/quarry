@@ -101,6 +101,30 @@
    "method": "GET",
    "query": [
     [
+     "query",
+     "study_accession=\"PRJNA1065887\""
+    ],
+    [
+     "result",
+     "read_run"
+    ]
+   ],
+   "url": "https://www.ebi.ac.uk/ena/portal/api/count"
+  },
+  "response": {
+   "body": "count\n0\n",
+   "headers": {
+    "content-type": "text/plain"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
      "accession",
      "PRJNA1065887"
     ],
@@ -163,6 +187,30 @@
    "body": "[\n{\"study_accession\":\"PRJNA923278\",\"secondary_study_accession\":\"SRP417184\",\"study_alias\":\"PRJNA923278\",\"study_title\":\"Proteomic profiling Proteogenomic landscape of multiple myeloma reveals CDK6 upregulation as a targetable resistance mechanism for lenalidomide in multiple myeloma\",\"study_description\":\"Multiple myeloma is a plasma cell malignancy of the bone marrow. Despite therapeutic advances in multiple myeloma, it remains incurable and better risk stratification as well as new therapies are therefore highly needed. While genetics and gene expression have been extensively studied leading to new insights in disease biology and improved prognostic models, the proteome of multiple myeloma has not been systematically assessed. Here, we provide a comprehensive multi-omic analysis including deep tandem mass tags (TMT)-based quantitative global (phospho)proteomics, RNA sequencing and nanopore DNA sequencing of 138 primary patient-derived plasma cell malignancy samples, including treatment-naive multiple myeloma cases selected for clinical trials, plasma cell leukemia, and the premalignancy MGUS, as well as healthy controls. We found that the (phospho)proteome of malignant plasma cells is highly deregulated as compared to healthy cells and is both defined by chromosomal alterations and extensive post-transcriptional regulation. A protein signature consisting of 8 proteins was identified that is associated with aggressive disease and highly predictive for outcomes in newly diagnosed multiple myeloma. Integration with functional genetics and single-cell sequencing revealed generally and genetic subtype-specific deregulated proteins and pathways in plasma cell malignancies that include novel potential targets for (immuno)therapies. Our study provides a unique resource for investigating biology and new therapeutic approaches in multiple myeloma and associated diseases and highlights the broad implications of proteomic studies in cancer. Overall design: mRNA profiles of CD138+ or bone marrow with the content of CD138+ >75% (Multiple Myelom) were generated using TruSeq RNA Exome (TruSeq RNA Access Kit) (Illumina) followed by sequencing with 50 bp single-end reads on NextSeq Two samples were sequenced on HiSeq 2000 as indicated in column \\\"instrument model\\\".\",\"tax_id\":\"9606\",\"scientific_name\":\"Homo sapiens\",\"first_public\":\"2024-02-01\"}\n]\n",
    "headers": {
     "content-type": "application/json"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "query",
+     "study_accession=\"PRJNA923278\""
+    ],
+    [
+     "result",
+     "read_run"
+    ]
+   ],
+   "url": "https://www.ebi.ac.uk/ena/portal/api/count"
+  },
+  "response": {
+   "body": "count\n123\n",
+   "headers": {
+    "content-type": "text/plain"
    },
    "status": 200
   }
