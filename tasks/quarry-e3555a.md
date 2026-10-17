@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: main
 created: 2026-10-11T15:28:21Z
-updated: 2026-10-17T20:11:14Z
+updated: 2026-10-17T20:11:15Z
 started: 2026-10-17T19:14:02Z
 depends: []
 tags: []
@@ -39,3 +39,4 @@ ENA files takes filereport as given; the catalog's own pitfall says the portal A
 - 2026-10-17T19:36:17Z (crew): parked (waiting on user, review): review crew attempt 01M55NA1999J8RM68ZQJP2X016 (verdict not-passed): branch crew/quarry-e3555a-qjp2x016 in .worktrees/crew-qjp2x016; merge and close, or discard
 - 2026-10-17T20:11:14Z (main): resumed
   provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-17T20:11:15Z (main): review: impl round 1 — verdict: accept; findings: accepted 1, rejected 3; reviewer: human
