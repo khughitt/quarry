@@ -6,9 +6,9 @@ priority: 3
 size: xs
 complexity: low
 process: direct
-owner: crew
+owner: main
 created: 2026-10-10T21:52:21Z
-updated: 2026-10-18T10:28:27Z
+updated: 2026-10-18T15:19:28Z
 started: 2026-10-18T10:07:18Z
 depends: []
 tags: []
@@ -36,3 +36,5 @@ Deferred final-review Minor: Client currently treats a required-key route withou
 - 2026-10-18T10:22:09Z (crew): crew: attempt 01M578G10SR5345BPDDBV96KVT started — kind code-xs, worker openrouter/qwen/qwen3-coder-next, worktree .worktrees/crew-dbv96kvt
 - 2026-10-18T10:28:26Z (crew): crew: attempt 01M578G10SR5345BPDDBV96KVT — verdict not-passed (worker openrouter/qwen/qwen3-coder-next, reviewer openrouter/openai/gpt-6.1-sol); report /home/keith/.local/state/crew/attempts/01M578G10SR5345BPDDBV96KVT/attempt-report.md
 - 2026-10-18T10:28:27Z (crew): parked (waiting on user, review): review crew attempt 01M578G10SR5345BPDDBV96KVT (verdict not-passed): branch crew/quarry-e0f1c0-dbv96kvt in .worktrees/crew-dbv96kvt; merge and close, or discard
+- 2026-10-18T15:19:28Z (main): resumed
+  provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
