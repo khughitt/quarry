@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: main
 created: 2026-10-10T21:52:21Z
-updated: 2026-10-18T15:32:13Z
+updated: 2026-10-18T15:40:23Z
 started: 2026-10-18T10:07:18Z
 depends: []
 tags: []
@@ -44,3 +44,5 @@ Deferred final-review Minor: Client currently treats a required-key route withou
   provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-18T15:32:13Z (main): parked (waiting on user, decision): Person: approve original B 1195cd079c7a79e460c57dd5e9ffc1318158d539 merge, task closure and recoverable removal of all4 final attempt worktrees/branches, explicitly including discard ONLY A captured src/quarry/http.py/tests/test_http.py edits and untracked scratchpad/task-analysis.md after verified recovery. Controller executes prepared integration brief only after approval and fresh state checks. All8 human judgments recorded, A excluded with full reason. No merge/closure/discard/removal performed.
   provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-18T15:40:23Z (main): resumed
+  provenance: {"harness_session":"codex:01a14e63-114c-7280-993a-8fddc8ba68bc","harness_session_source":"CODEX_THREAD_ID"}
