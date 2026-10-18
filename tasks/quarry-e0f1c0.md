@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: crew
 created: 2026-10-10T21:52:21Z
-updated: 2026-10-18T10:22:09Z
+updated: 2026-10-18T10:28:26Z
 started: 2026-10-18T10:07:18Z
 depends: []
 tags: []
@@ -34,3 +34,4 @@ Deferred final-review Minor: Client currently treats a required-key route withou
 - 2026-10-18T10:20:41Z (crew): parked (waiting on user, review): review crew attempt 01M57833MFWWY9A7J970KT1G30 (verdict passed): branch crew/quarry-e0f1c0-70kt1g30 in .worktrees/crew-70kt1g30; merge and close, or discard
 - 2026-10-18T10:21:40Z (crew): resumed
 - 2026-10-18T10:22:09Z (crew): crew: attempt 01M578G10SR5345BPDDBV96KVT started — kind code-xs, worker openrouter/qwen/qwen3-coder-next, worktree .worktrees/crew-dbv96kvt
+- 2026-10-18T10:28:26Z (crew): crew: attempt 01M578G10SR5345BPDDBV96KVT — verdict not-passed (worker openrouter/qwen/qwen3-coder-next, reviewer openrouter/openai/gpt-6.1-sol); report /home/keith/.local/state/crew/attempts/01M578G10SR5345BPDDBV96KVT/attempt-report.md
