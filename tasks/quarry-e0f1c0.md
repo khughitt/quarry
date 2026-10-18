@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: main
 created: 2026-10-10T21:52:21Z
-updated: 2026-10-18T15:19:45Z
+updated: 2026-10-18T15:19:46Z
 started: 2026-10-18T10:07:18Z
 depends: []
 tags: []
@@ -40,3 +40,5 @@ Deferred final-review Minor: Client currently treats a required-key route withou
   provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-18T15:19:33Z (main): review: impl round 1 — verdict: accept; findings: accepted 3, rejected 1, excluded 1; reviewer: human
 - 2026-10-18T15:19:45Z (main): Final pilot human judgment: A=no B=yes C=yes D=yes; include A=no. A is uncommitted with stray scratchpad and excluded based on exact finished-sibling code/test matches and chronology, beyond branch listings alone. B recommended for absent/empty key, no-request/wait/trace, sentinel secrecy and keyed-success coverage plus docstring; C/D also accepted with full caveats preserved in the pilot manifest. Full human input retained by controller; no source integration, closure or cleanup approved yet.
+- 2026-10-18T15:19:46Z (main): parked (waiting on agent, review): Controller: prepare original B ancestry-preserving merge and evidence-preserving cleanup proposal for person approval, after exact captured identities, prospective inputs and all4 recoverability checks. Source code unchanged; do not integrate, close, restore, discard or remove until explicit disposition approval.
+  provenance: {"harness_session":"codex:01a14293-c4c7-7d80-856c-cae65758e666","harness_session_source":"CODEX_THREAD_ID"}
