@@ -8,7 +8,7 @@ import httpx
 import pytest
 
 from quarry.catalog import Route
-from quarry.http import Client, Throttle, UpstreamError
+from quarry.http import Client, MissingKeyError, Throttle, UpstreamError
 from quarry.testing import RecordingTransport, ReplayTransport, exchange, exchange_key
 
 
@@ -32,6 +32,10 @@ def route(service="eutils", interval=0.34, **kw):
 
 def keyed(**kw):
     return route(auth="optional-key", key_env="TEST_KEY", keyed_min_interval=0.1, **kw)
+
+
+def required(**kw):
+    return route(auth="required-key", key_env="TEST_KEY", key_param="api_key", **kw)
 
 
 def mock(handler):
@@ -77,6 +81,39 @@ def test_empty_key_variable_is_unset():
     client(lambda r: (seen.append(r.url), httpx.Response(200))[1], environ={"TEST_KEY": ""}).request(
         keyed(key_param="api_key"), "GET", "a")
     assert "api_key" not in seen[0].params
+
+
+def test_required_key_route_without_its_key_refuses_before_transport():
+    seen, lines, clock = [], [], FakeClock()
+    c = client(lambda r: (seen.append(r), httpx.Response(200))[1], clock, trace=lines.append)
+    with pytest.raises(MissingKeyError) as caught:
+        c.request(required(), "GET", "x")
+    assert seen == [] and lines == [] and clock.t == 0.0      # zero requests, waits and traces
+    assert caught.value.kind == "missing_required_key"
+    assert "TEST_KEY" in caught.value.detail                  # names the environment variable
+
+
+def test_required_key_route_with_an_empty_variable_also_refuses():
+    seen = []
+    c = client(lambda r: (seen.append(r), httpx.Response(200))[1], environ={"TEST_KEY": ""})
+    with pytest.raises(MissingKeyError):
+        c.request(required(), "GET", "x")
+    assert seen == []
+
+
+def test_required_key_refusal_never_names_any_key_value():
+    sentinel = "SECRET-9f17"
+    c = client(lambda r: httpx.Response(200), environ={"TEST_KEY": sentinel})
+    with pytest.raises(MissingKeyError) as caught:            # the route wants OTHER_KEY, kept unset
+        c.request(route(auth="required-key", key_env="OTHER_KEY", key_param="api_key"), "GET", "x")
+    assert "OTHER_KEY" in caught.value.detail and sentinel not in caught.value.detail
+
+
+def test_required_key_route_with_its_key_runs():
+    seen = []
+    c = client(lambda r: (seen.append(r), httpx.Response(200))[1], environ={"TEST_KEY": "k9"})
+    response = c.request(required(), "GET", "x")
+    assert response.status_code == 200 and seen[0].url.params["api_key"] == "k9"
 
 
 def statuses(*codes, headers=None):
