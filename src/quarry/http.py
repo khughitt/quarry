@@ -1,7 +1,8 @@
 """The one HTTP client (spec §9). A throttle per service and key is shared by every client in
 the process; retries back off and honour Retry-After within a wait budget; redirects are
 followed for GET only, and a credential never leaves its origin or reaches a trace line or an
-error detail."""
+error detail. A required-key route refuses to run before transport when its environment
+variable is absent; the error names the variable, never a value."""
 from __future__ import annotations
 
 import email.utils
@@ -53,6 +54,13 @@ PROCESS_THROTTLE = Throttle(SystemClock())
 class UpstreamError(QuarryError):
     def __init__(self, detail: str):
         super().__init__("upstream_failed", detail)
+
+
+class MissingKeyError(QuarryError):
+    """A required-key route was called with no key in its environment variable."""
+
+    def __init__(self, detail: str):
+        super().__init__("missing_required_key", detail)
 
 
 def _retry_after(response: httpx.Response) -> float | None:
@@ -163,6 +171,11 @@ class Client:
         """`accept` names error statuses the caller reads itself (a 404 that means not found);
         every other 4xx/5xx is an upstream failure."""
         key = self._key(route)
+        if route.auth == "required-key" and key is None:
+            env = route.key_env
+            raise MissingKeyError(
+                f"set the {env} environment variable to use the {route.service} route" if env
+                else f"the {route.service} route is required-key but declares no key_env")
         params = dict(params or {})
         headers = {}
         if key:
