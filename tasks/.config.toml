@@ -1,5 +1,0 @@
-prefix = "quarry"
-color = "#0b6eae"
-
-[git]
-commit = true
