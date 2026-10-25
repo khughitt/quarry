@@ -54,7 +54,7 @@ skills and live checks are the next milestone.
 - `tests/fixtures/`: recorded resource responses for offline tests.
 - `tests/recordings/`: live recording scenarios, refreshed with `just record <resource>`.
 - `tools/`: gate and timing tools vendored from ops.
-- `tasks/`: project task records.
+- Task records live in the records root (`tasks where` names it).
 
 ## Consumers
 
