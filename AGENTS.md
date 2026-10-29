@@ -6,7 +6,10 @@ One CLI and skills over scientific resources, with domains as lenses
 
 ## Setup
 
-`just setup` runs `uv sync --group dev` behind work-link. Python 3.13 or later,
+`just setup` links the sibling checkouts, then runs `uv sync --group dev` behind
+work-link. quarry needs `refs` and `nodes` cloned beside this checkout and `just setup`
+run in `refs` first (it writes the registry data copies quarry reads); `just link-siblings`
+fails early when either is missing. Python 3.13 or later,
 uv, and just are required. The checkout uses `.githooks/` via
 `git config core.hooksPath .githooks`.
 
