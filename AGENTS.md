@@ -24,7 +24,7 @@ Use the just recipes so tools/tt records each run; never call pytest directly.
 ## Layout
 
 - `src/quarry/`: the Python package.
-- `src/quarry/catalog/`: resources, domains, and the pinned Bioregistry snapshot.
+- `src/quarry/catalog/`: resources and domains. The registry comes from refs.
 - `src/quarry/adapters/`: one module per supported resource; `eutils.py` is shared by GEO and PubMed.
 - `tests/`: tests; `tests/fixtures/` holds recorded resource responses.
 - `tests/recordings/`: scenarios that `just record <resource>` captures.
@@ -40,4 +40,6 @@ A new command or option is a row in ops `cli.toml` first, then `vendored adopt c
 the conformance test fails on any difference.
 
 Catalog owned prefixes must use Bioregistry's canonical spelling. Local-prefix
-declarations must be lowercase so validation and owner routing agree.
+declarations must be lowercase so validation and owner routing agree, and their patterns
+must be in refs' pattern dialect (`[0-9]`, not `\d`). A scheme several projects share
+belongs in refs' shared local schemes, with the catalog only owning the prefix.

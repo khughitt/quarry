@@ -49,7 +49,7 @@ skills and live checks are the next milestone.
 ## Layout
 
 - `src/quarry/`: the Python package.
-- `src/quarry/catalog/`: resources, domains, and the pinned Bioregistry snapshot.
+- `src/quarry/catalog/`: resources and domains. The registry comes from refs.
 - `src/quarry/adapters/`: one module per resource, plus `eutils.py` shared by GEO and PubMed.
 - `tests/fixtures/`: recorded resource responses for offline tests.
 - `tests/recordings/`: live recording scenarios, refreshed with `just record <resource>`.

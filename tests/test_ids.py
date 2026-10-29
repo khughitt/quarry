@@ -1,15 +1,78 @@
 """Identifiers: canonical CURIEs from the pinned snapshot (spec §7)."""
 import pytest
+import refs.ids
+import refs.registry
+from refs.errors import RefsError
 
 from quarry import catalog, ids
-from quarry.catalog import Catalog, LocalPrefix, Resource, Route
+from quarry.catalog import CATALOG_ROOT, Catalog, LocalPrefix, Resource, Route
 from quarry.errors import QuarryError
 
-REG = ids.Registry.load()
+REG = ids.Registry.default()
+
+
+def declaring(*declarations: str) -> Catalog:
+    """A catalog whose resources 0, 1, ... each declare one local prefix, in order."""
+    route = Route("rest", "https://x.example", 0.5, "x", "none", False)
+    return Catalog({
+        str(i): Resource(str(i), f"Owner {i}", ("repository",), "quarry.adapters", (route,),
+                         local_prefixes={prefix: LocalPrefix("^[0-9]+$", "https://x.example/$1", "test")})
+        for i, prefix in enumerate(declarations)
+    }, {})
+
+
+def findings(cat: Catalog) -> list[str]:
+    """The kinds `quarry check` reports for a catalog, through the same registry and collisions."""
+    return [f.kind for f in catalog.check(cat, ids.registry_for(cat), modules=[], collisions=ids.collisions(cat))]
 
 
 def test_snapshot_is_pinned():
     assert REG.version and REG.canonical("geo") == "geo"
+
+
+def test_registry_comes_from_refs():
+    assert ids.Registry is refs.registry.Registry
+    assert ids.Curie is refs.ids.Curie
+    shipped = catalog.load()
+    assert ids.registry_for(shipped).fingerprint == refs.registry.Registry.default().with_local([]).fingerprint
+
+
+def test_non_ascii_digits_are_now_malformed():
+    # The recorded narrowing of refs spec 5.2: Bioregistry's \d patterns are ASCII under refs' dialect.
+    with pytest.raises(QuarryError) as caught:
+        ids.parse("pubmed:\u0661\u0662\u0663", REG)
+    assert caught.value.kind == "malformed"
+
+
+def test_no_owned_prefix_is_refused():
+    shipped = catalog.load()
+    owned = [p for r in shipped.resources.values() for p in r.owned_prefixes()]
+    assert owned
+    for prefix in owned:
+        canonical = REG.canonical(prefix)
+        assert canonical == prefix
+        assert REG.scheme(canonical).refused is None
+
+
+def test_no_vendored_snapshot_left():
+    assert not (CATALOG_ROOT / "bioregistry.json").exists()
+    assert not (CATALOG_ROOT / "SOURCES.toml").exists()
+
+
+def test_figshare_is_refs_shared_scheme_owned_by_the_catalog():
+    shipped = catalog.load()
+    assert shipped.resources["figshare"].prefixes == ("figshare",)
+    assert not shipped.resources["figshare"].local_prefixes
+    reg = ids.registry_for(shipped)
+    assert str(ids.parse("FIGSHARE:34254439", reg)) == "figshare:34254439"
+    assert shipped.owner("figshare") is shipped.resources["figshare"]
+
+
+def test_refs_refusals_keep_their_kind_and_quarrys_error_type():
+    for text, kind in [("GSE1", "ambiguous_id"), ("geo:", "not_a_curie"), ("nosuch:1", "unknown_prefix")]:
+        with pytest.raises(QuarryError) as caught:
+            ids.parse(text, REG)
+        assert caught.value.kind == kind and caught.value.detail
 
 
 @pytest.mark.parametrize("text, expected", [
@@ -66,34 +129,40 @@ def test_resolve_fills_the_uri_format():
 
 
 def test_local_prefixes_join_the_registry():
-    route = Route(kind="rest", url="https://api.figshare.com/v2", min_interval=0.5, service="figshare",
-                  auth="none", reports_total=False)
-    fig = Resource(id="figshare", name="figshare", roles=("repository",), adapter="quarry.adapters",
-                   routes=(route,), local_prefixes={"figshare": LocalPrefix(r"^\d+$", "https://figshare.com/articles/$1",
-                                                                            "Bioregistry has no figshare prefix")})
-    cat = Catalog({"figshare": fig}, {})
-    reg = REG.with_local(cat)
-    assert str(ids.parse("FIGSHARE:34254439", reg)) == "figshare:34254439"
-    assert ids.resolve(ids.parse("figshare:1", reg), reg) == ["https://figshare.com/articles/1"]
-    assert reg.is_upstream("geo") and not reg.is_upstream("figshare")
+    cat = declaring("custom")
+    reg = ids.registry_for(cat)
+    assert str(ids.parse("CUSTOM:34254439", reg)) == "custom:34254439"
+    assert ids.resolve(ids.parse("custom:1", reg), reg) == ["https://x.example/1"]
+    assert reg.is_upstream("geo") and not reg.is_upstream("custom") and reg.is_local("custom")
     # a valid local prefix checks clean against the merged registry it joined
-    assert catalog.check(cat, reg, modules=[]) == []
+    assert findings(cat) == []
 
 
 @pytest.mark.parametrize("local", ["pmid", "PMID", "geo"])
 def test_a_local_prefix_never_shadows_bioregistry(local):
-    route = Route(kind="rest", url="https://x.example", min_interval=0.5, service="x", auth="none", reports_total=False)
-    shadow = Resource(id="shadow", name="shadow", roles=("repository",), adapter="quarry.adapters", routes=(route,),
-                      local_prefixes={local: LocalPrefix(r"^\d+$", "https://x.example/$1", "test")})
-    cat = Catalog({"shadow": shadow}, {})
-    reg = REG.with_local(cat)
+    cat = declaring(local)
+    assert [c.kind for c in ids.collisions(cat)] == ["shadows_registry"]
+    with pytest.raises(RefsError) as caught:
+        REG.with_local(ids.local_schemes(cat))
+    assert caught.value.kind == "local_collision"
+    reg = ids.registry_for(cat)  # only the conflict-free declarations reach the registry
     assert str(ids.parse("PMID:123", reg)) == "pubmed:123"
-    assert [f.kind for f in catalog.check(cat, reg, modules=[])] == ["local_prefix_in_bioregistry"]
+    assert findings(cat) == ["local_prefix_in_bioregistry"]
+
+
+def test_a_local_prefix_outside_the_dialect_is_refused_at_startup():
+    cat = declaring("custom")
+    bad = Catalog({"0": Resource("0", "Owner", ("repository",), "quarry.adapters", cat.resources["0"].routes,
+                                 local_prefixes={"custom": LocalPrefix("^[0-9]+(?=x)$", "https://x.example/$1", "test")})}, {})
+    with pytest.raises(QuarryError) as caught:
+        ids.registry_for(bad)
+    assert caught.value.kind == "unsupported_pattern"
 
 
 def test_the_shipped_catalog_checks_clean_against_the_snapshot():
     cat = catalog.load()
-    assert catalog.check(cat, REG.with_local(cat)) == []
+    assert ids.collisions(cat) == []
+    assert catalog.check(cat, ids.registry_for(cat), collisions=ids.collisions(cat)) == []
 
 
 def test_normalize_refuses_an_unknown_curie_prefix():
@@ -106,45 +175,24 @@ def test_normalize_deduplicates_owned_prefix_aliases():
     assert str(ids.normalize("123", REG, ["PMID", "pubmed", "pubmed"])) == "pubmed:123"
 
 
-def test_canonical_prefix_wins_over_synonym(tmp_path):
-    import json
-    path = tmp_path / "registry.json"
-    path.write_text(json.dumps({"version": "test", "prefixes": {
-        "first": {"synonyms": ["second"], "pattern": "^\\d+$"},
-        "second": {"synonyms": [], "pattern": "^\\d+$"},
-    }}))
-    reg = ids.Registry.load(path)
-    assert str(ids.parse("SECOND:1", reg)) == "second:1"
-
-
 def test_local_prefix_is_canonicalized_without_replacing_an_alias():
-    route = Route("rest", "https://x.example", 0.5, "x", "none", False)
-    resource = Resource("x", "X", ("repository",), "quarry.adapters", (route,),
-                        local_prefixes={"Custom": LocalPrefix(r"^\d+$", "https://x.example/$1", "test")})
-    reg = REG.with_local(Catalog({"x": resource}, {}))
+    reg = ids.registry_for(declaring("Custom"))
     assert str(ids.parse("CUSTOM:1", reg)) == "custom:1"
     assert reg.is_local("Custom") and reg.is_local("custom")
-    assert str(reg.with_local(Catalog({"x": resource}, {})).scheme("custom").prefix) == "custom"
+    assert reg.scheme("custom").prefix == "custom"
 
 
 @pytest.mark.parametrize("declarations, expected", [
     (("Custom",), ["noncanonical_prefix"]),
-    (("Custom", "custom"), ["noncanonical_prefix"]),
+    (("Custom", "custom"), ["noncanonical_prefix", "prefix_owned_twice"]),
     (("custom", "custom"), ["prefix_owned_twice"]),
     (("custom",), []),
+    (("figshare",), ["prefix_owned_twice"]),  # refs already ships this scheme
 ])
 def test_local_declarations_agree_with_canonical_owner(declarations, expected):
-    route = Route("rest", "https://x.example", 0.5, "x", "none", False)
-    resources = {
-        str(i): Resource(str(i), f"Owner {i}", ("repository",), "quarry.adapters", (route,),
-                         local_prefixes={prefix: LocalPrefix(r"^\d+$", "https://x.example/$1", "test")})
-        for i, prefix in enumerate(declarations)
-    }
-    cat = Catalog(resources, {})
-    reg = REG.with_local(cat)
-    findings = catalog.check(cat, reg, modules=[])
-    assert [f.kind for f in findings] == expected
-    if not findings:
-        curie = ids.parse("CUSTOM:1", reg)
+    cat = declaring(*declarations)
+    assert findings(cat) == expected
+    if not expected:
+        curie = ids.parse("CUSTOM:1", ids.registry_for(cat))
         assert str(curie) == "custom:1"
-        assert cat.owner(curie.prefix) is resources["0"]
+        assert cat.owner(curie.prefix) is cat.resources["0"]
