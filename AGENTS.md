@@ -42,8 +42,11 @@ that fail (ENA's count endpoint returned 500 during the myeloma survey).
 A new command or option is a row in ops `cli.toml` first, then `vendored adopt cli.toml`;
 the conformance test fails on any difference.
 
-Catalog owned prefixes must use Bioregistry's canonical spelling. Local-prefix
+Catalog owned prefixes must use the registry's canonical spelling. Local-prefix
 declarations must be lowercase so validation and owner routing agree, and their patterns
-must be in refs' pattern dialect (`[0-9]`, not `\d`); `quarry check` reports one that is not and
-startup leaves it out. A scheme several projects share
-belongs in refs' shared local schemes, with the catalog only owning the prefix.
+must be in refs' pattern dialect (`[0-9]`, not `\d`). `quarry check` reports one that is not;
+startup leaves it out of the registry, so every catalog-reading command other than `quarry check` refuses
+with `catalog_invalid` and points at `quarry check`. A new external scheme that Bioregistry
+lacks goes in refs' shared local schemes (registry/local-schemes.toml there), so a prefix has one grammar everywhere,
+and the catalog lists it under `prefixes`; catalog `local_prefixes` stay supported, with
+patterns in refs' dialect.
