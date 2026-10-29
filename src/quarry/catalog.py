@@ -7,9 +7,14 @@ from __future__ import annotations
 import importlib.util
 import pkgutil
 import tomllib
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
+
+from refs.dialect import check_pattern
+from refs.errors import RefsError
+from refs.registry import Collision
 
 from quarry.errors import QuarryError
 
@@ -31,9 +36,7 @@ class CatalogError(QuarryError):
 class PrefixLookup(Protocol):
     def canonical(self, prefix: str) -> str | None: ...
 
-    def is_upstream(self, prefix: str) -> bool: ...   # in Bioregistry itself, not a local prefix
-
-    def is_local(self, prefix: str) -> bool: ...      # registered from a resource's local_prefixes
+    def is_local(self, prefix: str) -> bool: ...      # a local scheme: refs' shared ones and the catalog's own
 
 
 @dataclass(frozen=True)
@@ -270,15 +273,19 @@ def adapter_modules() -> list[str]:
             if m.name not in NOT_ADAPTERS]
 
 
-def check(catalog: Catalog, registry: PrefixLookup, modules: list[str] | None = None) -> list[Finding]:
+def check(catalog: Catalog, registry: PrefixLookup, modules: list[str] | None = None,
+          collisions: Iterable[Collision] = ()) -> list[Finding]:
     """`modules` are the adapter modules to hold against the catalog; None means every one the
-    package ships. A test catalog passes its own list."""
+    package ships. A test catalog passes its own list. `collisions` are the conflicts between
+    the catalog's local declarations and the registry (`ids.collisions`); `registry` holds
+    only the declarations that did not conflict."""
     found: list[Finding] = []
 
     def add(kind: str, where: str, detail: str) -> None:
         found.append(Finding(kind, where, detail))
 
     owners: dict[str, str] = {}
+    owned_twice: set[str] = set()
     for r in catalog.resources.values():
         where = f"resources/{r.id}.toml"
         if not r.roles:
@@ -298,21 +305,34 @@ def check(catalog: Catalog, registry: PrefixLookup, modules: list[str] | None = 
         if not _adapter_exists(r.adapter):
             add("missing_adapter", where, f"no module {r.adapter!r}")
         for p in r.prefixes:
-            if not registry.is_upstream(p) or registry.canonical(p) != p:
-                add("unknown_prefix", where, f"{p!r} is not a canonical Bioregistry prefix")
-        for p in r.local_prefixes:
-            if not registry.is_local(p):
-                add("local_prefix_in_bioregistry", where,
-                    f"{p!r} is a Bioregistry prefix or synonym ({registry.canonical(p)}); list it under prefixes")
-            elif registry.canonical(p) != p:
+            if registry.canonical(p) != p:
+                add("unknown_prefix", where, f"{p!r} is not a canonical registry prefix")
+        for p, local in r.local_prefixes.items():
+            try:
+                check_pattern(local.pattern)
+            except RefsError as error:
+                if error.kind != "unsupported_pattern":
+                    raise
+                add("local_pattern_unsupported", where,
+                    f"{p!r}: {error.detail} (at {error.position}); the declaration is left out of the registry")
+            if registry.is_local(p) and registry.canonical(p) != p:
                 add("noncanonical_prefix", where, f"{p!r} must be declared as {registry.canonical(p)!r}")
         for p in r.owned_prefixes():
             if p in owners:
                 add("prefix_owned_twice", where, f"{p!r} is already owned by {owners[p]}")
+                owned_twice.add(p.lower())
             owners.setdefault(p, r.id)
         for pit in r.pitfalls:
             if not (pit.summary and pit.handling and pit.evidence):
                 add("pitfall_incomplete", where, f"pitfall {pit.summary!r} needs summary, handling and evidence")
+
+    for c in collisions:
+        declaring = [r for r in catalog.resources.values() if c.prefix in r.local_prefixes]
+        if c.kind == "shadows_registry":
+            for r in declaring:
+                add("local_prefix_in_bioregistry", f"resources/{r.id}.toml", f"{c.detail}; list it under prefixes")
+        elif c.prefix.lower() not in owned_twice:  # an exact repeat was reported with the owners above
+            add("prefix_owned_twice", f"resources/{declaring[-1].id}.toml" if declaring else "catalog", c.detail)
 
     referenced = {r.adapter for r in catalog.resources.values()}
     for name in adapter_modules() if modules is None else modules:

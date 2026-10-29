@@ -7,7 +7,10 @@ quarry gives people and agents one interface to scientific repositories, knowled
 ## Setup
 
 Run `just setup` in a checkout to install Python dependencies. Python 3.13 or later,
-uv, and just are required.
+uv, and just are required. quarry takes its identifier registry from the `refs` library,
+which needs the `refs` and `nodes` checkouts cloned beside this one, and `just setup` run
+in `refs` first so that it writes its registry data (without it every quarry command fails
+reading that data).
 
 ## Usage
 
@@ -49,7 +52,7 @@ skills and live checks are the next milestone.
 ## Layout
 
 - `src/quarry/`: the Python package.
-- `src/quarry/catalog/`: resources, domains, and the pinned Bioregistry snapshot.
+- `src/quarry/catalog/`: resources and domains. The registry comes from refs.
 - `src/quarry/adapters/`: one module per resource, plus `eutils.py` shared by GEO and PubMed.
 - `tests/fixtures/`: recorded resource responses for offline tests.
 - `tests/recordings/`: live recording scenarios, refreshed with `just record <resource>`.

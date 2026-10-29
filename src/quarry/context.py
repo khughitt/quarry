@@ -5,6 +5,8 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 
+from refs.registry import Collision
+
 from quarry import catalog as catalog_mod
 from quarry import ids
 from quarry.errors import QuarryError
@@ -17,16 +19,17 @@ CATALOG_ROOT = catalog_mod.CATALOG_ROOT
 class Env:
     catalog: catalog_mod.Catalog
     registry: ids.Registry
+    collisions: tuple[Collision, ...]
 
 
 def load_unchecked() -> Env:
     cat = catalog_mod.load(CATALOG_ROOT)
-    return Env(cat, ids.Registry.load().with_local(cat))
+    return Env(cat, ids.registry_for(cat), tuple(ids.collisions(cat)))
 
 
 def open_env() -> Env:
     env = load_unchecked()
-    findings = catalog_mod.check(env.catalog, env.registry)
+    findings = catalog_mod.check(env.catalog, env.registry, collisions=env.collisions)
     if findings:
         detail = "; ".join(f"{f.where}: {f.detail}" for f in findings)
         raise QuarryError("catalog_invalid", f"{detail} (run `quarry check`)")

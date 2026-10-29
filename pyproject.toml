@@ -5,10 +5,13 @@ description = "One CLI and skills over scientific resources, with domains as len
 requires-python = ">=3.13"
 license = "MIT"
 license-files = ["LICENSE"]
-dependencies = ["click>=8.1", "httpx>=0.28"]
+dependencies = ["click>=8.1", "httpx>=0.28", "verifiably-refs"]
 
 [project.scripts]
 quarry = "quarry.cli:main"
+
+[tool.uv.sources]
+verifiably-refs = { path = "../refs/python", editable = true }
 
 [dependency-groups]
 dev = ["pytest>=8.4", "pytest-testmon>=2.1"]

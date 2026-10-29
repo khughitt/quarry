@@ -259,7 +259,7 @@ def check_command(ctx: click.Context) -> None:
     except CatalogError as error:
         _findings(ctx, [Finding("catalog_invalid", "catalog", error.detail)])
         return
-    _findings(ctx, catalog_mod.check(env.catalog, env.registry))
+    _findings(ctx, catalog_mod.check(env.catalog, env.registry, collisions=env.collisions))
 
 
 def _pretty_coverage(c: dict) -> str:

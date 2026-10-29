@@ -33,9 +33,9 @@ why = "a test prefix nothing shipped owns"
 @pytest.fixture
 def catalog(make_catalog):
     fakes = {rid: FAKE.format(id=rid, role=role, prefix=prefix)
-             for rid, role, prefix in (("alpha", "repository", LOCAL.format(name="alpha", pattern=r"^GSE\d+$")),
+             for rid, role, prefix in (("alpha", "repository", LOCAL.format(name="alpha", pattern="^GSE[0-9]+$")),
                                        ("beta", "repository", ""), ("expanding", "repository", ""),
-                                       ("onto", "ontology", LOCAL.format(name="onto", pattern=r"^\d+$")))}
+                                       ("onto", "ontology", LOCAL.format(name="onto", pattern="^[0-9]+$")))}
     return make_catalog(fakes, ["alpha", "beta", "expanding", "onto"], ["alpha", "beta"])
 
 

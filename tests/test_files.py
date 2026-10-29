@@ -83,8 +83,8 @@ from tests.test_search import FAKE, LOCAL
 
 @pytest.fixture
 def catalog(make_catalog):
-    fakes = {"alpha": FAKE.format(id="alpha", role="repository", prefix=LOCAL.format(name="alpha", pattern=r"^GSE\d+$")),
-             "onto": FAKE.format(id="onto", role="ontology", prefix=LOCAL.format(name="onto", pattern=r"^\d+$"))}
+    fakes = {"alpha": FAKE.format(id="alpha", role="repository", prefix=LOCAL.format(name="alpha", pattern="^GSE[0-9]+$")),
+             "onto": FAKE.format(id="onto", role="ontology", prefix=LOCAL.format(name="onto", pattern="^[0-9]+$"))}
     return make_catalog(fakes, ["alpha", "onto"], ["alpha"])
 
 

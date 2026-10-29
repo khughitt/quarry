@@ -88,7 +88,7 @@ one_cmd := "uv run pytest"
 # catches both kinds only every two hours. Use explicit, audited paths; never
 # ignore source parents. Linux needs attr installed. Attribute failures must
 # fail setup, not be swallowed.
-setup_cmd := "just work-link .venv && uv sync --group dev"
+setup_cmd := "just link-siblings && just work-link .venv && uv sync --group dev"
 
 # The inner loop runs the whole small suite.
 test-fast:
@@ -119,9 +119,13 @@ gate: check test
 docs:
     {{tt}} docs -- python3 tools/ops-docs write
 
-# Refresh the pinned Bioregistry snapshot from one exact release (PyPI version).
-bioregistry-vendor version:
-    {{tt}} bioregistry-vendor -- uv run --no-project --with "bioregistry=={{version}}" python tools/vendor_bioregistry.py
+# quarry depends on ../refs, and refs on ../../nodes, by path. In a worktree the
+# siblings are not beside it, so link them into .worktrees/ (where refs' relative path to
+# nodes also lands), pointing at the siblings of the main checkout. In the main
+# checkout this only checks that they exist and that refs' own setup has written its
+# registry data (without it every quarry command fails reading that data).
+link-siblings:
+    {{tt}} link-siblings -- sh -c 'common="$(git rev-parse --git-common-dir)"; for name in refs nodes; do if [ "$common" != ".git" ]; then main="$(cd "$common/.." && pwd -P)"; target="$main/../$name"; link="../$name"; if [ -L "$link" ] && [ "$(readlink "$link")" = "$target" ]; then :; elif [ -e "$link" ]; then echo "setup: $link exists and is not a link to $target" >&2; exit 1; else ln -s "$target" "$link"; fi; fi; test -f "../$name/python/pyproject.toml" || { echo "setup: ../$name/python not found; clone $name beside this checkout" >&2; exit 1; }; done; test -f ../refs/python/src/refs/data/bioregistry.json || { echo "setup: ../refs has no registry data; run just setup in ../refs" >&2; exit 1; }'
 
 # Ask work-link to put the named generated directories (.venv, target; never
 # node_modules) off the synced tree behind in-tree links. Absent command: this machine

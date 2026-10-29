@@ -1,12 +1,8 @@
 id = "figshare"
 name = "figshare"
 roles = ["repository"]
+prefixes = ["figshare"]              # refs' shared local scheme: the grammar comes from refs
 adapter = "quarry.adapters.figshare"
-
-[local_prefixes.figshare]
-pattern = "^\\d+$"
-uri_format = "https://figshare.com/articles/dataset/_/$1"
-why = "Bioregistry has no figshare prefix (checked 2026-10-10); items are numbered and resolve by number"
 
 [[routes]]
 kind = "rest"

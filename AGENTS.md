@@ -6,7 +6,10 @@ One CLI and skills over scientific resources, with domains as lenses
 
 ## Setup
 
-`just setup` runs `uv sync --group dev` behind work-link. Python 3.13 or later,
+`just setup` links the sibling checkouts, then runs `uv sync --group dev` behind
+work-link. quarry needs `refs` and `nodes` cloned beside this checkout and `just setup`
+run in `refs` first (it writes the registry data copies quarry reads); `just link-siblings`
+fails early when either is missing. Python 3.13 or later,
 uv, and just are required. The checkout uses `.githooks/` via
 `git config core.hooksPath .githooks`.
 
@@ -24,7 +27,7 @@ Use the just recipes so tools/tt records each run; never call pytest directly.
 ## Layout
 
 - `src/quarry/`: the Python package.
-- `src/quarry/catalog/`: resources, domains, and the pinned Bioregistry snapshot.
+- `src/quarry/catalog/`: resources and domains. The registry comes from refs.
 - `src/quarry/adapters/`: one module per supported resource; `eutils.py` is shared by GEO and PubMed.
 - `tests/`: tests; `tests/fixtures/` holds recorded resource responses.
 - `tests/recordings/`: scenarios that `just record <resource>` captures.
@@ -39,5 +42,11 @@ that fail (ENA's count endpoint returned 500 during the myeloma survey).
 A new command or option is a row in ops `cli.toml` first, then `vendored adopt cli.toml`;
 the conformance test fails on any difference.
 
-Catalog owned prefixes must use Bioregistry's canonical spelling. Local-prefix
-declarations must be lowercase so validation and owner routing agree.
+Catalog owned prefixes must use the registry's canonical spelling. Local-prefix
+declarations must be lowercase so validation and owner routing agree, and their patterns
+must be in refs' pattern dialect (`[0-9]`, not `\d`). `quarry check` reports one that is not;
+startup leaves it out of the registry, so every catalog-reading command other than `quarry check` refuses
+with `catalog_invalid` and points at `quarry check`. A new external scheme that Bioregistry
+lacks goes in refs' shared local schemes (registry/local-schemes.toml there), so a prefix has one grammar everywhere,
+and the catalog lists it under `prefixes`; catalog `local_prefixes` stay supported, with
+patterns in refs' dialect.
