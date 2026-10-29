@@ -44,6 +44,15 @@ def test_non_ascii_digits_are_now_malformed():
     assert caught.value.kind == "malformed"
 
 
+def test_a_refused_prefix_says_what_refs_refuses():
+    # Ten Bioregistry patterns have no dialect form; every id under them is refused (refs spec 4.1).
+    with pytest.raises(QuarryError) as caught:
+        ids.parse("wikipedia.en:Myeloma", REG)
+    assert caught.value.kind == "unsupported_pattern"
+    assert caught.value.detail.startswith(
+        "refs refuses every id under wikipedia.en: its upstream pattern has no portable form (negated shorthand")
+
+
 def test_no_owned_prefix_is_refused():
     shipped = catalog.load()
     owned = [p for r in shipped.resources.values() for p in r.owned_prefixes()]

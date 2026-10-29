@@ -30,6 +30,11 @@ def _quarry_error(error: RefsError, text: str) -> QuarryError:
         return QuarryError("ambiguous_id", f"{text!r} needs a prefix; {_BARE_ACCESSION}")
     if error.kind == "not_a_curie":
         return QuarryError("not_a_curie", f"{text!r} is not <prefix>:<id>; {_BARE_ACCESSION}")
+    if error.kind == "unsupported_pattern":
+        # Only a refused scheme raises this at parse time, and refs words it "<prefix>: <reason>".
+        prefix, _, reason = error.detail.partition(": ")
+        return QuarryError(error.kind, f"refs refuses every id under {prefix}: its upstream pattern "
+                                       f"has no portable form ({reason})")
     return QuarryError(error.kind, error.detail)
 
 
