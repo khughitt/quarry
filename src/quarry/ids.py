@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 import refs.ids
+from refs.dialect import check_pattern
 from refs.errors import RefsError
 from refs.ids import Curie, Scheme
 from refs.registry import Collision, LocalScheme, Registry
@@ -32,10 +33,25 @@ def _quarry_error(error: RefsError, text: str) -> QuarryError:
     return QuarryError(error.kind, error.detail)
 
 
+def pattern_refusal(pattern: str) -> RefsError | None:
+    """Why `pattern` is outside refs' pattern dialect (kind `unsupported_pattern`, with the
+    position), or None when it is inside."""
+    try:
+        check_pattern(pattern)
+    except RefsError as error:
+        if error.kind != "unsupported_pattern":
+            raise
+        return error
+    return None
+
+
 def local_schemes(catalog: Catalog) -> list[LocalScheme]:
-    """Every local prefix the catalog's resources declare, in catalog order."""
+    """Every local prefix the catalog's resources declare whose pattern is in refs' dialect,
+    in catalog order. One outside the dialect is left out here, as a colliding one is, and
+    `catalog.check` reports it."""
     return [LocalScheme(prefix, resource.name, local.pattern, local.uri_format, local.why)
-            for resource in catalog.resources.values() for prefix, local in resource.local_prefixes.items()]
+            for resource in catalog.resources.values() for prefix, local in resource.local_prefixes.items()
+            if pattern_refusal(local.pattern) is None]
 
 
 def collisions(catalog: Catalog, base: Registry | None = None) -> list[Collision]:
@@ -46,9 +62,9 @@ def collisions(catalog: Catalog, base: Registry | None = None) -> list[Collision
 
 def registry_for(catalog: Catalog, base: Registry | None = None) -> Registry:
     """`base` (refs' default registry unless given) plus the catalog's conflict-free local
-    declarations. A declaration that shadows a registry prefix or repeats an earlier one is
-    left out here and reported by `collisions` and `catalog.check`. A pattern outside refs'
-    dialect raises `QuarryError` `unsupported_pattern`."""
+    declarations. A declaration that shadows a registry prefix, repeats an earlier one or has
+    a pattern outside refs' dialect is left out here and reported by `catalog.check`, so
+    `with_local` only ever sees clean declarations."""
     base = base or Registry.default()
     kept: list[LocalScheme] = []
     for scheme in local_schemes(catalog):

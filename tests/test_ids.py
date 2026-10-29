@@ -150,13 +150,22 @@ def test_a_local_prefix_never_shadows_bioregistry(local):
     assert findings(cat) == ["local_prefix_in_bioregistry"]
 
 
-def test_a_local_prefix_outside_the_dialect_is_refused_at_startup():
-    cat = declaring("custom")
-    bad = Catalog({"0": Resource("0", "Owner", ("repository",), "quarry.adapters", cat.resources["0"].routes,
-                                 local_prefixes={"custom": LocalPrefix("^[0-9]+(?=x)$", "https://x.example/$1", "test")})}, {})
-    with pytest.raises(QuarryError) as caught:
-        ids.registry_for(bad)
-    assert caught.value.kind == "unsupported_pattern"
+def test_a_local_prefix_outside_the_dialect_is_skipped_at_startup_and_reported():
+    bad = declaring("custom", "other")
+    bad.resources["0"].local_prefixes["custom"] = LocalPrefix(r"^\d+$", "https://x.example/$1", "test")
+    reg = ids.registry_for(bad)  # still loads
+    assert reg.canonical("custom") is None and reg.is_local("other")
+    assert ids.collisions(bad) == []
+    found = catalog.check(bad, reg, modules=[], collisions=ids.collisions(bad))
+    assert [(f.kind, f.where) for f in found] == [("local_pattern_unsupported", "resources/0.toml")]
+    assert "'custom'" in found[0].detail and "escape \\d" in found[0].detail and "(at 1)" in found[0].detail
+
+
+def test_a_skipped_pattern_does_not_make_a_later_declaration_a_repeat():
+    bad = declaring("custom", "custom")
+    bad.resources["0"].local_prefixes["custom"] = LocalPrefix(r"^\d+$", "https://x.example/$1", "test")
+    assert ids.registry_for(bad).is_local("custom")  # resource 1's clean declaration
+    assert findings(bad) == ["local_pattern_unsupported", "prefix_owned_twice"]
 
 
 def test_the_shipped_catalog_checks_clean_against_the_snapshot():

@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
+from refs.dialect import check_pattern
+from refs.errors import RefsError
 from refs.registry import Collision
 
 from quarry.errors import QuarryError
@@ -305,7 +307,14 @@ def check(catalog: Catalog, registry: PrefixLookup, modules: list[str] | None = 
         for p in r.prefixes:
             if registry.canonical(p) != p:
                 add("unknown_prefix", where, f"{p!r} is not a canonical registry prefix")
-        for p in r.local_prefixes:
+        for p, local in r.local_prefixes.items():
+            try:
+                check_pattern(local.pattern)
+            except RefsError as error:
+                if error.kind != "unsupported_pattern":
+                    raise
+                add("local_pattern_unsupported", where,
+                    f"{p!r}: {error.detail} (at {error.position}); the declaration is left out of the registry")
             if registry.is_local(p) and registry.canonical(p) != p:
                 add("noncanonical_prefix", where, f"{p!r} must be declared as {registry.canonical(p)!r}")
         for p in r.owned_prefixes():

@@ -41,5 +41,6 @@ the conformance test fails on any difference.
 
 Catalog owned prefixes must use Bioregistry's canonical spelling. Local-prefix
 declarations must be lowercase so validation and owner routing agree, and their patterns
-must be in refs' pattern dialect (`[0-9]`, not `\d`). A scheme several projects share
+must be in refs' pattern dialect (`[0-9]`, not `\d`); `quarry check` reports one that is not and
+startup leaves it out. A scheme several projects share
 belongs in refs' shared local schemes, with the catalog only owning the prefix.
