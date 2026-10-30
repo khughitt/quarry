@@ -25,17 +25,17 @@ def invoke(*args):
 def test_search_sets_and_effective_resources():
     assert CAT.search_set("core") == ["zenodo", "figshare"]
     assert CAT.search_set("biology") == ["geo", "ena", "biostudies", "zenodo", "figshare"]
-    assert CAT.effective_resources("biology") == ["geo", "ena", "biostudies", "zenodo", "figshare", "pubmed"]
+    assert CAT.effective_resources("biology") == ["geo", "ena", "biostudies", "zenodo", "figshare", "pubmed", "europepmc"]
     assert {rid: CAT.resources[rid].roles for rid in CAT.resources} == {
         "biostudies": ("repository",), "ena": ("repository",), "figshare": ("repository",), "geo": ("repository",),
-        "pubmed": ("literature-index",), "zenodo": ("repository",)}
+        "europepmc": ("literature-index",), "pubmed": ("literature-index",), "zenodo": ("repository",)}
 
 
 def test_domains_list_shows_both_domains_with_their_resources():
     out = invoke("domains", "list")
     rows = {d["id"]: d for d in json.loads(out.stdout)["domains"]}
-    assert rows["biology"]["resources"] == ["geo", "ena", "biostudies", "zenodo", "figshare", "pubmed"]
-    assert rows["core"]["resources"] == ["zenodo", "figshare", "pubmed"] and rows["core"]["beliefs_contract"] is None
+    assert rows["biology"]["resources"] == ["geo", "ena", "biostudies", "zenodo", "figshare", "pubmed", "europepmc"]
+    assert rows["core"]["resources"] == ["zenodo", "figshare", "pubmed", "europepmc"] and rows["core"]["beliefs_contract"] is None
 
 
 def test_check_is_clean_with_every_shipped_adapter():
@@ -44,7 +44,9 @@ def test_check_is_clean_with_every_shipped_adapter():
 
 
 @pytest.mark.parametrize("bare, expected", [
-    ("GSE24080", "geo:GSE24080"), ("E-GEOD-5900", "arrayexpress:E-GEOD-5900"), ("S-BSST1234", "biostudies:S-BSST1234"),
+    ("PMC3257301", "pmc:PMC3257301"), ("PPR404258", "ppr:PPR404258"),
+    ("MED/22253597", "europepmc:MED/22253597"), ("GSE24080", "geo:GSE24080"),
+    ("E-GEOD-5900", "arrayexpress:E-GEOD-5900"), ("S-BSST1234", "biostudies:S-BSST1234"),
     ("PRJNA130207", "bioproject:PRJNA130207"), ("SRP000001", "insdc.sra:SRP000001"),
 ])
 def test_bare_accessions_with_one_owner_normalize(bare, expected):

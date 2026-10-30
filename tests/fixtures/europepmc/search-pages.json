@@ -1,0 +1,82 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "cursorMark",
+     "*"
+    ],
+    [
+     "format",
+     "json"
+    ],
+    [
+     "pageSize",
+     "2"
+    ],
+    [
+     "query",
+     "(EXT_ID:22253597 AND SRC:MED) OR (EXT_ID:41805121 AND SRC:MED) OR (EXT_ID:PPR1338310 AND SRC:PPR)"
+    ],
+    [
+     "resultType",
+     "lite"
+    ],
+    [
+     "synonym",
+     "false"
+    ]
+   ],
+   "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+  },
+  "response": {
+   "body": "{\"version\":\"6.9\",\"hitCount\":3,\"nextCursorMark\":\"AoIIQC1Aryg1NTA4MjU2NQ==\",\"nextPageUrl\":\"https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=%28EXT_ID%3A22253597+AND+SRC%3AMED%29+OR+%28EXT_ID%3A41805121+AND+SRC%3AMED%29+OR+%28EXT_ID%3APPR1338310+AND+SRC%3APPR%29&cursorMark=AoIIQC1Aryg1NTA4MjU2NQ%3D%3D&resultType=lite&pageSize=2&format=json\",\"request\":{\"queryString\":\"(EXT_ID:22253597 AND SRC:MED) OR (EXT_ID:41805121 AND SRC:MED) OR (EXT_ID:PPR1338310 AND SRC:PPR)\",\"resultType\":\"lite\",\"cursorMark\":\"*\",\"pageSize\":2,\"sort\":\"\",\"synonym\":false},\"resultList\":{\"result\":[{\"id\":\"PPR1338310\",\"source\":\"PPR\",\"doi\":\"10.64898/2026.10.01.755028\",\"title\":\"Continuous Integration and Software Quality in Scientific Software: A Large-Scale Empirical Analysis of GitHub Repositories\",\"authorString\":\"Compton Mellon WJ, Sy M, Gangrade N, Jakobi T.\",\"pubYear\":\"2026\",\"pubType\":\"preprint\",\"bookOrReportDetails\":{\"publisher\":\"bioRxiv\",\"yearOfPublication\":2026},\"isOpenAccess\":\"N\",\"inEPMC\":\"N\",\"inPMC\":\"N\",\"citedByCount\":0,\"hasReferences\":\"N\",\"hasTextMinedTerms\":\"N\",\"hasDbCrossReferences\":\"N\",\"hasPDF\":\"N\",\"hasBook\":\"N\",\"hasSuppl\":\"N\",\"hasLabsLinks\":\"N\",\"hasTMAccessionNumbers\":\"N\",\"firstPublicationDate\":\"2026-10-08\",\"firstIndexDate\":\"2026-10-10\"},{\"id\":\"41805121\",\"source\":\"MED\",\"pmid\":\"41805121\",\"pmcid\":\"PMC13274558\",\"fullTextIdList\":{\"fullTextId\":[\"PMC13274558\"]},\"doi\":\"10.1021/acs.jcim.5c03137\",\"title\":\"The Open Molecular Software Foundation (OMSF) and the Growing Role of Open Source Software in Molecular Modeling.\",\"authorString\":\"\u010condi\u0107-Jurki\u0107 K, Alibay I, Sherman W, Tollefson MR, Walters WP, Baker Z, Chong LT, Wei JN, Gray J, Weitzner BD, Smith DGA, Koehler Leman J, Bahl C, Mobley DL.\",\"journalTitle\":\"J Chem Inf Model\",\"issue\":\"6\",\"journalVolume\":\"66\",\"pubYear\":\"2026\",\"journalIssn\":\"1549-9596; 1549-960x; \",\"pageInfo\":\"2967-2984\",\"pubType\":\"research-article; review; journal article\",\"isOpenAccess\":\"N\",\"inEPMC\":\"Y\",\"inPMC\":\"Y\",\"citedByCount\":2,\"hasReferences\":\"Y\",\"hasTextMinedTerms\":\"Y\",\"hasDbCrossReferences\":\"N\",\"hasPDF\":\"Y\",\"hasBook\":\"N\",\"hasSuppl\":\"N\",\"hasLabsLinks\":\"Y\",\"hasTMAccessionNumbers\":\"Y\",\"tmAccessionTypeList\":{\"accessionType\":[\"doi\"]},\"firstPublicationDate\":\"2026-03-10\",\"firstIndexDate\":\"2026-03-11\"}]}}",
+   "headers": {
+    "content-type": "application/json;charset=UTF-8"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "cursorMark",
+     "AoIIQC1Aryg1NTA4MjU2NQ=="
+    ],
+    [
+     "format",
+     "json"
+    ],
+    [
+     "pageSize",
+     "2"
+    ],
+    [
+     "query",
+     "(EXT_ID:22253597 AND SRC:MED) OR (EXT_ID:41805121 AND SRC:MED) OR (EXT_ID:PPR1338310 AND SRC:PPR)"
+    ],
+    [
+     "resultType",
+     "lite"
+    ],
+    [
+     "synonym",
+     "false"
+    ]
+   ],
+   "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+  },
+  "response": {
+   "body": "{\"version\":\"6.9\",\"hitCount\":3,\"nextCursorMark\":\"AoIIPtoHVigyOTQ5NzA3MQ==\",\"nextPageUrl\":\"https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=%28EXT_ID%3A22253597+AND+SRC%3AMED%29+OR+%28EXT_ID%3A41805121+AND+SRC%3AMED%29+OR+%28EXT_ID%3APPR1338310+AND+SRC%3APPR%29&cursorMark=AoIIPtoHVigyOTQ5NzA3MQ%3D%3D&resultType=lite&pageSize=2&format=json\",\"request\":{\"queryString\":\"(EXT_ID:22253597 AND SRC:MED) OR (EXT_ID:41805121 AND SRC:MED) OR (EXT_ID:PPR1338310 AND SRC:PPR)\",\"resultType\":\"lite\",\"cursorMark\":\"AoIIQC1Aryg1NTA4MjU2NQ==\",\"pageSize\":2,\"sort\":\"\",\"synonym\":false},\"resultList\":{\"result\":[{\"id\":\"22253597\",\"source\":\"MED\",\"pmid\":\"22253597\",\"pmcid\":\"PMC3257301\",\"fullTextIdList\":{\"fullTextId\":[\"PMC3257301\"]},\"doi\":\"10.1371/journal.ppat.1002485\",\"title\":\"The bZIP transcription factor Rca1p is a central regulator of a novel CO\u2082 sensing pathway in yeast.\",\"authorString\":\"Cottier F, Raymond M, Kurzai O, Bolstad M, Leewattanapasuk W, Jim\u00e9nez-L\u00f3pez C, Lorenz MC, Sanglard D, V\u00e1chov\u00e1 L, Pavelka N, Palkov\u00e1 Z, M\u00fchlschlegel FA.\",\"journalTitle\":\"PLoS Pathog\",\"issue\":\"1\",\"journalVolume\":\"8\",\"pubYear\":\"2012\",\"journalIssn\":\"1553-7366; 1553-7374; \",\"pageInfo\":\"e1002485\",\"pubType\":\"research support, non-u.s. gov't; research-article; journal article; research support, n.i.h., extramural\",\"isOpenAccess\":\"Y\",\"inEPMC\":\"Y\",\"inPMC\":\"Y\",\"citedByCount\":47,\"hasReferences\":\"Y\",\"hasTextMinedTerms\":\"Y\",\"hasDbCrossReferences\":\"N\",\"hasPDF\":\"Y\",\"hasBook\":\"N\",\"hasSuppl\":\"Y\",\"hasLabsLinks\":\"Y\",\"hasTMAccessionNumbers\":\"N\",\"firstPublicationDate\":\"2012-01-12\",\"firstIndexDate\":\"2012-01-19\"}]}}",
+   "headers": {
+    "content-type": "application/json;charset=UTF-8"
+   },
+   "status": 200
+  }
+ }
+]

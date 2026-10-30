@@ -1,0 +1,29 @@
+id = "europepmc"
+name = "Europe PMC"
+roles = ["literature-index"]
+prefixes = ["europepmc", "pmc", "ppr"]
+adapter = "quarry.adapters.europepmc"
+
+[[routes]]
+kind = "rest"
+url = "https://www.ebi.ac.uk/europepmc/webservices/rest"
+min_interval = 0.5
+service = "ebi-europepmc"
+auth = "none"
+reports_total = true
+page_cap = 1000
+
+[[pitfalls]]
+summary = "fullTextXML serves the PMC open-access subset; non-OA records have returned generic HTTP 500 rather than 404"
+handling = "list XML only with open_access=Y, in_epmc=Y and an unversioned validated PMCID; never probe article bytes; metadata is not an uptime guarantee"
+evidence = "2026-10-30 sci-d3044e route-500-diagnosis: non-OA 500, OA controls 200; Europe PMC full-text availability documentation: https://groups.google.com/a/ebi.ac.uk/g/epmc-webservices/c/OFOobNm5nRs"
+
+[[pitfalls]]
+summary = "The file inventory covers only hosted PMC XML, not every article copy or asset"
+handling = "empty files means no eligible PMC XML route; do not infer no full text elsewhere or advertise preprint XML, publisher PDFs, supplements or books"
+evidence = "Europe PMC developer documentation distinguishes PMC OA XML and the preprint full-text route: https://europepmc.org/RestfulWebService"
+
+[[pitfalls]]
+summary = "Literal equivalence across Europe PMC tokenization is not established"
+handling = "disable synonym expansion, report match: expanded and refuse --exact; --native preserves provider query syntax"
+evidence = "Europe PMC REST API query and synonym documentation: https://europepmc.org/RestfulWebService"

@@ -1,0 +1,42 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "cursorMark",
+     "*"
+    ],
+    [
+     "format",
+     "json"
+    ],
+    [
+     "pageSize",
+     "2"
+    ],
+    [
+     "query",
+     "EXT_ID:PPR1338310 AND SRC:PPR"
+    ],
+    [
+     "resultType",
+     "core"
+    ],
+    [
+     "synonym",
+     "false"
+    ]
+   ],
+   "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+  },
+  "response": {
+   "body": "{\"version\":\"6.9\",\"hitCount\":1,\"request\":{\"queryString\":\"EXT_ID:PPR1338310 AND SRC:PPR\",\"internalQuery\":\"EXT_ID:PPR1338310 AND SRC:PPR\",\"resultType\":\"CORE\",\"cursorMark\":\"*\",\"pageSize\":2,\"sort\":\"\",\"synonym\":false},\"resultList\":{\"result\":[{\"id\":\"PPR1338310\",\"source\":\"PPR\",\"doi\":\"10.64898/2026.10.01.755028\",\"title\":\"Continuous Integration and Software Quality in Scientific Software: A Large-Scale Empirical Analysis of GitHub Repositories\",\"authorString\":\"Compton Mellon WJ, Sy M, Gangrade N, Jakobi T.\",\"authorList\":{\"author\":[{\"fullName\":\"Compton Mellon WJ\",\"lastName\":\"Compton Mellon\",\"firstName\":\"Walker\",\"initials\":\"WJ\"},{\"fullName\":\"Sy M\",\"lastName\":\"Sy\",\"firstName\":\"Makena\",\"initials\":\"M\"},{\"fullName\":\"Gangrade N\",\"lastName\":\"Gangrade\",\"firstName\":\"Navya\",\"initials\":\"N\"},{\"fullName\":\"Jakobi T\",\"lastName\":\"Jakobi\",\"firstName\":\"Tobias\",\"initials\":\"T\",\"authorId\":{\"type\":\"ORCID\",\"value\":\"0000-0002-3906-0401\"}}]},\"authorIdList\":{\"authorId\":[{\"type\":\"ORCID\",\"value\":\"0000-0002-3906-0401\"}]},\"pubYear\":\"2026\",\"abstractText\":\"Bioinformatics software plays a central role in biological research, yet many academic projects lack robust testing and continuous integration (CI) practices. This absence can compromise reproducibility, accessibility, and long-term maintainability. In this study, we conduct an large-scale empirical analysis of GitHub repositories spanning bioinformatics and other scientific software domains to examine the relationship between CI, software testing, and software quality. Repository discovery was performed using domain-specific search terms via GitHub\u2019s Application Programming Interface (API). This was followed by a layered data extraction pipeline, which included a Large Language Model (LLM) validation step, that connected repositories to published works, institutions, authors, funding, and citation counts. By integrating repository activity, community engagement, and backlog health into a composite Repository Quality Index (RQI), we find that the presence of CI and software tests is significantly associated with higher repository quality. Additionally, repositories with higher academic citation counts tend to cluster in higher RQI tiers, suggesting that software quality, which is driven by proper testing and integration, is associated with academic impact and funding status. These results demonstrate that adopting industry-standard development practices, such as CI and software testing, is a tractable path toward more sustainable and impactful academic software and funding opportunities.\",\"pubTypeList\":{\"pubType\":[\"Preprint\"]},\"bookOrReportDetails\":{\"publisher\":\"bioRxiv\",\"yearOfPublication\":2026},\"fullTextUrlList\":{\"fullTextUrl\":[{\"availability\":\"Free\",\"availabilityCode\":\"F\",\"documentStyle\":\"doi\",\"site\":\"DOI\",\"url\":\"https://doi.org/10.64898/2026.10.01.755028\"}]},\"isOpenAccess\":\"N\",\"inEPMC\":\"N\",\"inPMC\":\"N\",\"citedByCount\":0,\"hasReferences\":\"N\",\"hasTextMinedTerms\":\"N\",\"hasDbCrossReferences\":\"N\",\"hasPDF\":\"N\",\"hasBook\":\"N\",\"hasSuppl\":\"N\",\"hasLabsLinks\":\"N\",\"hasData\":\"N\",\"authMan\":\"N\",\"epmcAuthMan\":\"N\",\"nihAuthMan\":\"N\",\"hasTMAccessionNumbers\":\"N\",\"dateOfCreation\":\"2026-10-10\",\"firstPublicationDate\":\"2026-10-08\",\"firstIndexDate\":\"2026-10-10\",\"hasEvaluations\":\"N\"}]}}",
+   "headers": {
+    "content-type": "application/json;charset=UTF-8"
+   },
+   "status": 200
+  }
+ }
+]

@@ -31,7 +31,7 @@ The root command accepts `--json` and `--pretty` to choose output mode.
 `QUARRY_FORMAT` sets the default to `json` or `pretty`.
 
 The first version's repositories are GEO, ENA and BioStudies (biology) and Zenodo and
-figshare (core), with PubMed as a literature index named with `--in`. A biology search
+figshare (core), with PubMed and Europe PMC as literature indexes named with `--in`. A biology search
 covers all five repositories. A default-set repository that cannot express the query's
 filter or matching mode (`--organism` on Zenodo and figshare, `--exact` on BioStudies) is
 skipped, with a `skipped` coverage row giving the reason and a warning; one named with `--in`
@@ -62,6 +62,62 @@ skills and live checks are the next milestone.
 ## Consumers
 
 People and agents use the CLI; no project consumers are established yet.
+
+## Europe PMC
+
+```sh
+uv run quarry search --in europepmc --since 2024-01-01 -n 10 "bioinformatics software"
+uv run quarry show europepmc:MED/22253597
+uv run quarry show pmc:PMC3257301
+uv run quarry show ppr:PPR404258
+uv run quarry files pmc:PMC3257301 --acquisition
+```
+
+Europe PMC searches the whole index and stays outside default search sets.
+Primary ids preserve the index's source/id pair (`europepmc:MED/22253597`), so
+search results round-trip through Europe PMC. Canonical source identifiers remain
+cross-references: MED → `pubmed`, PMC → `pmc`, PPR → `ppr`, AGR → `agricola`,
+CBA → `cba`, CTX → `citexplore`. `pubmed:` lookups still use PubMed.
+`pmc:` and `ppr:` aliases use Europe PMC and return its provider-qualified id.
+Version-specific PMC inputs are refused until that lookup is supported.
+Invalid mapped identifiers fail with `upstream_failed`; `--allow-partial` discards
+that resource's rows, records failed coverage, and preserves other resources' results.
+
+Literature availability uses four shared concepts under `domain_fields.core`:
+
+| Key | Europe PMC field | Meaning |
+| --- | --- | --- |
+| `open_access` | `isOpenAccess` | Reporting resource's OA designation |
+| `in_epmc` | `inEPMC` | Full text present in the Europe PMC archive |
+| `in_pmc` | `inPMC` | Full text present in the PMC archive |
+| `license` | `license` | Reporting resource's exact licence text |
+
+The result's `resource` names the reporter. Values retain upstream spelling:
+flags remain Y/N strings and licences are not converted to SPDX identifiers.
+Missing or null values are omitted and mean unknown; malformed values fail.
+Search emits available lite metadata; show/files use core metadata for licences.
+Pretty show labels known fields, and ordinary file listings carry optional `license`.
+Archive presence is not retrieval permission, and OA is the reporter's designation,
+not an independent licence judgment. These core concepts can be supplied by other
+adapters when supported; equivalent upstream definitions are not assumed.
+
+Files currently list only PMC XML with `open_access=Y`, `in_epmc=Y` and a valid
+unversioned PMCID. Europe PMC has returned generic HTTP 500 for non-OA fullTextXML
+requests; quarry omits ineligible routes without probing article bytes. Empty files
+means no eligible PMC XML route: preprint full text, publisher PDFs, supplements,
+books and other copies are outside this inventory. OA metadata does not guarantee
+route uptime. `--acquisition` retains its existing schema without a licence field;
+retain the ordinary listing for licence metadata. Empty selections raise `no_files`.
+
+Phrase queries disable synonym expansion, combine phrases with OR and inclusive
+first-publication dates with AND, and report conservative `match: expanded`.
+`--exact` and organism filtering refuse; unrepresentable literal phrase syntax points
+to `--native`. Native queries pass unchanged, while `-n` still limits output.
+Cursor/count inconsistencies fail instead of claiming a complete listing.
+Abstracts are absent from output, although upstream core responses and replay fixtures
+can contain them. Metadata preflight grants no consumer exposure authorization:
+byte acquisition, in-memory fetching, section isolation and display policy remain
+with the consumer and kernel, outside quarry.
 
 ## License
 

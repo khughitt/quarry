@@ -1,0 +1,42 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "cursorMark",
+     "*"
+    ],
+    [
+     "format",
+     "json"
+    ],
+    [
+     "pageSize",
+     "2"
+    ],
+    [
+     "query",
+     "EXT_ID:999999999 AND SRC:MED"
+    ],
+    [
+     "resultType",
+     "core"
+    ],
+    [
+     "synonym",
+     "false"
+    ]
+   ],
+   "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+  },
+  "response": {
+   "body": "{\"version\":\"6.9\",\"hitCount\":0,\"request\":{\"queryString\":\"EXT_ID:999999999 AND SRC:MED\",\"internalQuery\":\"EXT_ID:999999999 AND SRC:MED\",\"resultType\":\"CORE\",\"cursorMark\":\"*\",\"pageSize\":2,\"sort\":\"\",\"synonym\":false},\"resultList\":{\"result\":[]}}",
+   "headers": {
+    "content-type": "application/json;charset=UTF-8"
+   },
+   "status": 200
+  }
+ }
+]

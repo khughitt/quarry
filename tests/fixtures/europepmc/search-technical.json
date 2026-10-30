@@ -1,0 +1,42 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "cursorMark",
+     "*"
+    ],
+    [
+     "format",
+     "json"
+    ],
+    [
+     "pageSize",
+     "3"
+    ],
+    [
+     "query",
+     "(\"bioinformatics software\") AND FIRST_PDATE:[2024-01-01 TO *]"
+    ],
+    [
+     "resultType",
+     "lite"
+    ],
+    [
+     "synonym",
+     "false"
+    ]
+   ],
+   "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+  },
+  "response": {
+   "body": "{\"version\":\"6.9\",\"hitCount\":1716,\"nextCursorMark\":\"AoIIQYvm2Cg1NTU3MzcxMg==\",\"nextPageUrl\":\"https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=%28%22bioinformatics+software%22%29+AND+FIRST_PDATE%3A%5B2024-01-01+TO+*%5D&cursorMark=AoIIQYvm2Cg1NTU3MzcxMg%3D%3D&resultType=lite&pageSize=3&format=json\",\"request\":{\"queryString\":\"(\\\"bioinformatics software\\\") AND FIRST_PDATE:[2024-01-01 TO *]\",\"resultType\":\"lite\",\"cursorMark\":\"*\",\"pageSize\":3,\"sort\":\"\",\"synonym\":false},\"resultList\":{\"result\":[{\"id\":\"PPR1254161\",\"source\":\"PPR\",\"doi\":\"10.64898/2026.06.12.731250\",\"title\":\"AutoZyme: An Autonomous Agentic Framework to Optimize Bioinformatics Software\",\"authorString\":\"Xie E, Cheng L, Cai Y, Shireman J, Kendziorski C.\",\"pubYear\":\"2026\",\"pubType\":\"preprint\",\"bookOrReportDetails\":{\"publisher\":\"bioRxiv\",\"yearOfPublication\":2026},\"isOpenAccess\":\"N\",\"inEPMC\":\"N\",\"inPMC\":\"N\",\"citedByCount\":0,\"hasReferences\":\"Y\",\"hasTextMinedTerms\":\"N\",\"hasDbCrossReferences\":\"N\",\"hasPDF\":\"N\",\"hasBook\":\"N\",\"hasSuppl\":\"N\",\"hasLabsLinks\":\"N\",\"hasTMAccessionNumbers\":\"N\",\"firstPublicationDate\":\"2026-06-16\",\"firstIndexDate\":\"2026-06-18\"},{\"id\":\"42747870\",\"source\":\"MED\",\"pmid\":\"42747870\",\"pmcid\":\"PMC13580090\",\"fullTextIdList\":{\"fullTextId\":[\"PMC13580090\"]},\"doi\":\"10.1093/bib/bbag452\",\"title\":\"BioTester: an AI-driven automated testing framework for identifying potential quality risks in bioinformatics software.\",\"authorString\":\"Lian X, Wang J, Zhu X, Dang S, Xu T.\",\"journalTitle\":\"Brief Bioinform\",\"issue\":\"5\",\"journalVolume\":\"27\",\"pubYear\":\"2026\",\"journalIssn\":\"1467-5463; 1477-4054; \",\"pageInfo\":\"bbag452\",\"pubType\":\"journal article; case-report\",\"isOpenAccess\":\"Y\",\"inEPMC\":\"Y\",\"inPMC\":\"Y\",\"citedByCount\":0,\"hasReferences\":\"Y\",\"hasTextMinedTerms\":\"Y\",\"hasDbCrossReferences\":\"N\",\"hasPDF\":\"Y\",\"hasBook\":\"N\",\"hasSuppl\":\"Y\",\"hasLabsLinks\":\"N\",\"hasTMAccessionNumbers\":\"Y\",\"tmAccessionTypeList\":{\"accessionType\":[\"doi\"]},\"firstPublicationDate\":\"2026-09-01\",\"firstIndexDate\":\"2026-09-17\"},{\"id\":\"PPR1224455\",\"source\":\"PPR\",\"doi\":\"10.64898/2026.02.09.704801\",\"title\":\"A multi-agent platform for assessment and improvement of bioinformatics software documentation\",\"authorString\":\"Ma A, Feng S, Gu S, Wang C, Ma Q.\",\"pubYear\":\"2026\",\"pubType\":\"preprint\",\"bookOrReportDetails\":{\"publisher\":\"bioRxiv\",\"yearOfPublication\":2026},\"isOpenAccess\":\"N\",\"inEPMC\":\"N\",\"inPMC\":\"N\",\"citedByCount\":0,\"hasReferences\":\"N\",\"hasTextMinedTerms\":\"Y\",\"hasDbCrossReferences\":\"N\",\"hasPDF\":\"N\",\"hasBook\":\"N\",\"hasSuppl\":\"N\",\"hasLabsLinks\":\"N\",\"hasTMAccessionNumbers\":\"N\",\"firstPublicationDate\":\"2026-02-10\",\"firstIndexDate\":\"2026-05-19\"}]}}",
+   "headers": {
+    "content-type": "application/json;charset=UTF-8"
+   },
+   "status": 200
+  }
+ }
+]
