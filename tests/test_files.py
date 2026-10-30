@@ -128,3 +128,23 @@ def test_files_pretty_output(catalog, monkeypatch):
     assert out.stdout == "a.txt\t3\thttps://alpha.example/a.txt\nb.bin\t-\tftp://alpha.example/b.bin\n# 2 files\n"
     out = CliRunner().invoke(main, ["files", "alpha:GSE5", "--acquisition", "--file", "a.txt"], catch_exceptions=False)
     assert json.loads(out.stdout)["locator"] == "accession:alpha:GSE5"
+
+
+def test_file_license_is_optional_and_not_an_acquisition_field():
+    file = File("PMC3257301.xml", urls=("https://example.org/a.xml",), license="cc by")
+    assert file.as_dict()["license"] == "cc by"
+    assert "license" not in File("x").as_dict()
+    assert acquisition.build(RECORD, [file])["resources"] == [
+        {"name": "PMC3257301.xml", "url": "https://example.org/a.xml"}]
+
+
+def test_pretty_file_license_preserves_unlicensed_rows(catalog, monkeypatch):
+    licensed = File("a.xml", urls=("https://example.org/a.xml",), license="cc by")
+    monkeypatch.setattr(fake_adapter, "FILES", [licensed])
+    out = CliRunner().invoke(main, ["files", "alpha:GSE5"], catch_exceptions=False)
+    assert out.stdout == "a.xml\t-\thttps://example.org/a.xml\n  license: cc by\n# 1 files\n"
+    monkeypatch.setattr(fake_adapter, "FILES", [A, licensed, B])
+    out = CliRunner().invoke(main, ["files", "alpha:GSE5"], catch_exceptions=False)
+    assert out.stdout == ("a.txt\t3\thttps://alpha.example/a.txt\n"
+                          "a.xml\t-\thttps://example.org/a.xml\n  license: cc by\n"
+                          "b.bin\t-\tftp://alpha.example/b.bin\n# 3 files\n")

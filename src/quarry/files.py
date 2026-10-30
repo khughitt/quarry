@@ -13,6 +13,7 @@ class File:
     size: int | None = None
     checksums: Mapping[str, str] = field(default_factory=dict)   # algorithm -> hex digest
     media_type: str | None = None
+    license: str | None = None
 
     def as_dict(self) -> dict:
         out: dict = {"name": self.name, "urls": list(self.urls)}
@@ -22,6 +23,8 @@ class File:
             out["checksums"] = dict(self.checksums)
         if self.media_type is not None:
             out["media_type"] = self.media_type
+        if self.license is not None:
+            out["license"] = self.license
         return out
 
 

@@ -19,6 +19,7 @@ from quarry.errors import QuarryError
 from quarry.lens import resolve_domain
 from quarry.output import CONTEXT, emit, fail, output_options
 from quarry.query import WHEN, Query
+from quarry.results import Result
 
 
 GLOBAL_VALUED = frozenset({"-C", "--config"})
@@ -334,11 +335,22 @@ def show_command(ctx: click.Context, curie: str) -> None:
     parsed, owner = _owned(env, curie)
     with context.make_client(state(ctx).trace) as client:
         result = adapter_base.make(owner).show(client, parsed)
-    emit(ctx, result.as_dict(), f"{result.id}\t{result.date or '-'}\t{result.title}")
+    emit(ctx, result.as_dict(), _pretty_record(result))
+
+
+def _pretty_record(result: Result) -> str:
+    lines = [f"{result.id}\t{result.date or '-'}\t{result.title}"]
+    core = result.domain_fields.get("core", {})
+    lines += [f"{key}: {core[key]}" for key in ("open_access", "in_epmc", "in_pmc", "license") if key in core]
+    return "\n".join(lines)
 
 
 def _pretty_files(listed: list[files_mod.File]) -> str:
-    lines = [f"{f.name}\t{f.size if f.size is not None else '-'}\t{f.urls[0] if f.urls else '-'}" for f in listed]
+    lines = []
+    for f in listed:
+        lines.append(f"{f.name}\t{f.size if f.size is not None else '-'}\t{f.urls[0] if f.urls else '-'}")
+        if f.license is not None:
+            lines.append(f"  license: {f.license}")
     return "\n".join([*lines, f"# {len(listed)} files"])
 
 

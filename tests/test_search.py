@@ -249,3 +249,20 @@ def test_all_skipped_default_set_fails_naming_every_resource(make_catalog, monke
     error = json.loads(out.stderr)["error"]
     assert out.exit_code == 1 and out.stdout == "" and error["kind"] == "unsupported_filter"
     assert "expanding expands" in error["detail"] and "expanding2 expands" in error["detail"]
+
+
+@pytest.mark.parametrize("fields, labels", [
+    ({"open_access": "Y", "in_epmc": "Y", "in_pmc": "Y", "license": "cc by"},
+     "open_access: Y\nin_epmc: Y\nin_pmc: Y\nlicense: cc by\n"),
+    ({"open_access": "N"}, "open_access: N\n"),
+    ({}, ""),
+])
+def test_pretty_show_names_core_availability_and_omits_unknowns(catalog, monkeypatch, fields, labels):
+    from quarry.results import Result
+
+    record = Result(id="alpha:GSE5", resource="alpha", kind="publication", title="shown",
+                    domain_fields={"core": fields})
+    monkeypatch.setattr(Fake, "show", lambda *args: record)
+    out = CliRunner().invoke(main, ["show", "alpha:GSE5"], catch_exceptions=False)
+    assert out.stdout == "alpha:GSE5\t-\tshown\n" + labels
+    assert json.loads(invoke("show", "alpha:GSE5").stdout) == record.as_dict()
