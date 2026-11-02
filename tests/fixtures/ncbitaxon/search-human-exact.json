@@ -1,0 +1,65 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [],
+   "url": "https://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon"
+  },
+  "response": {
+   "body": "{\n  \"languages\" : [ \"en\" ],\n  \"lang\" : \"en\",\n  \"ontologyId\" : \"ncbitaxon\",\n  \"loaded\" : \"2026-11-01T00:09:11.411649191\",\n  \"updated\" : \"2026-11-01T00:09:11.411649191\",\n  \"status\" : \"LOADED\",\n  \"message\" : \"\",\n  \"version\" : \"2026-07-12\",\n  \"fileHash\" : null,\n  \"loadAttempts\" : 0,\n  \"numberOfTerms\" : 2854537,\n  \"numberOfProperties\" : 32,\n  \"numberOfIndividuals\" : 0,\n  \"config\" : {\n    \"id\" : \"ncbitaxon\",\n    \"versionIri\" : \"http://purl.obolibrary.org/obo/ncbitaxon/2026-07-12/ncbitaxon.owl\",\n    \"namespace\" : \"ncbitaxon\",\n    \"preferredPrefix\" : \"NCBITaxon\",\n    \"title\" : \"NCBI organismal classification\",\n    \"description\" : \"An ontology representation of the NCBI organismal taxonomy\",\n    \"homepage\" : \"https://github.com/obophenotype/ncbitaxon\",\n    \"version\" : \"2026-07-12\",\n    \"mailingList\" : null,\n    \"tracker\" : \"https://github.com/obophenotype/ncbitaxon/issues\",\n    \"logo\" : null,\n    \"creators\" : [ ],\n    \"annotations\" : null,\n    \"fileLocation\" : \"http://purl.obolibrary.org/obo/ncbitaxon.owl\",\n    \"oboSlims\" : false,\n    \"labelProperty\" : \"http://www.w3.org/2000/01/rdf-schema#label\",\n    \"definitionProperties\" : [ ],\n    \"synonymProperties\" : [ ],\n    \"hierarchicalProperties\" : [ ],\n    \"baseUris\" : [ \"http://purl.obolibrary.org/obo/NCBITaxon_\" ],\n    \"hiddenProperties\" : [ ],\n    \"preferredRootTerms\" : [ ],\n    \"isSkos\" : false,\n    \"allowDownload\" : false\n  },\n  \"baseUris\" : [ \"http://purl.obolibrary.org/obo/NCBITaxon_\" ],\n  \"_links\" : {\n    \"self\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon?lang=en\"\n    },\n    \"terms\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms\"\n    },\n    \"properties\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/properties\"\n    },\n    \"individuals\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/individuals\"\n    }\n  }\n}",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "exact",
+     "true"
+    ],
+    [
+     "local",
+     "true"
+    ],
+    [
+     "obsoletes",
+     "false"
+    ],
+    [
+     "ontology",
+     "ncbitaxon"
+    ],
+    [
+     "q",
+     "human"
+    ],
+    [
+     "queryFields",
+     "label,synonym"
+    ],
+    [
+     "rows",
+     "5"
+    ],
+    [
+     "start",
+     "0"
+    ]
+   ],
+   "url": "https://www.ebi.ac.uk/ols4/api/search"
+  },
+  "response": {
+   "body": "{\"response\":{\"docs\":[{\"iri\":\"http://purl.obolibrary.org/obo/NCBITaxon_9606\",\"ontology_name\":\"ncbitaxon\",\"ontology_prefix\":\"NCBITaxon\",\"short_form\":\"NCBITaxon_9606\",\"description\":[],\"label\":\"Homo sapiens\",\"obo_id\":\"NCBITaxon:9606\",\"type\":\"class\",\"exact_synonyms\":[\"human\"]}],\"numFound\":1,\"start\":0},\"responseHeader\":{\"QTime\":0,\"status\":0},\"facet_counts\":{\"facet_fields\":{\"ontologyPreferredPrefix\":[\"NCBITaxon\",\"1\"],\"isDefiningOntology\":[\"true\",\"1\"],\"ontologyId\":[\"sio\",\"1\",\"ncit\",\"1\",\"mesh\",\"1\",\"foodon\",\"1\",\"ncbitaxon\",\"1\"],\"ontologyIri\":[\"http://purl.obolibrary.org/obo/ncbitaxon.owl\",\"1\"],\"isObsolete\":[\"false\",\"1\"],\"type\":[\"class\",\"1\"]}}}",
+   "headers": {
+    "content-type": "application/json;charset=UTF-8"
+   },
+   "status": 200
+  }
+ }
+]

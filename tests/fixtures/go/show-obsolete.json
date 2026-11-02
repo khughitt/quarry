@@ -1,0 +1,37 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [],
+   "url": "https://www.ebi.ac.uk/ols4/api/ontologies/go"
+  },
+  "response": {
+   "body": "{\n  \"languages\" : [ \"en\" ],\n  \"lang\" : \"en\",\n  \"ontologyId\" : \"go\",\n  \"loaded\" : \"2026-11-01T00:08:17.262703226\",\n  \"updated\" : \"2026-11-01T00:08:17.262703226\",\n  \"status\" : \"LOADED\",\n  \"message\" : \"\",\n  \"version\" : \"2026-07-26\",\n  \"fileHash\" : null,\n  \"loadAttempts\" : 0,\n  \"numberOfTerms\" : 85169,\n  \"numberOfProperties\" : 484,\n  \"numberOfIndividuals\" : 48,\n  \"config\" : {\n    \"id\" : \"go\",\n    \"versionIri\" : \"http://purl.obolibrary.org/obo/go/releases/2026-07-26/extensions/go-plus.ofn\",\n    \"namespace\" : \"go\",\n    \"preferredPrefix\" : \"GO\",\n    \"title\" : \"Gene Ontology\",\n    \"description\" : \"The Gene Ontology (GO) provides a framework and set of concepts for describing the functions of gene products from all organisms.\",\n    \"homepage\" : \"http://geneontology.org/\",\n    \"version\" : \"2026-07-26\",\n    \"mailingList\" : null,\n    \"tracker\" : \"https://github.com/geneontology/go-ontology/issues/\",\n    \"logo\" : null,\n    \"creators\" : [ ],\n    \"annotations\" : null,\n    \"fileLocation\" : \"http://purl.obolibrary.org/obo/go/extensions/go-plus.owl\",\n    \"oboSlims\" : false,\n    \"labelProperty\" : \"http://www.w3.org/2000/01/rdf-schema#label\",\n    \"definitionProperties\" : [ ],\n    \"synonymProperties\" : [ ],\n    \"hierarchicalProperties\" : [ ],\n    \"baseUris\" : [ ],\n    \"hiddenProperties\" : [ ],\n    \"preferredRootTerms\" : [ ],\n    \"isSkos\" : false,\n    \"allowDownload\" : false\n  },\n  \"baseUris\" : [ ],\n  \"_links\" : {\n    \"self\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/go?lang=en\"\n    },\n    \"terms\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/go/terms\"\n    },\n    \"properties\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/go/properties\"\n    },\n    \"individuals\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/go/individuals\"\n    }\n  }\n}",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "obo_id",
+     "GO:0000005"
+    ]
+   ],
+   "url": "https://www.ebi.ac.uk/ols4/api/ontologies/go/terms"
+  },
+  "response": {
+   "body": "{\n  \"_embedded\" : {\n    \"terms\" : [ {\n      \"iri\" : \"http://purl.obolibrary.org/obo/GO_0000005\",\n      \"lang\" : \"en\",\n      \"description\" : [ \"This term was made obsolete because it refers to a class of gene products and a biological process rather than a molecular function.\", \"OBSOLETE. Assists in the correct assembly of ribosomes or ribosomal subunits in vivo, but is not a component of the assembled ribosome when performing its normal biological function.\" ],\n      \"synonyms\" : [ \"ribosomal chaperone activity\" ],\n      \"annotation\" : {\n        \"consider\" : [ \"http://purl.obolibrary.org/obo/GO_0042254\", \"http://purl.obolibrary.org/obo/GO_0044183\", \"http://purl.obolibrary.org/obo/GO_0140309\" ],\n        \"has_obo_namespace\" : [ \"molecular_function\" ],\n        \"id\" : [ \"GO:0000005\" ]\n      },\n      \"label\" : \"obsolete ribosomal chaperone activity\",\n      \"ontology_name\" : \"go\",\n      \"ontology_prefix\" : \"GO\",\n      \"ontology_iri\" : \"http://purl.obolibrary.org/obo/go/extensions/go-plus.ofn\",\n      \"is_obsolete\" : true,\n      \"term_replaced_by\" : null,\n      \"is_defining_ontology\" : true,\n      \"has_children\" : false,\n      \"is_root\" : true,\n      \"short_form\" : \"GO_0000005\",\n      \"obo_id\" : \"GO:0000005\",\n      \"in_subset\" : null,\n      \"obo_definition_citation\" : [ {\n        \"definition\" : \"OBSOLETE. Assists in the correct assembly of ribosomes or ribosomal subunits in vivo, but is not a component of the assembled ribosome when performing its normal biological function.\",\n        \"oboXrefs\" : [ {\n          \"database\" : \"GOC\",\n          \"id\" : \"jl\",\n          \"description\" : null,\n          \"url\" : null\n        }, {\n          \"database\" : \"PMID\",\n          \"id\" : \"12150913\",\n          \"description\" : null,\n          \"url\" : \"https://pubmed.ncbi.nlm.nih.gov/12150913\"\n        } ]\n      } ],\n      \"obo_xref\" : null,\n      \"obo_synonym\" : null,\n      \"is_preferred_root\" : false,\n      \"_links\" : {\n        \"self\" : {\n          \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/go/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FGO_0000005?lang=en\"\n        },\n        \"graph\" : {\n          \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/go/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FGO_0000005/graph\"\n        }\n      }\n    } ]\n  },\n  \"_links\" : {\n    \"self\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/go/terms?obo_id=GO%3A0000005\"\n    }\n  },\n  \"page\" : {\n    \"size\" : 1,\n    \"totalElements\" : 1,\n    \"totalPages\" : 1,\n    \"number\" : 0\n  }\n}",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ }
+]

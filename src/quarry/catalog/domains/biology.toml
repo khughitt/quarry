@@ -1,7 +1,7 @@
 id = "biology"
 summary = "Life-science repositories, knowledgebases, identifiers and ontologies"
 includes = ["core"]
-resources = ["geo", "ena", "biostudies"]
+resources = ["geo", "ena", "biostudies", "go", "uberon", "ncbitaxon"]
 search_default = ["geo", "ena", "biostudies"]
 filters = ["organism"]
 beliefs_contract = "biology"           # the contract science activates by this name

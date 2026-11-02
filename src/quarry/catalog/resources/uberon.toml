@@ -1,0 +1,49 @@
+id = "uberon"
+name = "Uberon multi-species anatomy ontology"
+roles = ["ontology"]
+prefixes = ["uberon"]
+adapter = "quarry.adapters.ols"
+
+[[routes]]
+kind = "rest"
+url = "https://www.ebi.ac.uk/ols4/api/ontologies/uberon"
+min_interval = 0.5
+service = "ebi-ols"
+auth = "none"
+reports_total = true
+page_cap = 100
+
+[[pitfalls]]
+summary = "OLS returns OBO-cased ids (NCBITaxon:9606) and cross-reference databases refs may not know"
+handling = "every id is re-parsed to its canonical CURIE; an unparsable primary id fails with upstream_failed, an unparsable cross-reference is left out and named in warnings"
+evidence = "quarry-78e681 OLS4 probe 2026-11-01, UBERON:0000948"
+
+[[pitfalls]]
+summary = "OLS _links hrefs are http://"
+handling = "the adapter builds every URL from the route's https base and never follows a returned link"
+evidence = "quarry-78e681 OLS4 probe 2026-11-01, UBERON:0000948"
+
+[[pitfalls]]
+summary = "term_replaced_by is a short form (GO_0008150) and consider holds OBO PURLs; an obsolete term's label can be its short form (GO_0000004)"
+handling = "both become CURIEs through obo_text before ids.parse; the label prints as given"
+evidence = "quarry-78e681 OLS4 probe 2026-11-01, UBERON:0000948"
+
+[[pitfalls]]
+summary = "q is Solr syntax: * and ? are wildcards, a colon makes a field query, () and ~ change parsing, several words are ANDed"
+handling = "term search refuses Lucene metacharacters, a leading + or -, the words AND, OR and NOT, and a non-CURIE colon (unsupported_filter); the skill says words are ANDed"
+evidence = "quarry-78e681 OLS4 probe 2026-11-01, UBERON:0000948"
+
+[[pitfalls]]
+summary = "config.version is null; the release date is only in versionIri"
+handling = "the release falls back to the YYYY-MM-DD in versionIri"
+evidence = "quarry-78e681 OLS4 probe 2026-11-01, uberon ontology record"
+
+[[pitfalls]]
+summary = "description[0] can be taxon notes, not the definition"
+handling = "show reads the definition from obo_definition_citation; search results, whose docs carry no definition, print none"
+evidence = "quarry-78e681 OLS4 probe 2026-11-01, UBERON:0000948"
+
+[[pitfalls]]
+summary = "is_a ancestors include imported BFO terms"
+handling = "they stay, as bfo: CURIEs no catalog resource owns"
+evidence = "quarry-78e681 OLS4 probe 2026-11-01, UBERON:0000948 ancestors"

@@ -75,6 +75,14 @@ def test_id_normalize_and_resolve():
     assert resolved["id"] == "geo:GSE24080" and resolved["urls"]
 
 
+def test_normalize_ignores_term_prefixes():
+    # ncbitaxon's pattern takes any word; only data-role prefixes may claim a bare accession.
+    out = invoke("--json", "id", "normalize", "human")
+    assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == "unknown_id"
+    assert json.loads(invoke("--json", "id", "normalize", "GSE24080").stdout) == {"id": "geo:GSE24080"}
+    assert json.loads(invoke("--json", "id", "normalize", "NCBITaxon:9606").stdout) == {"id": "ncbitaxon:9606"}
+
+
 def test_root_config_option_sets_the_domain(tmp_path):
     cfg = tmp_path / "q.toml"
     cfg.write_text('domain = "biology"\n')

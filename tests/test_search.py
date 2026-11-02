@@ -266,3 +266,10 @@ def test_pretty_show_names_core_availability_and_omits_unknowns(catalog, monkeyp
     out = CliRunner().invoke(main, ["show", "alpha:GSE5"], catch_exceptions=False)
     assert out.stdout == "alpha:GSE5\t-\tshown\n" + labels
     assert json.loads(invoke("show", "alpha:GSE5").stdout) == record.as_dict()
+
+
+def test_search_refuses_an_ontology():
+    # The real catalog, not the fakes: an ontology resource holds terms, not searchable records.
+    out = CliRunner().invoke(main, ["--json", "search", "--domain", "biology", "--in", "uberon", "heart"],
+                             catch_exceptions=False)
+    assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == "unsupported_role"
