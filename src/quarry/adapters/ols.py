@@ -65,10 +65,12 @@ def _primary(value: object, registry: Registry, what: str) -> str:
         raise UpstreamError(f"ols {what}: term id {value!r} is not an id refs knows") from None
 
 
-def _optional(value: object, registry: Registry, left_out: list[str]) -> str | None:
-    """The canonical id of a cross-reference, or None with the raw id noted in `left_out`."""
-    text = obo_text(value)
-    if text is not None:
+def _optional(value: object, registry: Registry, left_out: list[str], *, as_curie: bool = False) -> str | None:
+    """The canonical id of a cross-reference, or None with the raw id noted in `left_out`.
+    `as_curie` says `value` is already `<database>:<id>` text; otherwise it is an OBO id, short
+    form or PURL and goes through `obo_text` first."""
+    text = value if as_curie else obo_text(value)
+    if type(text) is str:
         try:
             return str(parse(text, registry))
         except QuarryError:
@@ -165,7 +167,8 @@ class Ols:
             database, local = item.get("database"), _text(item, "id", what)
             if database is not None and type(database) is not str:
                 raise UpstreamError(f"ols {what}: a cross-reference database is not text")
-            xref = _optional(local if database is None else f"{database}:{local}", registry, left_out)
+            xref = (_optional(local, registry, left_out) if database is None
+                    else _optional(f"{database}:{local}", registry, left_out, as_curie=True))
             if xref is not None:
                 xrefs.append(xref)
         obsolete = doc.get("is_obsolete")

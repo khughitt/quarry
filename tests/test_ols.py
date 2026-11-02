@@ -349,3 +349,9 @@ def test_malformed_payloads():
         client, _ = synthetic_client([ontology(), exchange("GET", f"{BASE}/search", search_params(rows=5), body=body)])
         with client, pytest.raises(UpstreamError):
             adapter.search(client, REGISTRY, "heart", exact=False, limit=5)
+
+
+def test_show_human_keeps_its_parsable_xref():
+    # GC_ID has an underscore, which obo_text's short-form rule would have read as a PURL fragment.
+    term, _, warnings = show("ncbitaxon", "ncbitaxon:9606")
+    assert term.xrefs == ("ncbi.gc:1",) and warnings == []
