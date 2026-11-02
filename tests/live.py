@@ -4,8 +4,6 @@ import sys
 from collections.abc import Callable
 from datetime import date
 
-import httpx
-
 from quarry import catalog as catalog_mod, ids
 from quarry.adapters import base
 from quarry.errors import QuarryError
@@ -62,14 +60,14 @@ def run(catalog, client: Client, probes: dict[tuple[str, str], Probe]) -> list[t
     """One (resource, route url, "ok" | "<kind>: <detail>") per route; every probe runs."""
     results = []
     for resource in catalog.resources.values():
-        adapter = base.make(resource)
         for route in resource.routes:
             try:
+                adapter = base.make(resource)
                 probes[(resource.id, route.url)](adapter, client)
                 outcome = "ok"
             except QuarryError as exc:
                 outcome = f"{exc.kind}: {exc.detail}"
-            except (KeyError, httpx.HTTPError, ValueError, AssertionError) as exc:
+            except Exception as exc:  # a reporting harness: one broken adapter must not hide the other routes
                 outcome = f"{type(exc).__name__}: {exc}"
             results.append((resource.id, route.url, outcome))
     return results

@@ -51,3 +51,23 @@ def test_main_exit_status(capsys, monkeypatch):
     fake_run(monkeypatch, {("a", "https://a"): ok, ("b", "https://b"): ok})
     assert live.main() == 0
     assert "failed" not in capsys.readouterr().out
+
+
+def test_run_continues_after_an_unexpected_exception(monkeypatch):
+    def broken(adapter, client):
+        raise TypeError("adapter bug")
+
+    monkeypatch.setattr(live.base, "make", lambda resource: object())
+    probes = {("a", "https://a"): broken, ("b", "https://b"): ok}
+    assert live.run(Catalog, None, probes) == [("a", "https://a", "TypeError: adapter bug"), ("b", "https://b", "ok")]
+
+
+def test_run_reports_a_failing_make_and_continues(monkeypatch):
+    def make(resource):
+        if resource.id == "a":
+            raise AttributeError("no adapter")
+        return object()
+
+    monkeypatch.setattr(live.base, "make", make)
+    probes = {("a", "https://a"): ok, ("b", "https://b"): ok}
+    assert live.run(Catalog, None, probes) == [("a", "https://a", "AttributeError: no adapter"), ("b", "https://b", "ok")]
