@@ -1410,6 +1410,14 @@ args = [
   { name = "curie", value = "string", required = true },
 ]
 
+[[cli.quarry.commands]]
+path = ["skills"]
+summary = "The agent skills this checkout ships"
+
+[[cli.quarry.commands]]
+path = ["skills", "build"]
+summary = "Regenerate the skills' resource notes from the catalog"
+
 # ---- science
 
 [[cli.science.commands]]

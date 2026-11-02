@@ -3,6 +3,7 @@ vocabulary's output and exit rules."""
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tomllib
@@ -11,7 +12,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from quarry import context
+from quarry import context, skills
 from quarry.cli import main
 from quarry.testing import ReplayTransport, replay_client
 from tests.recordings.ena import MYELOMA
@@ -79,6 +80,8 @@ def test_json_is_honoured_by_every_leaf_command(monkeypatch, tmp_path):
     monkeypatch.setattr(context, "make_client", lambda trace: replay_client(
         ReplayTransport.from_files([fx / "search-myeloma.json", fx / "show-first.json", fx / "files-first.json",
                     *(ROOT / "tests" / "fixtures" / "uberon").glob("*-heart.json")])))
+    shutil.copytree(skills.SKILLS_ROOT, tmp_path / "skills")
+    monkeypatch.setattr(skills, "SKILLS_ROOT", tmp_path / "skills")
     recorded = json.loads((fx / "show-first.json").read_text())
     assert recorded, "show-first recording is empty; refresh it with just record ena"
     first = recorded[-1]["request"]["query"]
@@ -106,6 +109,7 @@ def test_json_is_honoured_by_every_leaf_command(monkeypatch, tmp_path):
         ("term", "search"): ["term", "search", "heart", "--in", "uberon", "-n", "3"],
         ("term", "show"): ["term", "show", "uberon:0000948"],
         ("term", "ancestors"): ["term", "ancestors", "uberon:0000948"],
+        ("skills", "build"): ["skills", "build"],
     }
     assert sorted(invocations) == _leaf_rows(), "every leaf row needs an invocation"
     for path, args in invocations.items():

@@ -13,6 +13,7 @@ from quarry import acquisition, context
 from quarry import files as files_mod
 from quarry import ids as idmod
 from quarry import search as search_mod
+from quarry import skills
 from quarry import terms as terms_mod
 from quarry.adapters import base as adapter_base
 from quarry.catalog import DATA_ROLES, ROLES, ROUTE_KINDS, CatalogError, Finding, Resource
@@ -499,6 +500,29 @@ def term_search(ctx: click.Context, words: tuple[str, ...], in_: tuple[str, ...]
     lines += [f"# {c['resource']} {c['release']['version'] or '?'}: {c['returned']} of {c['total']} ({c['complete']})"
               for c in coverage]
     emit(ctx, report, "\n".join(lines + _warning_lines(warnings)))
+
+
+@main.group("skills", context_settings=CONTEXT)
+@output_options
+def skills_group() -> None:
+    """The agent skills this checkout ships."""
+
+
+@skills_group.command("build", context_settings=CONTEXT)
+@output_options
+@click.pass_context
+@reports_errors
+def skills_build(ctx: click.Context) -> None:
+    """Regenerate the skills' resource notes from the catalog."""
+    from quarry import catalog as catalog_mod
+    root = skills.SKILLS_ROOT        # read at call time
+    changed, unchanged = skills.build(catalog_mod.load(), root)
+
+    def shown(paths: list[Path]) -> list[str]:
+        return [str(p.relative_to(root.parent)) for p in paths]
+
+    emit(ctx, {"written": shown(changed), "unchanged": shown(unchanged)},
+         "\n".join(f"wrote {p}" for p in shown(changed)) or "skills are current")
 
 
 if __name__ == "__main__":
