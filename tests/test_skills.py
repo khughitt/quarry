@@ -68,6 +68,8 @@ def test_render_notes_lists_routes_and_pitfalls(synthetic):
     assert "every 0.5 s" in notes and "key NCBI_API_KEY" in notes
     assert "counts include withdrawn records. Handling: withdrawn records are dropped and reported in warnings." in notes
     assert "SECRET-EVIDENCE-TEXT" not in notes
+    routes, pitfalls = notes.index("\nRoutes:\n\n- "), notes.index("\nPitfalls:\n\n- ")
+    assert routes < notes.index("every 0.5 s") < pitfalls < notes.index("counts include withdrawn records")
 
 
 def test_core_notes_go_to_the_quarry_skill(tmp_path):

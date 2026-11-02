@@ -5,13 +5,17 @@ description: Use with the quarry skill when searching life-science resources: de
 
 # quarry: biology
 
-Use `--domain biology` (or set `domain = "biology"` in `quarry.toml`). This domain includes `core`.
+Use `--domain biology` (or set `domain = "biology"` in `quarry.toml`). This domain includes
+`core`.
 
 ## Which resource answers what
 
-- Deposited data: GEO (`geo`), ENA (`ena`), BioStudies (`biostudies`). `search` covers these by default, plus Zenodo and figshare from `core` (which `--organism` skips).
-- Terms: Gene Ontology (`go`), UBERON anatomy (`uberon`), NCBI Taxonomy (`ncbitaxon`) through `term search|show|ancestors`.
-- Literature: PubMed (`pubmed`) and Europe PMC (`europepmc`), not in the default set; name them with `--in pubmed`.
+- Deposited data: GEO (`geo`), ENA (`ena`), BioStudies (`biostudies`). `search` covers these
+  by default, plus Zenodo and figshare from `core` (which `--organism` skips).
+- Terms: Gene Ontology (`go`), UBERON anatomy (`uberon`), NCBI Taxonomy (`ncbitaxon`) through
+  `term search|show|ancestors`.
+- Literature: PubMed (`pubmed`) and Europe PMC (`europepmc`), not in the default set; name them
+  with `--in pubmed`.
 - Term ids need their prefix: `go:`, `uberon:`, `ncbitaxon:`.
 
 ## Organism
@@ -20,6 +24,8 @@ Use `--domain biology` (or set `domain = "biology"` in `quarry.toml`). This doma
 ENA include subtaxa. BioStudies matches the exact facet label only (no subtaxa) and refuses a
 CURIE under `--in`. To pin a taxon, resolve it first:
 `quarry term search human --in ncbitaxon --exact`, then pass the `ncbitaxon:` CURIE it prints.
+A CURIE leaves BioStudies out of a default search (a skipped coverage entry); pass the name
+instead to keep it.
 
 ## Resource notes
 
@@ -28,8 +34,12 @@ CURIE under `--in`. To pin a taxon, resolve it first:
 
 Roles: repository. Prefixes: `geo`.
 
+Routes:
+
 - rest `https://eutils.ncbi.nlm.nih.gov/entrez/eutils`: every 0.34 s (0.1 s with a key); key NCBI_API_KEY (optional-key); page cap 10000; reports a total
 - rest `https://www.ncbi.nlm.nih.gov/geo/query`: every 0.34 s; no total
+
+Pitfalls:
 
 - esearch serves at most 10,000 ids per query without the history server. Handling: a count above the window is refused with too_many_results before any summary request; -n inside the window is served.
 - a SuperSeries repeats its SubSeries' samples, so a naive harvest counts them twice. Handling: show reads the brief SOFT text and lists SuperSeries/SubSeries relations as geo: cross-references; GEO's sentence stays in the summary.
@@ -42,8 +52,12 @@ Roles: repository. Prefixes: `geo`.
 
 Roles: repository. Prefixes: `bioproject`, `insdc.sra`.
 
+Routes:
+
 - rest `https://www.ebi.ac.uk/ena/portal/api`: every 0.5 s; reports a total
 - rest `https://www.ebi.ac.uk/ena/taxonomy/rest`: every 0.5 s; no total
+
+Pitfalls:
 
 - a wildcard cannot contain '-', '.' or a space, and matches substrings (ARP1 finds PARP1). Handling: phrases compile to exact-equality clauses on study_title and study_description; no wildcard is generated.
 - the search endpoint can answer an incomplete listing during an outage. Handling: every search also asks the count endpoint and fails when the listing is shorter.
@@ -54,7 +68,11 @@ Roles: repository. Prefixes: `bioproject`, `insdc.sra`.
 
 Roles: repository. Prefixes: `biostudies`, `arrayexpress`.
 
+Routes:
+
 - rest `https://www.ebi.ac.uk/biostudies/api/v1`: every 0.5 s; page cap 100; reports a total
+
+Pitfalls:
 
 - phrase queries expand through EFO synonyms with no off switch. Handling: coverage says match: expanded; --exact refuses BioStudies, so an exact biology search names its resources with --in.
 - search hits omit the organism. Handling: --organism becomes the facet.organism parameter (a taxon name) and every hit then carries it; an ncbitaxon: CURIE skips biostudies from a default set and is refused under --in; show reads the study's Organism attribute.
@@ -69,7 +87,11 @@ Roles: repository. Prefixes: `biostudies`, `arrayexpress`.
 
 Roles: ontology. Prefixes: `go`.
 
+Routes:
+
 - rest `https://www.ebi.ac.uk/ols4/api/ontologies/go`: every 0.5 s; page cap 100; reports a total
+
+Pitfalls:
 
 - OLS returns OBO-cased ids (NCBITaxon:9606) and cross-reference databases refs may not know. Handling: every id is re-parsed to its canonical CURIE; an unparsable primary id fails with upstream_failed, an unparsable cross-reference is left out and named in warnings.
 - OLS _links hrefs are http://. Handling: the adapter builds every URL from the route's https base and never follows a returned link.
@@ -81,7 +103,11 @@ Roles: ontology. Prefixes: `go`.
 
 Roles: ontology. Prefixes: `uberon`.
 
+Routes:
+
 - rest `https://www.ebi.ac.uk/ols4/api/ontologies/uberon`: every 0.5 s; page cap 100; reports a total
+
+Pitfalls:
 
 - OLS returns OBO-cased ids (NCBITaxon:9606) and cross-reference databases refs may not know. Handling: every id is re-parsed to its canonical CURIE; an unparsable primary id fails with upstream_failed, an unparsable cross-reference is left out and named in warnings.
 - OLS _links hrefs are http://. Handling: the adapter builds every URL from the route's https base and never follows a returned link.
@@ -95,7 +121,11 @@ Roles: ontology. Prefixes: `uberon`.
 
 Roles: ontology. Prefixes: `ncbitaxon`.
 
+Routes:
+
 - rest `https://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon`: every 0.5 s; page cap 100; reports a total
+
+Pitfalls:
 
 - OLS returns OBO-cased ids (NCBITaxon:9606) and cross-reference databases refs may not know. Handling: every id is re-parsed to its canonical CURIE; an unparsable primary id fails with upstream_failed, an unparsable cross-reference is left out and named in warnings.
 - OLS _links hrefs are http://. Handling: the adapter builds every URL from the route's https base and never follows a returned link.
