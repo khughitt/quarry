@@ -64,7 +64,8 @@ def ancestor_page(iri, page, size, total, locals_):
 
 
 def search_params(q="heart", start=0, rows=10, rid="uberon", extra=None):
-    return {"q": q, "ontology": rid, "local": "true", "obsoletes": "false", "rows": rows, "start": start, **(extra or {})}
+    return {"q": q, "ontology": rid, "local": "true", "obsoletes": "false", "type": "class", "rows": rows,
+            "start": start, **(extra or {})}
 
 
 def search_page(docs, found, **params):
@@ -231,7 +232,8 @@ def test_search_exact_human_is_one_taxon():
     with client:
         coverage, terms, release, _ = make("ncbitaxon").search(client, REGISTRY, "human", exact=True, limit=5)
     assert [t.id for t in terms] == ["ncbitaxon:9606"] and coverage.exact
-    assert coverage.native == "q=human&ontology=ncbitaxon&local=true&obsoletes=false&exact=true&queryFields=label,synonym"
+    assert coverage.native == ("q=human&ontology=ncbitaxon&local=true&obsoletes=false&type=class&exact=true"
+                               "&queryFields=label,synonym")
     assert coverage.complete == "total" and coverage.total == coverage.returned == 1 and release.version
 
 
@@ -240,7 +242,7 @@ def test_search_free_text_human_ranks_viruses_first():
     with client:
         coverage, terms, _, _ = make("ncbitaxon").search(client, REGISTRY, "human", exact=False, limit=5)
     assert terms[0].id != "ncbitaxon:9606" and not coverage.exact
-    assert coverage.native == "q=human&ontology=ncbitaxon&local=true&obsoletes=false"
+    assert coverage.native == "q=human&ontology=ncbitaxon&local=true&obsoletes=false&type=class"
 
 
 def test_search_limit_reports_limited():
@@ -248,7 +250,7 @@ def test_search_limit_reports_limited():
     with client:
         coverage, terms, _, _ = make("uberon").search(client, REGISTRY, "heart", exact=False, limit=3)
     assert (coverage.returned, coverage.total, coverage.complete) == (3, 213, "limited") and len(terms) == 3
-    assert "local=true" in coverage.native and "obsoletes=false" in coverage.native
+    assert "local=true" in coverage.native and "obsoletes=false" in coverage.native and "type=class" in coverage.native
 
 
 def test_search_pages_by_cap():
@@ -339,7 +341,9 @@ def test_malformed_payloads():
         with client, pytest.raises(UpstreamError):
             adapter.show(client, REGISTRY, Curie("uberon", "0000001"))
     for body in ("<html>", "{}", json.dumps({"status": "FAILED", "config": {}}),
-                 json.dumps({"status": "LOADED", "config": {}})):
+                 json.dumps({"status": "LOADED", "config": {}}),
+                 json.dumps({"status": "LOADED", "config": {"preferredPrefix": "UBERON"}}),
+                 json.dumps({"ontologyId": "go", "status": "LOADED", "config": {"preferredPrefix": "UBERON"}})):
         client, _ = synthetic_client([exchange("GET", f"{BASE}/ontologies/uberon", body=body)])
         with client, pytest.raises(UpstreamError):
             adapter.release(client)

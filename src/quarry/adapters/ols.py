@@ -114,7 +114,7 @@ class Ols:
     def _ontology(self, client: Client) -> tuple[Release, str, list[str]]:
         what = f"{self.ontology} ontology"
         data = _object(self._get(client, self.route.url, {}).text, what)
-        if data.get("ontologyId") not in (None, self.ontology) or data.get("status") != "LOADED":
+        if data.get("ontologyId") != self.ontology or data.get("status") != "LOADED":
             raise UpstreamError(f"ols {what}: expected the loaded ontology {self.ontology}")
         config = data.get("config")
         if type(config) is not dict:
@@ -255,7 +255,9 @@ class Ols:
         if limit < 1:
             raise ValueError("limit is at least 1")
         release, _, warnings = self._ontology(client)
-        params = {"q": " ".join(text.split()), "ontology": self.ontology, "local": "true", "obsoletes": "false"}
+        # type=class: a property or individual hit would otherwise come back as a term (or fail the search)
+        params = {"q": " ".join(text.split()), "ontology": self.ontology, "local": "true", "obsoletes": "false",
+                  "type": "class"}
         if exact:
             params |= {"exact": "true", "queryFields": "label,synonym"}
         native = "&".join(f"{k}={v}" for k, v in params.items())
