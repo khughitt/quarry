@@ -38,10 +38,10 @@ def _route(route: Route) -> str:
 def _resource(resource: Resource) -> str:
     owned = ", ".join(f"`{p}`" for p in resource.owned_prefixes()) or "none"
     lines = [f"### {resource.name} (`{resource.id}`)", "",
-             f"Roles: {', '.join(resource.roles)}. Prefixes: {owned}.", ""]
+             f"Roles: {', '.join(resource.roles)}. Prefixes: {owned}.", "", "Routes:", ""]
     lines += [_route(r) for r in resource.routes]
     if resource.pitfalls:
-        lines.append("")
+        lines += ["", "Pitfalls:", ""]
         lines += [f"- {_sentence(p.summary)}. Handling: {_sentence(p.handling)}." for p in resource.pitfalls]
     return "\n".join(lines)
 

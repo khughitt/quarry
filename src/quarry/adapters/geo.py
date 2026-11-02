@@ -4,9 +4,9 @@ relations and the sample taxon id."""
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
 
 from quarry.adapters import eutils
+from quarry.adapters.base import Prepared
 from quarry.catalog import Resource
 from quarry.errors import QuarryError
 from quarry.files import File
@@ -98,12 +98,12 @@ class Geo:
         self.eutils, self.web = resource.routes[0], resource.routes[1]
 
     def search(self, client: Client, query: Query) -> tuple[Coverage, list[Result]]:
-        return self.prepare(query)(client)
+        return self.prepare(query).execute(client)
 
     def unexpressed(self, query: Query) -> str | None:
         return None
 
-    def prepare(self, query: Query) -> Callable[[Client], tuple[Coverage, list[Result]]]:
+    def prepare(self, query: Query) -> Prepared:
         q = compile_query(query)
 
         def execute(client: Client) -> tuple[Coverage, list[Result]]:
@@ -119,7 +119,7 @@ class Geo:
             return Coverage(self.resource.id, q, match, count, len(rows), complete,
                             warnings=tuple(warnings) + notices), rows
 
-        return execute
+        return Prepared(q, execute)
 
     def _fetch(self, client: Client, curie: Curie) -> tuple[dict, str]:
         """The esummary record and the brief SOFT text of one series; refusals come first."""

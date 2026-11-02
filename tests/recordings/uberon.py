@@ -1,4 +1,6 @@
 """Uberon through OLS4: heart (whose first description is taxon notes), a missing id, ancestors, search."""
+import re
+
 from quarry import catalog as catalog_mod, ids
 from quarry.errors import QuarryError
 from quarry.ids import Curie
@@ -12,7 +14,7 @@ def show_heart(adapter, client):
     term, release, warnings = adapter.show(client, REGISTRY, HEART)
     assert term.id == "uberon:0000948" and term.label == "heart"
     assert term.definition.startswith("A myogenic muscular circulatory organ")
-    assert release.version == "2026-10-01" or release.version
+    assert re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", release.version)   # read from versionIri: config.version is null
     return term, release, warnings
 
 

@@ -83,12 +83,14 @@ def test_core_search_replays_zenodo_then_figshare(monkeypatch):
 def stub_searches(monkeypatch):
     """Every shipped adapter keeps its capabilities but answers with an empty listing; no request is sent."""
     from quarry import search as search_mod
+    from quarry.adapters.base import Prepared
     from quarry.results import Coverage
     real_make = search_mod.base.make
 
     def make(resource):
         adapter = real_make(resource)
-        adapter.prepare = lambda query: lambda client: (Coverage(resource.id, "q", adapter.match, 0, 0, "total"), [])
+        adapter.prepare = lambda query: Prepared("q", lambda client: (Coverage(resource.id, "q", adapter.match, 0, 0,
+                                                                                "total"), []))
         return adapter
 
     monkeypatch.setitem(search_mod.run.__kwdefaults__, "make", make)

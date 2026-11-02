@@ -7,9 +7,10 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from urllib.parse import quote
 
+from quarry.adapters.base import Prepared
 from quarry.catalog import Resource
 from quarry.errors import QuarryError
 from quarry.files import File
@@ -184,12 +185,12 @@ class Biostudies:
         self.route = resource.routes[0]
 
     def search(self, client: Client, query: Query) -> tuple[Coverage, list[Result]]:
-        return self.prepare(query)(client)
+        return self.prepare(query).execute(client)
 
     def unexpressed(self, query: Query) -> str | None:
         return unexpressed(query)
 
-    def prepare(self, query: Query) -> Callable[[Client], tuple[Coverage, list[Result]]]:
+    def prepare(self, query: Query) -> Prepared:
         q, params = compile_query(query)
         organism = params.get("facet.organism")
         native = q if not params else f"{q} facet.organism={organism}"
@@ -214,7 +215,7 @@ class Biostudies:
             warnings = (f"biostudies matches the organism label {organism} only, not its subtaxa",) if organism else ()
             return Coverage(self.resource.id, native, match, exact_total, len(rows), complete, warnings=warnings), rows
 
-        return execute
+        return Prepared(native, execute)
 
     def _study(self, client: Client, curie: Curie) -> tuple[Result, list[tuple[str, int | None, str]], list[str]]:
         """The record, its inline (path, size, type) entries, type being "file" or "directory",

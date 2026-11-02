@@ -50,6 +50,10 @@
     [
      "start",
      "0"
+    ],
+    [
+     "type",
+     "class"
     ]
    ],
    "url": "https://www.ebi.ac.uk/ols4/api/search"

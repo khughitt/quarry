@@ -34,8 +34,14 @@ def files(curie: Curie) -> Probe:
     return lambda adapter, client: adapter.files(client, curie)
 
 
-def term_show(curie: Curie) -> Probe:
-    return lambda adapter, client: adapter.show(client, REGISTRY, curie)
+def terms(curie: Curie, words: str) -> Probe:
+    """One OLS route's three paths: the term (through ancestors), its ancestors, and search."""
+    def probe(adapter, client):
+        adapter.ancestors(client, REGISTRY, curie)
+        _, found, _, _ = adapter.search(client, REGISTRY, words, exact=False, limit=1)
+        if not found:
+            raise QuarryError("upstream_failed", "the term search answered no terms")
+    return probe
 
 
 PROBES: dict[tuple[str, str], Probe] = {
@@ -50,9 +56,9 @@ PROBES: dict[tuple[str, str], Probe] = {
     ("figshare", "https://api.figshare.com/v2"): search_one(MYELOMA_SINCE),
     ("pubmed", "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"): search_one(SMOLDERING),
     ("europepmc", "https://www.ebi.ac.uk/europepmc/webservices/rest"): search_one(SMOLDERING),
-    ("go", "https://www.ebi.ac.uk/ols4/api/ontologies/go"): term_show(Curie("go", "0006915")),
-    ("uberon", "https://www.ebi.ac.uk/ols4/api/ontologies/uberon"): term_show(Curie("uberon", "0000948")),
-    ("ncbitaxon", "https://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon"): term_show(Curie("ncbitaxon", "9606")),
+    ("go", "https://www.ebi.ac.uk/ols4/api/ontologies/go"): terms(Curie("go", "0006915"), "apoptotic process"),
+    ("uberon", "https://www.ebi.ac.uk/ols4/api/ontologies/uberon"): terms(Curie("uberon", "0000948"), "heart"),
+    ("ncbitaxon", "https://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon"): terms(Curie("ncbitaxon", "9606"), "human"),
 }
 
 

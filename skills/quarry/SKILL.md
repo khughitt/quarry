@@ -15,14 +15,16 @@ prints `{"error": {"kind", "detail"}}` on stderr. Run `quarry <command> --help` 
 - `quarry show zenodo:123456` shows one record; the prefix names the resource.
 - `quarry files zenodo:123456 --acquisition` prints the acquisition request the kernel takes
   for the record's files. quarry never downloads; the kernel's acquisition does.
-- `quarry id normalize PRJNA123456` prints a canonical CURIE; `id check` prints nothing and exits 0 when every id is well formed
-  (findings otherwise); `id resolve CURIE` prints the URLs that resolve it.
+- `quarry id normalize PRJNA123456` prints a canonical CURIE; `id check` prints nothing and
+  exits 0 when every id is well formed (findings otherwise); `id resolve CURIE` prints the URLs
+  that resolve it.
 - `quarry term search heart --in uberon --exact` finds ontology and vocabulary terms. The
   words are ANDed; `*` and `"` (and other query syntax) are refused. Give words from the
   label or synonym, not a pattern.
 - `quarry term show uberon:0000948` and `quarry term ancestors uberon:0000948` read one term
   and its is_a ancestors.
-- `quarry resources list`, `resources show <id>`, `domains list` and `check` describe the catalog.
+- `quarry resources list`, `resources show <id>`, `domains list` and `check` describe the
+  catalog.
 
 ## The lens
 
@@ -35,16 +37,19 @@ nearest one above the working directory), then `core`. Every result names the do
 Each resource searched has a `coverage` entry. `complete` is one of `total` (the listing equals
 the reported total), `short-page` (no total reported; paging ended on a short page), `limited`
 (`-n` stopped early), `skipped` (the resource cannot express the query; the reason is given) or
-`failed` (only with `--allow-partial`, which `search` alone takes). `search` coverage also has `match` (`exact`, `expanded`, or
-`native` after `--native`); `term search` coverage has `exact`. A resource that fails fails the
-command unless you pass `--allow-partial` to `search`, which records the failure in coverage and warnings;
-`term search` has no such option and fails when any resource fails.
+`failed` (only with `--allow-partial`, which `search` alone takes). `search` coverage also has
+`match` (`exact`, `expanded`, or `native` after `--native`); `term search` coverage has `exact`.
+A resource that fails fails the command unless you pass `--allow-partial` to `search`, which
+records the failure in coverage and warnings; `term search` has no such option and fails when
+any resource fails.
 
 ## When the shared filters are not enough
 
 `--native QUERY` sends one resource's own query unchanged (exactly one `--in`); its coverage
-says `match: native`. Each searched resource's coverage entry also carries the `native` query that was sent; skipped entries have none (failed ones null). When you
-record a harvest, keep those `native` queries with it so the harvest can be rerun.
+says `match: native`. Each searched resource's coverage entry also carries the `native` query
+it sent. Skipped entries have none. A failed entry carries the query it was sending, or null
+when building that query needed a lookup that failed (ENA resolving an `--organism` name).
+When you record a harvest, keep those `native` queries with it so the harvest can be rerun.
 
 ## Resource notes
 
@@ -53,7 +58,11 @@ record a harvest, keep those `native` queries with it so the harvest can be reru
 
 Roles: repository. Prefixes: `zenodo.record`.
 
+Routes:
+
 - rest `https://zenodo.org/api`: every 1 s (0.6 s with a key); key ZENODO_TOKEN (optional-key); page cap 25; reports a total
+
+Pitfalls:
 
 - a page size above 25 is HTTP 400 without a token. Handling: every listing pages by 25, with or without a token.
 - the search index serves at most 10,000 results per query. Handling: a total above 10,000 is refused with too_many_results unless -n keeps the listing inside it.
@@ -64,7 +73,11 @@ Roles: repository. Prefixes: `zenodo.record`.
 
 Roles: repository. Prefixes: `figshare`.
 
+Routes:
+
 - rest `https://api.figshare.com/v2`: every 1 s; page cap 100; no total
+
+Pitfalls:
 
 - the search endpoint reports no total. Handling: paging ends on the first short page and coverage says complete: short-page.
 - published_since and published_until on articles/search are not applied. Handling: --since and --until order the listing by published_date and bound it on the client: newest first, stopping below --since; oldest first, stopping above --until, when only --until is given.
@@ -74,7 +87,11 @@ Roles: repository. Prefixes: `figshare`.
 
 Roles: literature-index. Prefixes: `pubmed`.
 
+Routes:
+
 - rest `https://eutils.ncbi.nlm.nih.gov/entrez/eutils`: every 0.34 s (0.1 s with a key); key NCBI_API_KEY (optional-key); page cap 10000; reports a total
+
+Pitfalls:
 
 - PubMed maps phrases through automatic term mapping and, when a phrase is not indexed, searches its words ANDed. Handling: coverage says match: expanded; --exact refuses PubMed; --native sends PubMed syntax unchanged.
 - esearch serves at most 10,000 ids per query without the history server. Handling: a count above the window is refused with too_many_results before any summary request; -n inside the window is served.
@@ -84,7 +101,11 @@ Roles: literature-index. Prefixes: `pubmed`.
 
 Roles: literature-index. Prefixes: `europepmc`, `pmc`, `ppr`.
 
+Routes:
+
 - rest `https://www.ebi.ac.uk/europepmc/webservices/rest`: every 0.5 s; page cap 1000; reports a total
+
+Pitfalls:
 
 - fullTextXML serves the PMC open-access subset; non-OA records have returned generic HTTP 500 rather than 404. Handling: list XML only with open_access=Y, in_epmc=Y and an unversioned validated PMCID; never probe article bytes; metadata is not an uptime guarantee.
 - The file inventory covers only hosted PMC XML, not every article copy or asset. Handling: empty files means no eligible PMC XML route; do not infer no full text elsewhere or advertise preprint XML, publisher PDFs, supplements or books.

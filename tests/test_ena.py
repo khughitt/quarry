@@ -11,6 +11,7 @@ from click.testing import CliRunner
 from quarry import catalog as catalog_mod
 from quarry import context, search
 from quarry.adapters import ena
+from quarry.adapters.base import Prepared
 from quarry.cli import main
 from quarry.errors import QuarryError
 from quarry.http import Client, Throttle
@@ -146,7 +147,8 @@ def test_a_name_ena_cannot_carry_is_refused_in_prepare(name):                   
 
 
 def test_prepare_defers_a_name_to_execute():
-    assert callable(ENA.prepare(Query(phrases=("x",), filters={"organism": "Mus"})))
+    prepared = ENA.prepare(Query(phrases=("x",), filters={"organism": "Mus"}))
+    assert prepared.native is None and callable(prepared.execute)
 
 
 def test_a_failed_lookup_under_allow_partial_is_enas_failed_row():                  # Review Focus 3
@@ -156,6 +158,7 @@ def test_a_failed_lookup_under_allow_partial_is_enas_failed_row():              
                             allow_partial=True, from_defaults=False)
     cov = report["coverage"][0]
     assert cov["complete"] == "failed" and cov["error"]["kind"] == "not_found"
+    assert cov["native"] is None        # the query needed the taxon the lookup failed to find
     assert report["warnings"] == ["ena failed: ENA's taxonomy has no taxon named 'Nonexistus fakeus'"]
 
 
@@ -455,10 +458,10 @@ def test_later_ena_compilation_refusal_prevents_earlier_accepting_adapter_http(a
             def execute(client):
                 client.request(first.routes[0], "GET", "accepted")
                 return Coverage(first.id, phrase, "exact", 0, 0, "total"), []
-            return execute
+            return Prepared(phrase, execute)
 
         def search(self, client, query):
-            return self.prepare(query)(client)
+            return self.prepare(query).execute(client)
 
         def unexpressed(self, query):
             return None
@@ -494,8 +497,9 @@ def test_ena_prepare_compiles_once_without_http_and_executes_the_compiled_query(
     query = Query(phrases=("x",))
     prepared = ENA.prepare(query)
     assert compiled == [query] and seen == []
+    assert prepared.native == '(study_title="x" OR study_description="x")'
     with replay_client(httpx.MockTransport(empty)) as client:
-        cov, rows = prepared(client)
+        cov, rows = prepared.execute(client)
     assert len(seen) == 2 and rows == [] and cov.complete == "total"
 
 
