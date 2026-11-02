@@ -5,9 +5,9 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable
 from datetime import date
 
+from quarry.adapters.base import Prepared
 from quarry.catalog import Resource
 from quarry.errors import QuarryError
 from quarry.files import File
@@ -97,12 +97,12 @@ class Figshare:
         self.route = resource.routes[0]
 
     def search(self, client: Client, query: Query) -> tuple[Coverage, list[Result]]:
-        return self.prepare(query)(client)
+        return self.prepare(query).execute(client)
 
     def unexpressed(self, query: Query) -> str | None:
         return None
 
-    def prepare(self, query: Query) -> Callable[[Client], tuple[Coverage, list[Result]]]:
+    def prepare(self, query: Query) -> Prepared:
         q = compile_query(query)
         newest_first = not (query.until and not query.since)
 
@@ -137,7 +137,7 @@ class Figshare:
             match = "native" if query.native is not None else self.match
             return Coverage(self.resource.id, q, match, None, len(rows), complete), rows
 
-        return execute
+        return Prepared(q, execute)
 
     def _article(self, client: Client, curie: Curie) -> dict:
         response = client.request(self.route, "GET", f"articles/{curie.local}", accept=frozenset({404}))

@@ -83,13 +83,13 @@ def run(*, catalog: Catalog, client: Client, query: Query, resource_ids: list[st
             coverage.append(step)
             warnings.append(f"{step.resource} skipped: {step.reason}")
             continue
-        adapter, execute = step
+        adapter, prepared = step
         try:
-            cov, rows = execute(client)
+            cov, rows = prepared.execute(client)
         except QuarryError as error:
             if not allow_partial:
                 raise
-            coverage.append(Coverage(adapter.resource.id, query.native,
+            coverage.append(Coverage(adapter.resource.id, prepared.native,
                                      "native" if query.native is not None else adapter.match, None, 0, "failed",
                                      {"kind": error.kind, "detail": error.detail}))
             warnings.append(f"{adapter.resource.id} failed: {error.detail}")

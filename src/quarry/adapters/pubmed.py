@@ -2,9 +2,9 @@
 lit owns the snapshot. Phrases are quoted [All Fields] clauses, which PubMed still expands."""
 from __future__ import annotations
 
-from collections.abc import Callable
 
 from quarry.adapters import eutils
+from quarry.adapters.base import Prepared
 from quarry.catalog import Resource
 from quarry.errors import QuarryError
 from quarry.files import File
@@ -60,12 +60,12 @@ class Pubmed:
         self.route = resource.routes[0]
 
     def search(self, client: Client, query: Query) -> tuple[Coverage, list[Result]]:
-        return self.prepare(query)(client)
+        return self.prepare(query).execute(client)
 
     def unexpressed(self, query: Query) -> str | None:
         return None
 
-    def prepare(self, query: Query) -> Callable[[Client], tuple[Coverage, list[Result]]]:
+    def prepare(self, query: Query) -> Prepared:
         q = compile_query(query)
 
         def execute(client: Client) -> tuple[Coverage, list[Result]]:
@@ -75,7 +75,7 @@ class Pubmed:
             match = "native" if query.native is not None else self.match
             return Coverage(self.resource.id, q, match, count, len(rows), complete, warnings=notices), rows
 
-        return execute
+        return Prepared(q, execute)
 
     def show(self, client: Client, curie: Curie) -> Result:
         record = eutils.esummary_one(client, self.route, "pubmed", curie.local)

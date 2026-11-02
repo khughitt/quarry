@@ -5,6 +5,7 @@ import pytest
 from click.testing import CliRunner
 
 from quarry import context
+from quarry.adapters.base import Prepared
 from quarry.cli import main
 from quarry.errors import QuarryError
 from tests.fake_adapter import Fake
@@ -74,8 +75,9 @@ def test_allow_partial_records_the_failure_and_exits_zero(catalog):
     report = json.loads(out.stdout)
     assert out.exit_code == 0
     assert report["coverage"][0]["complete"] == "failed" and report["coverage"][0]["error"]["kind"] == "upstream_failed"
-    assert report["coverage"][0]["native"] is None and report["coverage"][0]["match"] == "exact"
+    assert report["coverage"][0]["native"] == "fail" and report["coverage"][0]["match"] == "exact"
     assert report["warnings"] == ["alpha failed: alpha is down"]
+
 
 
 @pytest.mark.parametrize("args, kind", [
@@ -181,7 +183,7 @@ def test_partial_native_failure_preserves_query_and_match(catalog, monkeypatch, 
     def fail_search(client):
         raise QuarryError("upstream_failed", "service is down")
 
-    monkeypatch.setattr(Fake, "prepare", lambda *args: fail_search)
+    monkeypatch.setattr(Fake, "prepare", lambda self, query: Prepared(query.native, fail_search))
     out = invoke("search", "--domain", "biology", "--in", resource,
                  "--native", "cancer[Title]", "--allow-partial")
     assert out.exit_code == 0 and out.stderr == ""

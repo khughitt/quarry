@@ -1,4 +1,5 @@
 """An adapter that needs no network, for framework tests."""
+from quarry.adapters.base import Prepared
 from quarry.errors import QuarryError
 from quarry.files import File
 from quarry.results import Coverage, Result
@@ -15,7 +16,7 @@ class Fake:
         self.resource = resource
 
     def search(self, client, query):
-        return self.prepare(query)(client)
+        return self.prepare(query).execute(client)
 
     def unexpressed(self, query):
         return None
@@ -33,7 +34,7 @@ class Fake:
                              completeness(total=3, returned=len(rows), limit=query.limit, short_page=False),
                              warnings=("alpha warns",) if "warn" in query.phrases else ()), rows)
 
-        return execute
+        return Prepared(native, execute)
 
     def show(self, client, curie):
         return Result(id=str(curie), resource=self.resource.id, kind="dataset", title="shown")

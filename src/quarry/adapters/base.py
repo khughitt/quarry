@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Protocol
 
 from quarry.catalog import Resource
@@ -13,13 +14,20 @@ from quarry.query import Query
 from quarry.results import Coverage, Result
 
 
+@dataclass(frozen=True)
+class Prepared:
+    """A compiled search: the query it will send and how to send it."""
+    native: str | None      # None only when compiling needs a request (ENA's organism name)
+    execute: Callable[[Client], tuple[Coverage, list[Result]]]
+
+
 class Adapter(Protocol):
     resource: Resource
     match: str                 # "exact" or "expanded": how phrases match (spec §8.2)
     filters: frozenset[str]    # the domain filters this adapter can express
 
-    def prepare(self, query: Query) -> Callable[[Client], tuple[Coverage, list[Result]]]:
-        """Compile and refuse unsupported queries without I/O; return their execution."""
+    def prepare(self, query: Query) -> Prepared:
+        """Compile and refuse unsupported queries without I/O; return the query and its execution."""
         ...
 
     def unexpressed(self, query: Query) -> str | None:
