@@ -228,7 +228,8 @@ def id_check(ctx: click.Context, ids: tuple[str, ...]) -> None:
 def id_normalize(ctx: click.Context, id: str) -> None:
     """Print an identifier as a canonical CURIE."""
     env = context.open_env()
-    owned = [p for r in env.catalog.resources.values() for p in r.owned_prefixes()]
+    # Term-only prefixes stay out: a bare word or number is not a term id (ncbitaxon's pattern takes any word).
+    owned = [p for r in env.catalog.resources.values() if set(r.roles) & DATA_ROLES for p in r.owned_prefixes()]
     curie = idmod.normalize(id, env.registry, owned)
     emit(ctx, {"id": str(curie)}, str(curie))
 

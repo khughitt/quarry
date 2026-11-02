@@ -1,0 +1,37 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [],
+   "url": "https://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon"
+  },
+  "response": {
+   "body": "{\n  \"languages\" : [ \"en\" ],\n  \"lang\" : \"en\",\n  \"ontologyId\" : \"ncbitaxon\",\n  \"loaded\" : \"2026-11-01T00:09:11.411649191\",\n  \"updated\" : \"2026-11-01T00:09:11.411649191\",\n  \"status\" : \"LOADED\",\n  \"message\" : \"\",\n  \"version\" : \"2026-07-12\",\n  \"fileHash\" : null,\n  \"loadAttempts\" : 0,\n  \"numberOfTerms\" : 2854537,\n  \"numberOfProperties\" : 32,\n  \"numberOfIndividuals\" : 0,\n  \"config\" : {\n    \"id\" : \"ncbitaxon\",\n    \"versionIri\" : \"http://purl.obolibrary.org/obo/ncbitaxon/2026-07-12/ncbitaxon.owl\",\n    \"namespace\" : \"ncbitaxon\",\n    \"preferredPrefix\" : \"NCBITaxon\",\n    \"title\" : \"NCBI organismal classification\",\n    \"description\" : \"An ontology representation of the NCBI organismal taxonomy\",\n    \"homepage\" : \"https://github.com/obophenotype/ncbitaxon\",\n    \"version\" : \"2026-07-12\",\n    \"mailingList\" : null,\n    \"tracker\" : \"https://github.com/obophenotype/ncbitaxon/issues\",\n    \"logo\" : null,\n    \"creators\" : [ ],\n    \"annotations\" : null,\n    \"fileLocation\" : \"http://purl.obolibrary.org/obo/ncbitaxon.owl\",\n    \"oboSlims\" : false,\n    \"labelProperty\" : \"http://www.w3.org/2000/01/rdf-schema#label\",\n    \"definitionProperties\" : [ ],\n    \"synonymProperties\" : [ ],\n    \"hierarchicalProperties\" : [ ],\n    \"baseUris\" : [ \"http://purl.obolibrary.org/obo/NCBITaxon_\" ],\n    \"hiddenProperties\" : [ ],\n    \"preferredRootTerms\" : [ ],\n    \"isSkos\" : false,\n    \"allowDownload\" : false\n  },\n  \"baseUris\" : [ \"http://purl.obolibrary.org/obo/NCBITaxon_\" ],\n  \"_links\" : {\n    \"self\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon?lang=en\"\n    },\n    \"terms\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms\"\n    },\n    \"properties\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/properties\"\n    },\n    \"individuals\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/individuals\"\n    }\n  }\n}",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "obo_id",
+     "NCBITaxon:9606"
+    ]
+   ],
+   "url": "https://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms"
+  },
+  "response": {
+   "body": "{\n  \"_embedded\" : {\n    \"terms\" : [ {\n      \"iri\" : \"http://purl.obolibrary.org/obo/NCBITaxon_9606\",\n      \"lang\" : \"en\",\n      \"description\" : [ ],\n      \"synonyms\" : [ \"human\" ],\n      \"annotation\" : {\n        \"database_cross_reference\" : [ \"GC_ID:1\" ],\n        \"has_obo_namespace\" : [ \"ncbi_taxonomy\" ],\n        \"has_rank\" : [ \"http://purl.obolibrary.org/obo/TAXRANK_0000006\" ],\n        \"obsolete has_rank\" : [ \"http://purl.obolibrary.org/obo/NCBITaxon_species\" ]\n      },\n      \"label\" : \"Homo sapiens\",\n      \"ontology_name\" : \"ncbitaxon\",\n      \"ontology_prefix\" : \"NCBITaxon\",\n      \"ontology_iri\" : \"http://purl.obolibrary.org/obo/ncbitaxon.owl\",\n      \"is_obsolete\" : false,\n      \"term_replaced_by\" : null,\n      \"is_defining_ontology\" : true,\n      \"has_children\" : true,\n      \"is_root\" : false,\n      \"short_form\" : \"NCBITaxon_9606\",\n      \"obo_id\" : \"NCBITaxon:9606\",\n      \"in_subset\" : null,\n      \"obo_definition_citation\" : null,\n      \"obo_xref\" : [ {\n        \"database\" : \"GC_ID\",\n        \"id\" : \"1\",\n        \"description\" : null,\n        \"url\" : \"https://www.ncbi.nlm.nih.gov/Taxonomy/taxonomyhome.html/index.cgi?chapter=cgencodes#SG1\"\n      } ],\n      \"obo_synonym\" : [ {\n        \"name\" : \"human\",\n        \"scope\" : \"hasExactSynonym\",\n        \"type\" : \"genbank common name\",\n        \"xrefs\" : [ ]\n      } ],\n      \"is_preferred_root\" : false,\n      \"_links\" : {\n        \"self\" : {\n          \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCBITaxon_9606?lang=en\"\n        },\n        \"parents\" : {\n          \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCBITaxon_9606/parents\"\n        },\n        \"ancestors\" : {\n          \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCBITaxon_9606/ancestors\"\n        },\n        \"hierarchicalParents\" : {\n          \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCBITaxon_9606/hierarchicalParents\"\n        },\n        \"hierarchicalAncestors\" : {\n          \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCBITaxon_9606/hierarchicalAncestors\"\n        },\n        \"jstree\" : {\n          \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCBITaxon_9606/jstree\"\n        },\n        \"children\" : {\n          \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCBITaxon_9606/children\"\n        },\n        \"descendants\" : {\n          \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCBITaxon_9606/descendants\"\n        },\n        \"hierarchicalChildren\" : {\n          \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCBITaxon_9606/hierarchicalChildren\"\n        },\n        \"hierarchicalDescendants\" : {\n          \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCBITaxon_9606/hierarchicalDescendants\"\n        },\n        \"graph\" : {\n          \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FNCBITaxon_9606/graph\"\n        }\n      }\n    } ]\n  },\n  \"_links\" : {\n    \"self\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon/terms?obo_id=NCBITaxon%3A9606\"\n    }\n  },\n  \"page\" : {\n    \"size\" : 1,\n    \"totalElements\" : 1,\n    \"totalPages\" : 1,\n    \"number\" : 0\n  }\n}",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ }
+]

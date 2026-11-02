@@ -1,0 +1,37 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [],
+   "url": "https://www.ebi.ac.uk/ols4/api/ontologies/uberon"
+  },
+  "response": {
+   "body": "{\n  \"languages\" : [ \"en\" ],\n  \"lang\" : \"en\",\n  \"ontologyId\" : \"uberon\",\n  \"loaded\" : \"2026-11-01T00:08:28.695961598\",\n  \"updated\" : \"2026-11-01T00:08:28.695961598\",\n  \"status\" : \"LOADED\",\n  \"message\" : \"\",\n  \"version\" : null,\n  \"fileHash\" : null,\n  \"loadAttempts\" : 0,\n  \"numberOfTerms\" : 26735,\n  \"numberOfProperties\" : 556,\n  \"numberOfIndividuals\" : 67,\n  \"config\" : {\n    \"id\" : \"uberon\",\n    \"versionIri\" : \"http://purl.obolibrary.org/obo/uberon/releases/2026-10-01/uberon.owl\",\n    \"namespace\" : \"uberon\",\n    \"preferredPrefix\" : \"UBERON\",\n    \"title\" : \"Uber-anatomy ontology\",\n    \"description\" : \"Uberon is an integrated cross-species anatomy ontology representing a variety of entities classified according to traditional anatomical criteria such as structure, function and developmental lineage. The ontology includes comprehensive relationships to taxon-specific anatomical ontologies, allowing integration of functional, phenotype and expression data.\",\n    \"homepage\" : \"http://uberon.org\",\n    \"version\" : null,\n    \"mailingList\" : \"https://lists.sourceforge.net/lists/listinfo/obo-anatomy\",\n    \"tracker\" : \"https://github.com/obophenotype/uberon/issues\",\n    \"logo\" : null,\n    \"creators\" : [ ],\n    \"annotations\" : null,\n    \"fileLocation\" : \"http://purl.obolibrary.org/obo/uberon.owl\",\n    \"oboSlims\" : false,\n    \"labelProperty\" : \"http://www.w3.org/2000/01/rdf-schema#label\",\n    \"definitionProperties\" : [ ],\n    \"synonymProperties\" : [ ],\n    \"hierarchicalProperties\" : [ ],\n    \"baseUris\" : [ ],\n    \"hiddenProperties\" : [ ],\n    \"preferredRootTerms\" : [ ],\n    \"isSkos\" : false,\n    \"allowDownload\" : false\n  },\n  \"baseUris\" : [ ],\n  \"_links\" : {\n    \"self\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/uberon?lang=en\"\n    },\n    \"terms\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/uberon/terms\"\n    },\n    \"properties\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/uberon/properties\"\n    },\n    \"individuals\" : {\n      \"href\" : \"http://www.ebi.ac.uk/ols4/api/ontologies/uberon/individuals\"\n    }\n  }\n}",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "obo_id",
+     "UBERON:9999999"
+    ]
+   ],
+   "url": "https://www.ebi.ac.uk/ols4/api/ontologies/uberon/terms"
+  },
+  "response": {
+   "body": "{\n  \"status\" : 404,\n  \"message\" : \"The requested resource was not found\"\n}",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 404
+  }
+ }
+]

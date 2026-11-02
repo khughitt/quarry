@@ -25,16 +25,19 @@ def invoke(*args):
 def test_search_sets_and_effective_resources():
     assert CAT.search_set("core") == ["zenodo", "figshare"]
     assert CAT.search_set("biology") == ["geo", "ena", "biostudies", "zenodo", "figshare"]
-    assert CAT.effective_resources("biology") == ["geo", "ena", "biostudies", "zenodo", "figshare", "pubmed", "europepmc"]
+    assert CAT.effective_resources("biology") == ["geo", "ena", "biostudies", "go", "uberon", "ncbitaxon",
+                                                  "zenodo", "figshare", "pubmed", "europepmc"]
     assert {rid: CAT.resources[rid].roles for rid in CAT.resources} == {
         "biostudies": ("repository",), "ena": ("repository",), "figshare": ("repository",), "geo": ("repository",),
-        "europepmc": ("literature-index",), "pubmed": ("literature-index",), "zenodo": ("repository",)}
+        "europepmc": ("literature-index",), "pubmed": ("literature-index",), "zenodo": ("repository",),
+        "go": ("ontology",), "uberon": ("ontology",), "ncbitaxon": ("ontology",)}
 
 
 def test_domains_list_shows_both_domains_with_their_resources():
     out = invoke("domains", "list")
     rows = {d["id"]: d for d in json.loads(out.stdout)["domains"]}
-    assert rows["biology"]["resources"] == ["geo", "ena", "biostudies", "zenodo", "figshare", "pubmed", "europepmc"]
+    assert rows["biology"]["resources"] == ["geo", "ena", "biostudies", "go", "uberon", "ncbitaxon",
+                                            "zenodo", "figshare", "pubmed", "europepmc"]
     assert rows["core"]["resources"] == ["zenodo", "figshare", "pubmed", "europepmc"] and rows["core"]["beliefs_contract"] is None
 
 

@@ -2,6 +2,8 @@
 happens before the first request."""
 from __future__ import annotations
 
+from typing import Protocol
+
 from quarry.adapters import base
 from quarry.catalog import DATA_ROLES, Catalog
 from quarry.errors import QuarryError
@@ -25,7 +27,11 @@ def completeness(*, total: int | None, returned: int, limit: int | None, short_p
                                             f"after {returned} records")
 
 
-def distinct(rows: list[Result]) -> list[Result]:
+class _HasId(Protocol):
+    id: str
+
+
+def distinct[Row: _HasId](rows: list[Row]) -> list[Row]:
     """The rows, refused when an id repeats: offset paging over a moving or tied sort that repeats
     one record can skip another while the count still matches the total."""
     seen = set()
