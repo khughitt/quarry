@@ -9,7 +9,7 @@ Use `--domain biology` (or set `domain = "biology"` in `quarry.toml`). This doma
 
 ## Which resource answers what
 
-- Deposited data: GEO (`geo`), ENA (`ena`), BioStudies (`biostudies`). `search` covers these by default.
+- Deposited data: GEO (`geo`), ENA (`ena`), BioStudies (`biostudies`). `search` covers these by default, plus Zenodo and figshare from `core` (which `--organism` skips).
 - Terms: Gene Ontology (`go`), UBERON anatomy (`uberon`), NCBI Taxonomy (`ncbitaxon`) through `term search|show|ancestors`.
 - Literature: PubMed (`pubmed`) and Europe PMC (`europepmc`), not in the default set; name them with `--in pubmed`.
 - Term ids need their prefix: `go:`, `uberon:`, `ncbitaxon:`.
@@ -19,7 +19,7 @@ Use `--domain biology` (or set `domain = "biology"` in `quarry.toml`). This doma
 `--organism` takes a taxon name or an `ncbitaxon:` CURIE and is applied per resource. GEO and
 ENA include subtaxa. BioStudies matches the exact facet label only (no subtaxa) and refuses a
 CURIE under `--in`. To pin a taxon, resolve it first:
-`quarry term search "homo sapiens" --in ncbitaxon --exact`, then pass the `ncbitaxon:` CURIE it prints.
+`quarry term search human --in ncbitaxon --exact`, then pass the `ncbitaxon:` CURIE it prints.
 
 ## Resource notes
 

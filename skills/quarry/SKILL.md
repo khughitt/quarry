@@ -15,7 +15,8 @@ prints `{"error": {"kind", "detail"}}` on stderr. Run `quarry <command> --help` 
 - `quarry show zenodo:123456` shows one record; the prefix names the resource.
 - `quarry files zenodo:123456 --acquisition` prints the acquisition request the kernel takes
   for the record's files. quarry never downloads; the kernel's acquisition does.
-- `quarry id normalize PRJNA123456` prints a canonical CURIE (`id check` and `id resolve` too).
+- `quarry id normalize PRJNA123456` prints a canonical CURIE; `id check` prints nothing and exits 0 when every id is well formed
+  (findings otherwise); `id resolve CURIE` prints the URLs that resolve it.
 - `quarry term search heart --in uberon --exact` finds ontology and vocabulary terms. The
   words are ANDed; `*` and `"` (and other query syntax) are refused. Give words from the
   label or synonym, not a pattern.
@@ -34,14 +35,15 @@ nearest one above the working directory), then `core`. Every result names the do
 Each resource searched has a `coverage` entry. `complete` is one of `total` (the listing equals
 the reported total), `short-page` (no total reported; paging ended on a short page), `limited`
 (`-n` stopped early), `skipped` (the resource cannot express the query; the reason is given) or
-`failed` (only with `--allow-partial`). `search` coverage also has `match` (`exact`, `expanded`, or
+`failed` (only with `--allow-partial`, which `search` alone takes). `search` coverage also has `match` (`exact`, `expanded`, or
 `native` after `--native`); `term search` coverage has `exact`. A resource that fails fails the
-command unless you pass `--allow-partial`, which records the failure in coverage and warnings.
+command unless you pass `--allow-partial` to `search`, which records the failure in coverage and warnings;
+`term search` has no such option and fails when any resource fails.
 
 ## When the shared filters are not enough
 
 `--native QUERY` sends one resource's own query unchanged (exactly one `--in`); its coverage
-says `match: native`. Each coverage entry also carries the `native` query that was sent. When you
+says `match: native`. Each searched resource's coverage entry also carries the `native` query that was sent; skipped entries have none (failed ones null). When you
 record a harvest, keep those `native` queries with it so the harvest can be rerun.
 
 ## Resource notes
