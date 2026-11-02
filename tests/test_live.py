@@ -1,4 +1,6 @@
 """The live probes' bookkeeping, with fake probes: no network."""
+import pytest
+
 from quarry import catalog as catalog_mod
 from quarry.errors import QuarryError
 from tests import live
@@ -71,3 +73,35 @@ def test_run_reports_a_failing_make_and_continues(monkeypatch):
     monkeypatch.setattr(live.base, "make", make)
     probes = {("a", "https://a"): ok, ("b", "https://b"): ok}
     assert live.run(Catalog, None, probes) == [("a", "https://a", "AttributeError: no adapter"), ("b", "https://b", "ok")]
+
+
+class Terms:
+    """Records which OLS paths a term probe asks for; `found` is what search answers."""
+
+    def __init__(self, found):
+        self.calls, self.found = [], found
+
+    def show(self, client, registry, curie):
+        self.calls.append("show")
+
+    def ancestors(self, client, registry, curie):
+        self.calls.append("ancestors")
+
+    def search(self, client, registry, text, *, exact, limit):
+        self.calls.append(("search", limit))
+        return None, self.found, None, []
+
+
+def test_ols_probes_reach_ancestors_and_search():
+    for rid in ("go", "uberon", "ncbitaxon"):
+        probe = live.PROBES[(rid, f"https://www.ebi.ac.uk/ols4/api/ontologies/{rid}")]
+        adapter = Terms(found=["a term"])
+        probe(adapter, None)
+        assert "ancestors" in adapter.calls and ("search", 1) in adapter.calls
+
+
+def test_a_term_search_with_no_terms_fails_the_probe():
+    probe = live.PROBES[("go", "https://www.ebi.ac.uk/ols4/api/ontologies/go")]
+    with pytest.raises(QuarryError) as caught:
+        probe(Terms(found=[]), None)
+    assert caught.value.kind == "upstream_failed"
