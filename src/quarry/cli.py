@@ -232,7 +232,13 @@ def id_normalize(ctx: click.Context, id: str) -> None:
     env = context.open_env()
     # Term-only prefixes stay out: a bare word or number is not a term id (ncbitaxon's pattern takes any word).
     owned = [p for r in env.catalog.resources.values() if set(r.roles) & DATA_ROLES for p in r.owned_prefixes()]
-    curie = idmod.normalize(id, env.registry, owned)
+    try:
+        curie = idmod.normalize(id, env.registry, owned)
+    except QuarryError as error:
+        if error.kind != "unknown_id":
+            raise
+        raise QuarryError("unknown_id", f"{id!r} matches no prefix a record-holding resource owns; a term id is "
+                                        f"never read from a bare word: {_term_hint(env, terms_mod.TERM_ROLES)}") from None
     emit(ctx, {"id": str(curie)}, str(curie))
 
 
@@ -307,7 +313,7 @@ def search_command(ctx, phrases, in_, domain, organism, exact, native, allow_par
     for name in query.filters:
         if name not in env.catalog.domain_filters(chosen):
             raise QuarryError("unsupported_filter", f"--{name} is not a filter of the {chosen} domain")
-    resource_ids = list(in_) or env.catalog.search_set(chosen)
+    resource_ids = list(dict.fromkeys(in_)) or env.catalog.search_set(chosen)
     if not resource_ids:
         raise QuarryError("nothing_to_search", f"the {chosen} domain searches nothing by default; name resources with --in")
     with context.make_client(state(ctx).trace) as client:
@@ -323,7 +329,8 @@ def _owned(env: context.Env, text: str) -> tuple[idmod.Curie, Resource]:
     if owner is None:
         raise QuarryError("no_owner", f"no catalog resource owns {parsed.prefix}: ids under it are cross-references only")
     if not set(owner.roles) & DATA_ROLES:
-        raise QuarryError("unsupported_role", f"{owner.id} holds no records")
+        hint = f"; {parsed} is a term: `quarry term show {parsed}`" if set(owner.roles) & terms_mod.TERM_ROLES else ""
+        raise QuarryError("unsupported_role", f"{owner.id} holds no records{hint}")
     return parsed, owner
 
 
@@ -393,9 +400,21 @@ def _term_adapter(resource: Resource, roles: frozenset[str]) -> terms_mod.TermAd
     return adapter
 
 
+def _term_hint(env: context.Env, roles: frozenset[str]) -> str:
+    prefixes = sorted(p for r in env.catalog.resources.values() if set(r.roles) & roles for p in r.owned_prefixes())
+    return (f"write it as <prefix>:<id> ({', '.join(f'{p}:' for p in prefixes)}), "
+            f"or find a term by name with `quarry term search <words>`")
+
+
 def _term_owner(env: context.Env, text: str, roles: frozenset[str]) -> tuple[idmod.Curie, terms_mod.TermAdapter]:
     """The CURIE and the term adapter of the resource that owns its prefix (spec §7)."""
-    parsed = idmod.parse(text, env.registry)
+    try:
+        parsed = idmod.parse(text, env.registry)
+    except QuarryError as error:
+        if error.kind not in ("ambiguous_id", "not_a_curie"):
+            raise
+        # ids.parse points at `id normalize`, which reads no term ids
+        raise QuarryError(error.kind, f"{text!r} needs a prefix; {_term_hint(env, roles)}") from None
     owner = env.catalog.owner(parsed.prefix)
     if owner is None:
         raise QuarryError("no_owner", f"no catalog resource owns {parsed.prefix}: ids under it are cross-references only")
@@ -476,7 +495,7 @@ def term_search(ctx: click.Context, words: tuple[str, ...], in_: tuple[str, ...]
     env = context.open_env()
     chosen = resolve_domain(domain, os.environ, state(ctx).config, Path.cwd(), env.catalog)
     if in_:
-        resource_ids = list(in_)
+        resource_ids = list(dict.fromkeys(in_))
         for rid in resource_ids:
             if rid not in env.catalog.resources:
                 raise QuarryError("unknown_resource", f"no resource {rid!r}")

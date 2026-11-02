@@ -175,3 +175,22 @@ def test_term_search_warnings_print(monkeypatch):
     patch_client(monkeypatch, [ontology(), search_page([doc("0000948")], 1, rows=10)])
     out = invoke("term", "search", "heart", "--in", "uberon").stdout
     assert "# uberon ?: 1 of 1 (total)" in out and "warning: uberon: OLS gives no release version" in out
+
+
+@pytest.mark.parametrize("command", ["show", "ancestors"])
+@pytest.mark.parametrize("text", ["9606", "human"])
+def test_term_id_without_a_prefix_points_at_term_prefixes(monkeypatch, command, text):
+    patch_client(monkeypatch)
+    out = invoke("--json", "term", command, text)
+    assert out.exit_code == 1
+    err = error(out)
+    assert err["kind"] == "ambiguous_id" and "id normalize" not in err["detail"]
+    assert all(p in err["detail"] for p in ("go:", "uberon:", "ncbitaxon:"))
+    assert "<prefix>:<id>" in err["detail"] and "quarry term search" in err["detail"]
+
+
+def test_term_search_repeated_in_searches_once(monkeypatch):
+    transport = patch_client(monkeypatch, [ontology(), search_page([doc("0000948")], 1, rows=10)])
+    out = invoke("--json", "term", "search", "heart", "--in", "uberon", "--in", "uberon")
+    assert out.exit_code == 0 and transport.pending == []
+    assert [c["resource"] for c in json.loads(out.stdout)["coverage"]] == ["uberon"]

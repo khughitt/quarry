@@ -130,6 +130,16 @@ def test_show_refusals(catalog, curie, kind):
     assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == kind
 
 
+def test_show_of_a_term_points_at_term_show(catalog):
+    out = invoke("show", "onto:0008150")
+    assert "`quarry term show onto:0008150`" in json.loads(out.stderr)["error"]["detail"]
+
+
+def test_repeated_in_searches_once(catalog):
+    report = json.loads(invoke("search", "--domain", "biology", "--in", "alpha", "--in", "alpha", "x").stdout)
+    assert [c["resource"] for c in report["coverage"]] == ["alpha"] and len(report["results"]) == 3
+
+
 @pytest.mark.parametrize("native", ["--trace", "-Cexample", "--config", "--config=q.toml"])
 def test_native_option_values_survive_global_hoisting(catalog, native):
     out = invoke("search", "--domain", "biology", "--in", "alpha", "--native", native)

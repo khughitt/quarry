@@ -28,7 +28,8 @@ def completeness(*, total: int | None, returned: int, limit: int | None, short_p
 
 
 class _HasId(Protocol):
-    id: str
+    @property
+    def id(self) -> str: ...
 
 
 def distinct[Row: _HasId](rows: list[Row]) -> list[Row]:
