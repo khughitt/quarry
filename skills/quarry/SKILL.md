@@ -11,6 +11,7 @@ prints `{"error": {"kind", "detail"}}` on stderr. Run `quarry <command> --help` 
 ## Verbs
 
 - `quarry search "single cell" --in zenodo -n 5` finds records across data-holding resources.
+  Each `search` argument is a phrase; phrases are ORed, filters ANDed; quote a multi-word phrase.
 - `quarry show zenodo:123456` shows one record; the prefix names the resource.
 - `quarry files zenodo:123456 --acquisition` prints the acquisition request the kernel takes
   for the record's files. quarry never downloads; the kernel's acquisition does.

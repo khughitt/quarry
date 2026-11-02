@@ -514,9 +514,8 @@ def skills_group() -> None:
 @reports_errors
 def skills_build(ctx: click.Context) -> None:
     """Regenerate the skills' resource notes from the catalog."""
-    from quarry import catalog as catalog_mod
     root = skills.SKILLS_ROOT        # read at call time
-    changed, unchanged = skills.build(catalog_mod.load(), root)
+    changed, unchanged = skills.build(context.open_env().catalog, root)
 
     def shown(paths: list[Path]) -> list[str]:
         return [str(p.relative_to(root.parent)) for p in paths]

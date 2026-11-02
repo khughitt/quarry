@@ -135,3 +135,13 @@ def test_skills_build_cli_is_idempotent(tmp_path, monkeypatch):
     assert second.exit_code == 0 and second.stdout.strip() == "skills are current"
     third = CliRunner().invoke(main, ["--json", "skills", "build"], catch_exceptions=False)
     assert json.loads(third.stdout)["written"] == []
+
+
+def test_skills_build_refuses_an_invalid_catalog(make_catalog, tmp_path, monkeypatch):
+    make_catalog({}, ["ghost"], [])              # biology lists a resource that does not exist
+    root = tmp_path / "checkout" / "skills"
+    shutil.copytree(skills.SKILLS_ROOT, root)
+    monkeypatch.setattr(skills, "SKILLS_ROOT", root)
+    out = CliRunner().invoke(main, ["--json", "skills", "build"], catch_exceptions=False)
+    assert out.exit_code == 1 and out.stdout == ""
+    assert json.loads(out.stderr)["error"]["kind"] == "catalog_invalid"
