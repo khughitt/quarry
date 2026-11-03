@@ -634,12 +634,24 @@ def test_unreadable_policy_refuses_push(front_door: FrontDoor) -> None:
     front_door.write_policy(automatic_broad="no", broad_targets=["test"])
     oid_a = "a" * 40
     oid_b = "b" * 40
-    res = front_door.run(
+    res_uncovered = front_door.run(
+        [str(front_door.repo / ".githooks" / "pre-push"), "origin", "https://example.invalid/repo.git"],
+        stdin=f"refs/tags/v1 {oid_a} refs/tags/v1 {oid_b}\n",
+    )
+    assert res_uncovered.returncode == 2
+    assert "cannot inspect test execution policy" in res_uncovered.stderr
+    assert front_door.markers() == []
+
+    res_covered = front_door.run(
         [str(front_door.repo / ".githooks" / "pre-push"), "origin", "https://example.invalid/repo.git"],
         stdin=f"refs/heads/main {oid_a} refs/heads/main {oid_b}\n",
     )
-    assert res.returncode == 2
-    assert "cannot inspect test execution policy" in res.stderr
+    assert res_covered.returncode == 2
+    assert (
+        "cannot inspect test execution policy" in res_covered.stderr
+        or "expected only boolean automatic_broad and broad_targets" in res_covered.stderr
+    )
+    assert front_door.markers() == []
 
 
 def test_missing_keepalive_refuses_before_gate(front_door: FrontDoor) -> None:

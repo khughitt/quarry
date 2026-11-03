@@ -42,7 +42,7 @@ docs_check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && ta
 # Leave "" when CI runs no full suite on push: a workflow that runs a subset, or only on
 # a schedule or on pull requests, covers no ref. A push takes the shortened gate only
 # when CI covers every ref in it.
-ci_suite_refs := ""
+ci_suite_refs := "refs/heads/*"
 
 # The remote whose pushes CI runs for: a push to any other remote (a mirror, a fork)
 # takes the full gate.
