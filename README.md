@@ -4,6 +4,8 @@
 quarry gives people and agents one interface to scientific repositories, knowledgebases, identifiers and ontologies, with each resource's pitfalls handled once. Domains (core, biology, later chemistry, physics, astronomy) select what is searched; the commands and their options stay the same in every domain.
 <!-- ops:identity end -->
 
+> **Note:** `quarry` is in early development; CLI commands, catalog schemas, and output formats may change before the first stable release.
+
 ## Setup
 
 Run `just setup` in a checkout to install Python dependencies. Python 3.13 or later,

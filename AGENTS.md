@@ -15,13 +15,14 @@ uv, and just are required. The checkout uses `.githooks/` via
 
 ## Gates
 
-- `just test-one <pytest args>` runs a path under `tests/`, `path::name`, or `-k expr`.
-- `just test-fast` runs the whole small suite; run it before committing. Subprocess CLI
+- `just test-one <pytest args>` runs a path under `tests/`, `path::name`, or `-k expr` (protected; always runs under `.tt.toml`).
+- `just test-fast` runs the whole small suite (`broad_targets`; skipped locally when `.tt.toml` sets `automatic_broad = false` unless `TT_FORCE=1`). Subprocess CLI
   tests prevent reliable testmon selection; keep the full suite until affected selection is justified.
-- `just test` runs the full suite.
+- `just test` runs the full suite (`broad_targets`; skipped locally when `.tt.toml` sets `automatic_broad = false` unless `TT_FORCE=1`).
+- `just test-full` forces the full offline suite (`TT_FORCE=1 just test`) even when `.tt.toml` disables automatic broad runs.
+- `just ci-python` runs portable hygiene (`ops-check`, `ops-docs check`, `quarry check`) and the full pytest suite with JUnit XML evidence in `QUARRY_CI_EVIDENCE_DIR`.
+- `just check-hygiene` (aliased as `just check`) runs `ops-check`, `ops-docs check`, `quarry check`, and `tasks check`.
 - `just live` probes every catalog route with its smallest real request and prints one line per route (`ok` or `failed`); it contacts the live services, reports without gating, and is never part of `just test`.
-- `just check` runs ops-check, ops-docs check, and tasks check.
-- There is no CI; the pre-push hook carries the full suite.
 
 Use the just recipes so tools/tt records each run; never call pytest directly.
 
