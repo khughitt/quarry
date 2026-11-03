@@ -24,12 +24,12 @@ tt := "python3 tools/tt"
 # The three commands, each written once. Recipes and hooks all run these, so a hook can
 # never drift from the gate it is supposed to be. Avoid single quotes inside them.
 # Run the whole small suite: testmon cannot track CLI subprocess dependencies.
-fast_cmd := "uv run pytest"
-test_cmd := "uv run pytest"
-check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && uv run quarry check && tasks check"
+fast_cmd := "uv run pytest --junitxml=\"${TT_JUNIT_DIR:?run through tt}/pytest.xml\""
+test_cmd := "uv run pytest --junitxml=\"${TT_JUNIT_DIR:?run through tt}/pytest.xml\""
+check_hygiene_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && uv run quarry check && tasks check"
 
 # Staged paths that cannot change the code checks' verdict: a commit staging only these
-# runs docs_check_cmd instead of check_cmd. fnmatch globs, `*` crossing `/`. Narrow it
+# runs docs_check_cmd instead of check_hygiene_cmd. fnmatch globs, `*` crossing `/`. Narrow it
 # when docs/ holds executable examples, fixtures, or anything a test reads; set it to
 # "" to always run the full check.
 docs_paths := "*.md docs/*"
@@ -47,14 +47,6 @@ ci_suite_refs := ""
 # The remote whose pushes CI runs for: a push to any other remote (a mirror, a fork)
 # takes the full gate.
 ci_remote := "origin"
-
-# The fast loop against what is being pushed, for the shortened gate. One of: selection
-# against the push base, naming the base (vitest run --changed <base>; nextest over the
-# crates changed since <base> and their reverse dependencies), falling back explicitly
-# to the fast set when the base cannot be resolved; testmon's own selection (fast_cmd
-# may serve); or the project's fixed fast set. Say which here.
-# Use the same whole-suite gate until reliable affected selection is justified.
-push_fast_cmd := fast_cmd
 
 # The runner with no selection of its own: `test-one` appends the caller's arguments,
 # each one intact, and nothing else; do not end it with `2>&1` (the recipe does). Which
@@ -90,6 +82,10 @@ one_cmd := "uv run pytest"
 # fail setup, not be swallowed.
 setup_cmd := "just link-siblings && just work-link .venv && uv sync --group dev"
 
+ci_evidence_cmd := "case \"${QUARRY_CI_EVIDENCE_DIR:-}\" in \"\") echo \"set QUARRY_CI_EVIDENCE_DIR\" >&2; exit 2;; /*) ;; *) echo \"CI evidence path must be absolute\" >&2; exit 2;; esac"
+ci_hygiene_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && uv run --frozen quarry check"
+ci_py_test_cmd := "uv run --frozen pytest --junitxml=\"$QUARRY_CI_EVIDENCE_DIR/pytest.xml\""
+
 # The inner loop runs the whole small suite.
 test-fast:
     {{tt}} test-fast -- sh -c '{{fast_cmd}}'
@@ -106,9 +102,22 @@ test-one +args:
 test:
     {{tt}} test -- sh -c '{{test_cmd}}'
 
-# Seconds, not minutes: format, lint, typecheck, tasks check.
+# Deliberate broad verification; the inner test is the only timing record.
+test-full:
+    TT_FORCE=1 just test
+
+# Hosted CI target: runs portable hygiene checks (no tasks binary or detached records)
+# and writes JUnit XML into QUARRY_CI_EVIDENCE_DIR.
+ci-python:
+    {{tt}} ci-python -- sh -c '{{ci_evidence_cmd}} && {{ci_hygiene_cmd}} && {{ci_py_test_cmd}}'
+
+# Seconds, not minutes: ops-check, ops-docs check, quarry check, tasks check.
+check-hygiene:
+    {{tt}} check-hygiene -- sh -c '{{check_hygiene_cmd}}'
+
+# Untimed composition; this repository has no separate lint/typecheck workload.
 check:
-    {{tt}} check -- sh -c '{{check_cmd}}'
+    just check-hygiene
 
 gate: check test
 
@@ -139,21 +148,23 @@ work-link *names:
 setup:
     {{tt}} setup -- sh -c '{{setup_cmd}}'
 
-# What the pre-commit hook runs: `check`'s command under its own hook target.
+# What the pre-commit hook runs: `check-hygiene`'s command under its own hook target.
 hook-pre-commit:
-    {{tt}} hook-pre-commit -- sh -c '{{check_cmd}}'
+    {{tt}} hook-pre-commit -- sh -c '{{check_hygiene_cmd}}'
 
 # What the pre-commit hook runs when every staged path is in docs_paths.
 hook-pre-commit-docs:
     {{tt}} hook-pre-commit-docs -- sh -c '{{docs_check_cmd}}'
 
-# What the pre-push hook runs: the same commands as `gate`, under one hook target.
+# Hook timers cover mandatory work only; broad children record their own decisions.
 hook-pre-push:
-    {{tt}} hook-pre-push -- sh -c '{{check_cmd}} && {{test_cmd}}'
+    {{tt}} hook-pre-push -- sh -c '{{check_hygiene_cmd}}'
+    just test
 
 # What the pre-push hook runs when CI runs the full suite for every pushed ref.
 hook-pre-push-fast:
-    {{tt}} hook-pre-push-fast -- sh -c '{{check_cmd}} && {{push_fast_cmd}}'
+    {{tt}} hook-pre-push-fast -- sh -c '{{check_hygiene_cmd}}'
+    just test-fast
 
 # Refresh one resource's recorded exchanges against the live service.
 record resource:
