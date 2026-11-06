@@ -67,25 +67,41 @@ def _identifier(prefix: str, local: object, registry: Registry) -> str:
     return f"{prefix}:{local}"
 
 
+def _select_pmcid(pmc_locals: list[str]) -> str | None:
+    if not pmc_locals:
+        return None
+    bases = {p.split(".", 1)[0] for p in pmc_locals}
+    versioned = {p for p in pmc_locals if "." in p}
+    if len(bases) > 1 or len(versioned) > 1:
+        raise UpstreamError("pubmed esummary: conflicting pmc ids")
+    unversioned = [p for p in pmc_locals if UNVERSIONED_PMC.fullmatch(p)]
+    return unversioned[0] if unversioned else pmc_locals[0]
+
+
 def _pmcid(d: dict, registry: Registry) -> str | None:
     d = _valid(d)
-    pmcid: str | None = None
-    for a in d.get("articleids") or []:
-        if a.get("idtype") == "pmc" and a.get("value") is not None:
-            pmcid = _identifier("pmc", a["value"], registry).split(":", 1)[1]
-    return pmcid
+    pmc_locals = [
+        _identifier("pmc", a["value"], registry).split(":", 1)[1]
+        for a in d.get("articleids") or []
+        if a.get("idtype") == "pmc" and a.get("value") is not None
+    ]
+    return _select_pmcid(pmc_locals)
 
 
 def _row(d: dict, registry: Registry, core: Mapping[str, str] | None = None) -> Result:
     d = _valid(d)
-    by_type: dict[str, str] = {}
+    dois: list[str] = []
+    pmcs: list[str] = []
     for a in d.get("articleids") or []:
         prefix = a.get("idtype")
         val = a.get("value")
-        if prefix in ("doi", "pmc") and val is not None:
-            by_type[prefix] = _identifier(prefix, val, registry)
-    xrefs = tuple(by_type[k] for k in ("doi", "pmc") if k in by_type)
-    resolved_core = dict(core) if core is not None else {"in_pmc": "Y" if "pmc" in by_type else "N"}
+        if prefix == "doi" and val is not None:
+            dois.append(_identifier("doi", val, registry))
+        elif prefix == "pmc" and val is not None:
+            pmcs.append(_identifier("pmc", val, registry))
+    _select_pmcid([p.split(":", 1)[1] for p in pmcs])
+    xrefs = tuple(dict.fromkeys([*dois, *pmcs]))
+    resolved_core = dict(core) if core is not None else {"in_pmc": "Y" if pmcs else "N"}
     return Result(
         id=f"pubmed:{d['uid']}",
         resource="pubmed",

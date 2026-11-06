@@ -133,6 +133,9 @@ def test_unknown_phrase_is_a_warning():
     ("articleids", [{"idtype": "pmc", "value": "bad"}]),
     ("articleids", [{"idtype": "pmc", "value": "123"}]),
     ("articleids", [{"idtype": "pmc", "value": 7}]),
+    ("articleids", [{"idtype": "pmc", "value": "PMC1234567"}, {"idtype": "pmc", "value": "PMC7654321"}]),
+    ("articleids", [{"idtype": "pmc", "value": "PMC1234567"}, {"idtype": "pmc", "value": "PMC7654321.1"}]),
+    ("articleids", [{"idtype": "pmc", "value": "PMC1234567.1"}, {"idtype": "pmc", "value": "PMC1234567.2"}]),
     ("articleids", [{"idtype": "doi", "value": "bad"}]),
     ("articleids", [{"idtype": "doi", "value": 7}]),
 ])
@@ -142,6 +145,54 @@ def test_malformed_summaries_are_upstream_errors(field, value):
     with pytest.raises(QuarryError) as caught:
         PUBMED.search(client, Query(phrases=("x",)))
     assert caught.value.kind == "upstream_failed"
+
+
+@pytest.mark.parametrize("pmc_values, expected_pmc_xrefs", [
+    (("PMC1234567", "PMC1234567.1"), ("pmc:PMC1234567", "pmc:PMC1234567.1")),
+    (("PMC1234567.1", "PMC1234567"), ("pmc:PMC1234567.1", "pmc:PMC1234567")),
+])
+def test_repeated_doi_and_paired_pmc_xrefs_preserve_all_and_select_unversioned_pmcid(pmc_values, expected_pmc_xrefs):
+    summary = {
+        **SUMMARY,
+        "articleids": [
+            {"idtype": "pubmed", "value": "38195712"},
+            {"idtype": "doi", "value": "10.1038/s41582-023-00915-x"},
+            {"idtype": "doi", "value": "10.1038/s41582-023-00915-y"},
+            {"idtype": "doi", "value": "10.1038/s41582-023-00915-x"},
+            *[{"idtype": "pmc", "value": v} for v in pmc_values],
+            {"idtype": "pmc", "value": pmc_values[0]},
+        ],
+    }
+    transport = ReplayTransport([one_record(summary), oai("PMC1234567")])
+    record, files = PUBMED.files(replay_client(transport), Curie("pubmed", "38195712"))
+    assert transport.pending == []
+    assert record.xrefs == (
+        "doi:10.1038/s41582-023-00915-x",
+        "doi:10.1038/s41582-023-00915-y",
+        *expected_pmc_xrefs,
+    )
+    assert record.domain_fields == {"core": {"open_access": "Y", "in_epmc": "Y", "in_pmc": "Y", "license": "CC BY"}}
+    assert [f.name for f in files] == ["PMC1234567.xml", "PMC1234567.bioc.json"]
+
+
+@pytest.mark.parametrize("pmc_values", [
+    ("PMC1234567", "PMC7654321"),
+    ("PMC1234567", "PMC7654321.1"),
+    ("PMC1234567.1", "PMC1234567.2"),
+])
+def test_conflicting_pmc_identities_fail_before_oai(pmc_values):
+    summary = {
+        **SUMMARY,
+        "articleids": [
+            {"idtype": "pubmed", "value": "38195712"},
+            *[{"idtype": "pmc", "value": v} for v in pmc_values],
+        ],
+    }
+    for fn in (PUBMED.show, PUBMED.files):
+        transport = ReplayTransport([one_record(summary)])
+        with pytest.raises(QuarryError) as caught:
+            fn(replay_client(transport), Curie("pubmed", "38195712"))
+        assert caught.value.kind == "upstream_failed" and transport.pending == []
 
 
 def test_a_summary_whose_uid_is_not_a_string_is_an_upstream_error():
