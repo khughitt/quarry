@@ -90,12 +90,15 @@ Roles: literature-index. Prefixes: `pubmed`.
 Routes:
 
 - rest `https://eutils.ncbi.nlm.nih.gov/entrez/eutils`: every 0.34 s (0.1 s with a key); key NCBI_API_KEY (optional-key); page cap 10000; reports a total
+- rest `https://pmc.ncbi.nlm.nih.gov/api/oai/v1/mh`: every 0.34 s; no total
 
 Pitfalls:
 
 - PubMed maps phrases through automatic term mapping and, when a phrase is not indexed, searches its words ANDed. Handling: coverage says match: expanded; --exact refuses PubMed; --native sends PubMed syntax unchanged.
 - esearch serves at most 10,000 ids per query without the history server. Handling: a count above the window is refused with too_many_results before any summary request; -n inside the window is served.
 - Entrez drops a term it has no records for (or a field tag it does not know) and answers for the rest, never widening the query. Handling: esearch reads errorlist and warninglist; each term Entrez found nothing for or ignored becomes a warning in the search report, in NCBI's spelling.
+- esummary articleids reports PMC archive presence (pmc:PMC...), not Open Access full-text eligibility or licence metadata, and OAI set pmc-open includes non-OA NIH author manuscripts (pmc-prop-open-access = no). Handling: search sets only in_pmc (Y or N) from esummary; show and files query ncbi-pmc-oai GetRecord (metadataPrefix=pmc_fm) for unversioned PMCIDs to read pmc-prop-open-access, pmc-prop-in-epmc, and pmc-license-ref, omitting open_access when a record is not in PMC and preserving versioned pmc: cross-references with in_pmc=Y while withholding file locators.
+- efetch.fcgi?db=pmc returns bodyless XML stubs on non-OA publisher deposits and returns body-containing XML on non-OA NIH author manuscripts (pmc-prop-open-access = no), while PubTator3 updates weekly and export/biocjson?pmids=...&full=true returns HTTP 200 abstract stubs for non-OA PMIDs. Handling: files emits <PMCID>.xml (efetch.fcgi?db=pmc) and <PMCID>.bioc.json (pmc_export/biocjson?pmcids=<PMCID>, which fails closed with HTTP 400 on non-OA records) only when open_access=Y, in_pmc=Y, pmc-status-embargo=no, and pmc-prop-pdf-only=no; metadata eligibility does not guarantee PubTator3 has indexed a newly released OA article or that ncbi-pmc-oai (throttled at 0.34 s per process, no concurrent requests) is up.
 
 ### Europe PMC (`europepmc`)
 

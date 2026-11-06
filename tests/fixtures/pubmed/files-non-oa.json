@@ -1,0 +1,58 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "db",
+     "pubmed"
+    ],
+    [
+     "id",
+     "20097884"
+    ],
+    [
+     "retmode",
+     "json"
+    ]
+   ],
+   "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+  },
+  "response": {
+   "body": "{\"header\":{\"type\":\"esummary\",\"version\":\"0.3\"},\"result\":{\"uids\":[\"20097884\"],\"20097884\":{\"uid\":\"20097884\",\"pubdate\":\"2010 Apr\",\"epubdate\":\"2010 Jan 22\",\"source\":\"Biostatistics\",\"authors\":[{\"name\":\"McCall MN\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Bolstad BM\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Irizarry RA\",\"authtype\":\"Author\",\"clusterid\":\"\"}],\"lastauthor\":\"Irizarry RA\",\"title\":\"Frozen robust multiarray analysis (fRMA).\",\"sorttitle\":\"frozen robust multiarray analysis frma\",\"volume\":\"11\",\"issue\":\"2\",\"pages\":\"242-53\",\"lang\":[\"eng\"],\"nlmuniqueid\":\"100897327\",\"issn\":\"1465-4644\",\"essn\":\"1468-4357\",\"pubtype\":[\"Journal Article\",\"Research Support, N.I.H., Extramural\"],\"recordstatus\":\"PubMed - indexed for MEDLINE\",\"pubstatus\":\"256\",\"articleids\":[{\"idtype\":\"pubmed\",\"idtypen\":1,\"value\":\"20097884\"},{\"idtype\":\"pmc\",\"idtypen\":8,\"value\":\"PMC2830579\"},{\"idtype\":\"pmcid\",\"idtypen\":5,\"value\":\"pmc-id: PMC2830579;\"},{\"idtype\":\"doi\",\"idtypen\":3,\"value\":\"10.1093/biostatistics/kxp059\"},{\"idtype\":\"pii\",\"idtypen\":4,\"value\":\"kxp059\"}],\"history\":[{\"pubstatus\":\"entrez\",\"date\":\"2010/01/26 06:00\"},{\"pubstatus\":\"pubmed\",\"date\":\"2010/01/26 06:00\"},{\"pubstatus\":\"medline\",\"date\":\"2010/06/24 06:00\"},{\"pubstatus\":\"pmc-release\",\"date\":\"2011/04/01 00:00\"}],\"references\":[],\"attributes\":[\"Has Abstract\"],\"pmcrefcount\":19,\"fulljournalname\":\"Biostatistics (Oxford, England)\",\"elocationid\":\"doi: 10.1093/biostatistics/kxp059\",\"doctype\":\"citation\",\"srccontriblist\":[],\"booktitle\":\"\",\"medium\":\"\",\"edition\":\"\",\"publisherlocation\":\"\",\"publishername\":\"\",\"srcdate\":\"\",\"reportnumber\":\"\",\"availablefromurl\":\"\",\"locationlabel\":\"\",\"doccontriblist\":[],\"docdate\":\"\",\"bookname\":\"\",\"chapter\":\"\",\"sortpubdate\":\"2010/04/01 00:00\",\"sortfirstauthor\":\"McCall MN\",\"vernaculartitle\":\"\"}}}\n",
+   "headers": {
+    "content-type": "application/json; charset=UTF-8"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "identifier",
+     "oai:pubmedcentral.nih.gov:2830579"
+    ],
+    [
+     "metadataPrefix",
+     "pmc_fm"
+    ],
+    [
+     "verb",
+     "GetRecord"
+    ]
+   ],
+   "url": "https://pmc.ncbi.nlm.nih.gov/api/oai/v1/mh/"
+  },
+  "response": {
+   "body": "\n\n\n<OAI-PMH xmlns=\"http://www.openarchives.org/OAI/2.0/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n         xsi:schemaLocation=\"http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd\">\n    <responseDate>2026-11-06T16:16:28Z</responseDate>\n    <request verb=\"GetRecord\" identifier=\"oai:pubmedcentral.nih.gov:2830579\" metadataPrefix=\"pmc_fm\">https://pmc.ncbi.nlm.nih.gov/api/oai/v1/mh/</request>\n    \n    <GetRecord>\n        <record>\n    <header>\n    <identifier>oai:pubmedcentral.nih.gov:2830579</identifier>\n    <datestamp>2011-04-01</datestamp>\n    \n        \n        <setSpec>biosts</setSpec>\n        \n    \n</header>\n    <metadata>\n        \n        <article xmlns=\"https://jats.nlm.nih.gov/ns/archiving/1.4/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:mml=\"http://www.w3.org/1998/Math/MathML\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns:ali=\"http://www.niso.org/schemas/ali/1.0/\" xsi:schemaLocation=\"https://jats.nlm.nih.gov/ns/archiving/1.4/ https://jats.nlm.nih.gov/archiving/1.4/xsd/JATS-archivearticle1-4.xsd\" article-type=\"research-article\" xml:lang=\"en\" dtd-version=\"1.4\"><front><journal-meta><journal-id journal-id-type=\"nlm-ta\">Biostatistics</journal-id><journal-id journal-id-type=\"pmc-domain-id\">717</journal-id><journal-id journal-id-type=\"pmc-domain\">biosts</journal-id><journal-id journal-id-type=\"nlm-id\">100897327</journal-id><journal-id journal-id-type=\"publisher-id\">biosts</journal-id><journal-title-group><journal-title xml:lang=\"en\">Biostatistics (Oxford, England)</journal-title></journal-title-group><issn pub-type=\"ppub\">1465-4644</issn><issn pub-type=\"epub\">1468-4357</issn><publisher><publisher-name>Oxford University Press</publisher-name></publisher></journal-meta><article-meta><article-id pub-id-type=\"pmcid\">PMC2830579</article-id><article-id pub-id-type=\"pmcid-ver\">PMC2830579.1</article-id><article-id pub-id-type=\"pmcaid\">2830579</article-id><article-id pub-id-type=\"pmcaiid\">2830579</article-id><article-id pub-id-type=\"pmid\">20097884</article-id><article-id pub-id-type=\"doi\">10.1093/biostatistics/kxp059</article-id><article-version article-version-type=\"pmc-version\">1</article-version><article-categories><subj-group subj-group-type=\"heading\"><subject>Articles</subject></subj-group></article-categories><title-group><article-title>Frozen robust multiarray analysis (fRMA)</article-title></title-group><contrib-group><contrib contrib-type=\"author\"><name name-style=\"western\"><surname>McCall</surname><given-names initials=\"MN\">Matthew N.</given-names></name></contrib></contrib-group><aff>Department of Biostatistics, Johns Hopkins University, Baltimore, MD 21205, USA</aff><contrib-group><contrib contrib-type=\"author\"><name name-style=\"western\"><surname>Bolstad</surname><given-names initials=\"BM\">Benjamin M.</given-names></name></contrib></contrib-group><aff>Affymetrix, Santa Clara, CA 95051, USA</aff><contrib-group><contrib contrib-type=\"author\"><name name-style=\"western\"><surname>Irizarry</surname><given-names initials=\"RA\">Rafael A.</given-names></name><xref ref-type=\"corresp\" rid=\"cor1\">*</xref></contrib></contrib-group><aff>Department of Biostatistics, Johns Hopkins University, Baltimore, MD 21205, USA <email>rafa@jhu.edu</email></aff><author-notes><corresp id=\"cor1\"><label>*</label>To whom correspondence should be addressed.</corresp></author-notes><pub-date pub-type=\"ppub\"><month>4</month><year>2010</year></pub-date><pub-date pub-type=\"epub\"><day>22</day><month>1</month><year>2010</year></pub-date><volume>11</volume><issue>2</issue><issue-id pub-id-type=\"pmc-issue-id\">185359</issue-id><fpage>242</fpage><lpage>253</lpage><history><date date-type=\"received\"><day>22</day><month>5</month><year>2009</year></date><date date-type=\"rev-recd\"><day>6</day><month>11</month><year>2009</year></date><date date-type=\"accepted\"><day>8</day><month>12</month><year>2009</year></date></history><pub-history><event event-type=\"pmc-release\"><date><day>01</day><month>04</month><year>2011</year></date></event><event event-type=\"pmc-live\"><date><day>01</day><month>04</month><year>2011</year></date></event><event event-type=\"pmc-released-under-embargo\"><date><day>01</day><month>02</month><year>2011</year></date></event><event event-type=\"pmc-last-change\"><date iso-8601-date=\"2013-04-03 21:13:23.867\"><day>03</day><month>04</month><year>2013</year></date></event></pub-history><permissions><copyright-statement>&#169; The Author 2010. Published by Oxford University Press. All rights reserved. For permissions, please e-mail: journals.permissions@oxfordjournals.org.</copyright-statement><copyright-year>2010</copyright-year></permissions><self-uri content-type=\"pmc-pdf\" xlink:href=\"kxp059.pdf\"/><abstract><p>Robust multiarray analysis (RMA) is the most widely used preprocessing algorithm for Affymetrix and Nimblegen gene expression microarrays. RMA performs background correction, normalization, and summarization in a modular way. The last 2 steps require multiple arrays to be analyzed simultaneously. The ability to borrow information across samples provides RMA various advantages. For example, the summarization step fits a parametric model that accounts for probe effects, assumed to be fixed across arrays, and improves outlier detection. Residuals, obtained from the fitted model, permit the creation of useful quality metrics. However, the dependence on multiple arrays has 2 drawbacks: (1) RMA cannot be used in clinical settings where samples must be processed individually or in small batches and (2) data sets preprocessed separately are not comparable. We propose a preprocessing algorithm, frozen RMA (fRMA), which allows one to analyze microarrays individually or in small batches and then combine the data for analysis. This is accomplished by utilizing information from the large publicly available microarray databases. In particular, estimates of probe-specific effects and variances are precomputed and frozen. Then, with new data sets, these are used in concert with information from the new arrays to normalize and summarize the data. We find that fRMA is comparable to RMA when the data are analyzed as a single batch and outperforms RMA when analyzing multiple batches. The methods described here are implemented in the R package fRMA and are currently available for download from the software section of <ext-link ext-link-type=\"uri\" xlink:href=\"http://rafalab.jhsph.edu\">http://rafalab.jhsph.edu</ext-link>.</p></abstract><kwd-group><kwd>Affymetrix</kwd><kwd>ArrayExpress</kwd><kwd>GEO</kwd><kwd>Microarray</kwd><kwd>Preprocessing</kwd><kwd>Single-array</kwd></kwd-group><custom-meta-group><custom-meta><meta-name>pmc-status-qastatus</meta-name><meta-value>0</meta-value></custom-meta><custom-meta><meta-name>pmc-status-live</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-status-embargo</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-status-released</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-open-access</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-olf</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-manuscript</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-legally-suppressed</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-has-pdf</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-has-supplement</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-pdf-only</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-suppress-copyright</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-is-real-version</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-is-scanned-article</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-preprint</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-in-epmc</meta-name><meta-value>yes</meta-value></custom-meta></custom-meta-group></article-meta></front></article>\n        \n    </metadata>\n</record>\n    </GetRecord>\n\n</OAI-PMH>",
+   "headers": {
+    "content-type": "application/xml; charset=utf-8"
+   },
+   "status": 200
+  }
+ }
+]

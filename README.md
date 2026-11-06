@@ -73,7 +73,7 @@ route against the live services.
 
 People and agents use the CLI; no project consumers are established yet.
 
-## Europe PMC
+## Europe PMC and PubMed
 
 ```sh
 uv run quarry search --in europepmc --since 2024-01-01 -n 10 "bioinformatics software"
@@ -81,13 +81,18 @@ uv run quarry show europepmc:MED/22253597
 uv run quarry show pmc:PMC3257301
 uv run quarry show ppr:PPR404258
 uv run quarry files pmc:PMC3257301 --acquisition
+uv run quarry show pubmed:29401521
+uv run quarry files pubmed:29401521 --acquisition
+uv run quarry files pubmed:29401521 --file "*.bioc.json" --acquisition
 ```
 
 Europe PMC searches the whole index and stays outside default search sets.
 Primary ids preserve the index's source/id pair (`europepmc:MED/22253597`), so
 search results round-trip through Europe PMC. Canonical source identifiers remain
 cross-references: MED → `pubmed`, PMC → `pmc`, PPR → `ppr`, AGR → `agricola`,
-CBA → `cba`, CTX → `citexplore`. `pubmed:` lookups still use PubMed.
+CBA → `cba`, CTX → `citexplore`. `pubmed:` lookups use PubMed (`ncbi-eutils`
+`esummary.fcgi` plus `ncbi-pmc-oai` `GetRecord` `metadataPrefix=pmc_fm` when an
+unversioned `pmc:` cross-reference is present).
 `pmc:` and `ppr:` aliases use Europe PMC and return its provider-qualified id.
 Version-specific PMC inputs are refused until that lookup is supported.
 Invalid mapped identifiers fail with `upstream_failed`; `--allow-partial` discards
@@ -95,28 +100,44 @@ that resource's rows, records failed coverage, and preserves other resources' re
 
 Literature availability uses four shared concepts under `domain_fields.core`:
 
-| Key | Europe PMC field | Meaning |
-| --- | --- | --- |
-| `open_access` | `isOpenAccess` | Reporting resource's OA designation |
-| `in_epmc` | `inEPMC` | Full text present in the Europe PMC archive |
-| `in_pmc` | `inPMC` | Full text present in the PMC archive |
-| `license` | `license` | Reporting resource's exact licence text |
+| Key | Europe PMC field | PubMed (`esummary` + `pmc_fm`) | Meaning |
+| --- | --- | --- | --- |
+| `open_access` | `isOpenAccess` | `pmc-prop-open-access` (`yes`→`Y`, `no`→`N`) | Reporting resource's OA designation |
+| `in_epmc` | `inEPMC` | `pmc-prop-in-epmc` (`yes`→`Y`, `no`→`N`) | Full text present in the Europe PMC archive |
+| `in_pmc` | `inPMC` | `esummary` `pmc:` cross-reference / `pmc_fm` record | Full text present in the PMC archive |
+| `license` | `license` | `pmc-license-ref` | Reporting resource's exact licence text |
 
 The result's `resource` names the reporter. Values retain upstream spelling:
 flags remain Y/N strings and licences are not converted to SPDX identifiers.
 Missing or null values are omitted and mean unknown; malformed values fail.
-Search emits available lite metadata; show/files use core metadata for licences.
+On Europe PMC, search emits available lite metadata and show/files use core metadata
+for licences. On PubMed, `search` sets only `in_pmc` (`Y` or `N`) from `esummary.fcgi`
+without per-hit OAI-PMH requests; `show` and `files` query `ncbi-pmc-oai` (`pmc_fm`,
+throttled at `0.34s` per process with no concurrent requests) for unversioned
+`pmc:PMC[0-9]+` cross-references. When a PubMed record has no `pmc:` cross-reference
+(or `pmc_fm` returns `idDoesNotExist`), `domain_fields.core` sets `in_pmc: N` and omits
+`open_access`, `in_epmc`, and `license`; when `esummary.fcgi` carries a valid versioned
+`pmc:PMC[0-9]+\.[0-9]+` cross-reference, `xrefs` preserves it and `domain_fields.core`
+sets `in_pmc: Y` while skipping `ncbi-pmc-oai` and withholding file locators.
 Pretty show labels known fields, and ordinary file listings carry optional `license`.
 Archive presence is not retrieval permission, and OA is the reporter's designation,
 not an independent licence judgment. These core concepts can be supplied by other
 adapters when supported; equivalent upstream definitions are not assumed.
 
-Files currently list only PMC XML with `open_access=Y`, `in_epmc=Y` and a valid
-unversioned PMCID. Europe PMC has returned generic HTTP 500 for non-OA fullTextXML
-requests; quarry omits ineligible routes without probing article bytes. Empty files
-means no eligible PMC XML route: preprint full text, publisher PDFs, supplements,
-books and other copies are outside this inventory. OA metadata does not guarantee
-route uptime. `--acquisition` retains its existing schema without a licence field;
+On `europepmc`, `files` lists `<PMCID>.xml` (`www.ebi.ac.uk` `fullTextXML`) when
+`open_access=Y`, `in_epmc=Y`, and `pmcid` is an unversioned `PMC[0-9]+`. On `pubmed`,
+`files` lists `<PMCID>.xml` (NCBI E-utilities `efetch.fcgi?db=pmc&id=<PMCID>&retmode=xml`,
+media type application/xml) and `<PMCID>.bioc.json` (NCBI PubTator3
+`pmc_export/biocjson?pmcids=<PMCID>`, media type application/json, which fails closed with HTTP 400
+on non-OA records) when `open_access=Y` (`pmc-prop-open-access=yes`), `in_pmc=Y`,
+`pmc-status-embargo=no`, `pmc-prop-pdf-only=no`, and `pmcid` is an unversioned `PMC[0-9]+`
+(excluding non-OA NIH author manuscripts in OAI set `pmc-open` where
+`pmc-prop-open-access=no`). `quarry` omits ineligible routes without probing article bytes.
+Empty files means no eligible full-text route: preprint full text, publisher PDFs,
+supplements, books and other copies are outside this inventory. OA metadata does not
+guarantee route uptime or that PubTator3 (which updates weekly) has already indexed a newly
+released OA article. `--acquisition` retains its existing schema without a licence field;
+use `--file "*.xml"` or `--file "*.bioc.json"` on `pubmed` to select one representation, and
 retain the ordinary listing for licence metadata. Empty selections raise `no_files`.
 
 Phrase queries disable synonym expansion, combine phrases with OR and inclusive

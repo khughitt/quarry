@@ -55,6 +55,7 @@ PROBES: dict[tuple[str, str], Probe] = {
     ("zenodo", "https://zenodo.org/api"): search_one(MYELOMA_SINCE),
     ("figshare", "https://api.figshare.com/v2"): search_one(MYELOMA_SINCE),
     ("pubmed", "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"): search_one(SMOLDERING),
+    ("pubmed", "https://pmc.ncbi.nlm.nih.gov/api/oai/v1/mh"): files(Curie("pubmed", "29401521")),
     ("europepmc", "https://www.ebi.ac.uk/europepmc/webservices/rest"): search_one(SMOLDERING),
     ("go", "https://www.ebi.ac.uk/ols4/api/ontologies/go"): terms(Curie("go", "0006915"), "apoptotic process"),
     ("uberon", "https://www.ebi.ac.uk/ols4/api/ontologies/uberon"): terms(Curie("uberon", "0000948"), "heart"),

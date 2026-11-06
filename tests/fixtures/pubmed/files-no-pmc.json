@@ -1,0 +1,30 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "db",
+     "pubmed"
+    ],
+    [
+     "id",
+     "20079422"
+    ],
+    [
+     "retmode",
+     "json"
+    ]
+   ],
+   "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+  },
+  "response": {
+   "body": "{\"header\":{\"type\":\"esummary\",\"version\":\"0.3\"},\"result\":{\"uids\":[\"20079422\"],\"20079422\":{\"uid\":\"20079422\",\"pubdate\":\"2010 Mar\",\"epubdate\":\"2010 Jan 14\",\"source\":\"Genomics\",\"authors\":[{\"name\":\"Kauffmann A\",\"authtype\":\"Author\",\"clusterid\":\"\"},{\"name\":\"Huber W\",\"authtype\":\"Author\",\"clusterid\":\"\"}],\"lastauthor\":\"Huber W\",\"title\":\"Microarray data quality control improves the detection of differentially expressed genes.\",\"sorttitle\":\"microarray data quality control improves the detection of differentially expressed genes\",\"volume\":\"95\",\"issue\":\"3\",\"pages\":\"138-42\",\"lang\":[\"eng\"],\"nlmuniqueid\":\"8800135\",\"issn\":\"0888-7543\",\"essn\":\"1089-8646\",\"pubtype\":[\"Journal Article\",\"Research Support, Non-U.S. Gov't\",\"Review\"],\"recordstatus\":\"PubMed - indexed for MEDLINE\",\"pubstatus\":\"256\",\"articleids\":[{\"idtype\":\"pubmed\",\"idtypen\":1,\"value\":\"20079422\"},{\"idtype\":\"doi\",\"idtypen\":3,\"value\":\"10.1016/j.ygeno.2010.01.003\"},{\"idtype\":\"pii\",\"idtypen\":4,\"value\":\"S0888-7543(10)00004-2\"}],\"history\":[{\"pubstatus\":\"received\",\"date\":\"2009/11/12 00:00\"},{\"pubstatus\":\"accepted\",\"date\":\"2010/01/08 00:00\"},{\"pubstatus\":\"entrez\",\"date\":\"2010/01/19 06:00\"},{\"pubstatus\":\"pubmed\",\"date\":\"2010/01/19 06:00\"},{\"pubstatus\":\"medline\",\"date\":\"2010/07/02 06:00\"}],\"references\":[],\"attributes\":[\"Has Abstract\"],\"pmcrefcount\":\"\",\"fulljournalname\":\"Genomics\",\"elocationid\":\"doi: 10.1016/j.ygeno.2010.01.003\",\"doctype\":\"citation\",\"srccontriblist\":[],\"booktitle\":\"\",\"medium\":\"\",\"edition\":\"\",\"publisherlocation\":\"\",\"publishername\":\"\",\"srcdate\":\"\",\"reportnumber\":\"\",\"availablefromurl\":\"\",\"locationlabel\":\"\",\"doccontriblist\":[],\"docdate\":\"\",\"bookname\":\"\",\"chapter\":\"\",\"sortpubdate\":\"2010/03/01 00:00\",\"sortfirstauthor\":\"Kauffmann A\",\"vernaculartitle\":\"\"}}}\n",
+   "headers": {
+    "content-type": "application/json; charset=UTF-8"
+   },
+   "status": 200
+  }
+ }
+]
