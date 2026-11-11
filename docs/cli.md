@@ -22,7 +22,9 @@ Domain precedence is `--domain`, then `QUARRY_DOMAIN`, then the `domain`
 value in a caller-created `quarry.toml`, then core. `--config` names a
 specific file. Otherwise quarry searches upward from the working directory,
 or the directory selected with `-C`. The domain selects defaults for search
-and term search. Explicit record/term IDs select their owning resource.
+and term search and determines available filters. Selecting a resource with
+`--in` keeps that domain selection. Explicit record/term IDs select their
+owning resource.
 
 Core defaults to Zenodo and figshare. Biology adds GEO, ENA and BioStudies.
 PubMed and Europe PMC are literature indexes selected with `--in`.
@@ -35,7 +37,7 @@ resource-specific behavior.
 
 ```sh
 uv run quarry search --domain biology -n 10 "multiple myeloma"
-uv run quarry search --in geo --organism ncbitaxon:9606 --since 2024-01-01 "single cell"
+uv run quarry search --domain biology --in geo --organism ncbitaxon:9606 --since 2024-01-01 "single cell"
 uv run quarry search --in pubmed --native 'myeloma[Title]' -n 5 --json
 ```
 
