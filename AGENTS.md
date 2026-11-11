@@ -7,8 +7,8 @@ One CLI and skills over scientific resources, with domains as lenses
 ## Setup
 
 `just setup` links the sibling checkouts, then runs `uv sync --group dev` behind
-work-link. quarry needs `refs` and `nodes` cloned beside this checkout and `just setup`
-run in `refs` first (it writes the registry data copies quarry reads); `just link-siblings`
+work-link. quarry needs `refs` and `nodes` cloned beside this checkout. Run
+`(cd ../refs && just registry-sync)` first to write the registry copies. `just link-siblings`
 fails early when either is missing. Python 3.13 or later,
 uv, and just are required. The checkout uses `.githooks/` via
 `git config core.hooksPath .githooks`.
@@ -54,3 +54,39 @@ with `catalog_invalid` and points at `quarry check`. A new external scheme that 
 lacks goes in refs' shared local schemes (registry/local-schemes.toml there), so a prefix has one grammar everywhere,
 and the catalog lists it under `prefixes`; catalog `local_prefixes` stay supported, with
 patterns in refs' dialect.
+
+## Development
+
+Add a resource TOML and its adapter under the catalog/package layout. Record
+responses through `just record <resource>`, add a smallest probe in
+`tests/live.py`, and use `uv run quarry skills build` to regenerate resource
+notes. Handwritten skill guidance lives outside the marked regions.
+The [CLI guide](docs/cli.md) covers workflows, the [JSON model](docs/output.md)
+defines outputs, and the [literature guide](docs/literature.md) covers eligibility.
+
+## Diagnosing checks
+
+`quarry check --json` reports kind, where and detail for each finding.
+Fix the input named by where, then rerun. Catalog-reading commands refuse
+an invalid catalog and point to this check.
+
+| Finding kinds | Repair |
+| --- | --- |
+| catalog_invalid | Repair TOML syntax, required fields, types, unknown keys or file/id mismatch. |
+| unknown_role, unknown_route_kind, unknown_auth | Use catalog-supported role, route and auth values. |
+| missing_key_env, missing_key_location | Declare the route's credential variable and query/header placement. |
+| missing_adapter, orphan_adapter | Make the resource's module importable and name every shipped adapter. |
+| unknown_prefix, noncanonical_prefix | Use canonical registry spelling and lowercase local declarations. |
+| local_pattern_unsupported | Express the pattern in refs' portable dialect. |
+| local_prefix_in_bioregistry, prefix_owned_twice | Use registry prefixes without shadowing and give each prefix one owner. |
+| pitfall_incomplete | Supply nonempty summary, handling and public evidence. |
+| missing_resource, search_default_outside | List existing resource IDs and include default-search resources locally. |
+| missing_domain, include_cycle | Correct includes and remove inclusion cycles. |
+| unmapped_facet_namespace | Map the facet namespace to a known prefix. |
+
+An ops-docs region mismatch needs `just docs`. Marker/type findings need
+the authored reference corrected. A CLI-surface failure needs the live parser
+and adopted table compared against the authoritative source. An ops-check
+failure names the path or source-owned file to repair. Maintainer
+`tasks check` requires registered task records and diagnoses their links.
+Focused tests run through `just test-one`; fixture-based tests stay offline.

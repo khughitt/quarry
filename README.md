@@ -4,151 +4,59 @@
 quarry gives people and agents one interface to scientific repositories, knowledgebases, identifiers and ontologies, with each resource's pitfalls handled once. Domains (core, biology, later chemistry, physics, astronomy) select what is searched; the commands and their options stay the same in every domain.
 <!-- ops:identity end -->
 
-> **Note:** `quarry` is in early development; CLI commands, catalog schemas, and output formats may change before the first stable release.
+quarry is in early development. Commands, catalog schemas and output formats
+may change before the first stable release.
 
 ## Setup
 
-Run `just setup` in a checkout to install Python dependencies. Python 3.13 or later,
-uv, and just are required. quarry takes its identifier registry from the `refs` library,
-which needs the `refs` and `nodes` checkouts cloned beside this one, and `just setup` run
-in `refs` first so that it writes its registry data (without it every quarry command fails
-reading that data).
+Use Python 3.13 or later, uv, just and Git. Clone the three public repositories
+as siblings. The refs registry supplies quarry's identifier data.
+
+```sh
+git clone https://github.com/verifiably/nodes.git
+git clone https://github.com/verifiably/refs.git
+git clone https://github.com/khughitt/quarry.git
+cd quarry
+(cd ../refs && just registry-sync)
+just setup
+```
 
 ## Usage
 
 ```sh
-uv run quarry --version
-uv run quarry --help
-uv run quarry help
+uv run quarry domains list
 uv run quarry resources list --domain biology
-uv run quarry search --domain biology "multiple myeloma"
-uv run quarry search --domain biology --in geo --in ena --in biostudies --organism "Homo sapiens" "multiple myeloma"
-uv run quarry search --in pubmed --since 2024-01-01 "smoldering myeloma"
+uv run quarry search --in geo -n 5 "multiple myeloma"
 uv run quarry show geo:GSE24080
 uv run quarry files geo:GSE24080
-uv run quarry files zenodo.record:21628233 --file "*.zip" --acquisition
-uv run quarry term search --in go apoptotic process
-uv run quarry term show uberon:0000948
-uv run quarry term ancestors go:0006915
-uv run quarry skills build
+uv run quarry term search heart --in uberon
 ```
 
-The root command accepts `--json` and `--pretty` to choose output mode.
-`QUARRY_FORMAT` sets the default to `json` or `pretty`.
+Core and biology are the shipped domains. A biology search includes GEO,
+ENA and BioStudies plus Zenodo and figshare from core. PubMed and Europe PMC
+are selected explicitly with `--in`.
 
-The first version's repositories are GEO, ENA and BioStudies (biology) and Zenodo and
-figshare (core), with PubMed and Europe PMC as literature indexes named with `--in`. A biology search
-covers all five repositories. A default-set repository that cannot express the query's
-filter or matching mode (`--organism` on Zenodo and figshare, `--exact` on BioStudies) is
-skipped, with a `skipped` coverage row giving the reason and a warning; one named with `--in`
-is refused instead, and a search with nothing left to run fails.
-`--organism` takes a taxon name or an `ncbitaxon:` CURIE and includes every taxon below it.
-ENA resolves a name to one taxon first and refuses a name that names none or several, listing
-the CURIEs to pass instead. BioStudies matches its organism label only: the report warns so for
-a name, and a CURIE skips it from a default set.
-A listing shorter than the resource's reported total fails rather than returning part of
-the answer, and `-n` limits the results explicitly, reporting the coverage as `limited` when
-it cuts the listing short.
-`files` lists a record's files with every location the
-resource gives; `files --acquisition` prints the request the kernel's acquisition takes
-(title, `accession:<CURIE>` locator, one http(s) URL per file). quarry downloads no bytes:
-`files --acquisition` emits the kernel's request only.
-`term search|show|ancestors` read ontology terms through OLS4 (GO, UBERON, NCBITaxon), and
-`skills build` regenerates the resource notes in `skills/`. `just live` probes every catalog
-route against the live services.
+The [CLI guide](docs/cli.md) covers filtering, identifiers, terms and file
+selection. See the [JSON model](docs/output.md) for automation and the
+[literature guide](docs/literature.md) for publication metadata and full-text
+locators. [AGENTS.md](AGENTS.md) describes development and verification.
+Agent instructions and catalog-generated resource notes live in
+[skills/](skills/quarry/SKILL.md).
 
 ## Layout
 
-- `src/quarry/`: the Python package.
-- `src/quarry/catalog/`: resources and domains. The registry comes from refs.
-- `src/quarry/adapters/`: one module per resource, plus `eutils.py` shared by GEO and PubMed.
-- `tests/fixtures/`: recorded resource responses for offline tests.
-- `tests/recordings/`: live recording scenarios, refreshed with `just record <resource>`.
-- `tests/live.py`: one probe per catalog route, run by `just live`.
-- `skills/`: agent skills, with resource notes generated by `quarry skills build`.
-- `tools/`: gate and timing tools vendored from ops.
-- Task records live in the records root (`tasks where` names it).
+- `src/quarry/` holds the CLI, adapters and TOML catalog.
+- `tests/fixtures/` contains recorded responses for offline tests.
+- `tests/recordings/` defines the opt-in fixture-refresh scenarios.
+- `skills/` holds agent guidance with generated resource notes.
+- `tools/` contains source-owned shared tooling.
 
 ## Consumers
 
-People and agents use the CLI; no project consumers are established yet.
-
-## Europe PMC and PubMed
-
-```sh
-uv run quarry search --in europepmc --since 2024-01-01 -n 10 "bioinformatics software"
-uv run quarry show europepmc:MED/22253597
-uv run quarry show pmc:PMC3257301
-uv run quarry show ppr:PPR404258
-uv run quarry files pmc:PMC3257301 --acquisition
-uv run quarry show pubmed:29401521
-uv run quarry files pubmed:29401521 --acquisition
-uv run quarry files pubmed:29401521 --file "*.bioc.json" --acquisition
-```
-
-Europe PMC searches the whole index and stays outside default search sets.
-Primary ids preserve the index's source/id pair (`europepmc:MED/22253597`), so
-search results round-trip through Europe PMC. Canonical source identifiers remain
-cross-references: MED → `pubmed`, PMC → `pmc`, PPR → `ppr`, AGR → `agricola`,
-CBA → `cba`, CTX → `citexplore`. `pubmed:` lookups use PubMed (`ncbi-eutils`
-`esummary.fcgi` plus `ncbi-pmc-oai` `GetRecord` `metadataPrefix=pmc_fm` when an
-unversioned `pmc:` cross-reference is present).
-`pmc:` and `ppr:` aliases use Europe PMC and return its provider-qualified id.
-Version-specific PMC inputs are refused until that lookup is supported.
-Invalid mapped identifiers fail with `upstream_failed`; `--allow-partial` discards
-that resource's rows, records failed coverage, and preserves other resources' results.
-
-Literature availability uses four shared concepts under `domain_fields.core`:
-
-| Key | Europe PMC field | PubMed (`esummary` + `pmc_fm`) | Meaning |
-| --- | --- | --- | --- |
-| `open_access` | `isOpenAccess` | `pmc-prop-open-access` (`yes`→`Y`, `no`→`N`) | Reporting resource's OA designation |
-| `in_epmc` | `inEPMC` | `pmc-prop-in-epmc` (`yes`→`Y`, `no`→`N`) | Full text present in the Europe PMC archive |
-| `in_pmc` | `inPMC` | `esummary` `pmc:` cross-reference / `pmc_fm` record | Full text present in the PMC archive |
-| `license` | `license` | `pmc-license-ref` | Reporting resource's exact licence text |
-
-The result's `resource` names the reporter. Values retain upstream spelling:
-flags remain Y/N strings and licences are not converted to SPDX identifiers.
-Missing or null values are omitted and mean unknown; malformed values fail.
-On Europe PMC, search emits available lite metadata and show/files use core metadata
-for licences. On PubMed, `search` sets only `in_pmc` (`Y` or `N`) from `esummary.fcgi`
-without per-hit OAI-PMH requests; `show` and `files` query `ncbi-pmc-oai` (`pmc_fm`,
-throttled at `0.34s` per process with no concurrent requests) for unversioned
-`pmc:PMC[0-9]+` cross-references. When a PubMed record has no `pmc:` cross-reference
-(or `pmc_fm` returns `idDoesNotExist`), `domain_fields.core` sets `in_pmc: N` and omits
-`open_access`, `in_epmc`, and `license`; when `esummary.fcgi` carries a valid versioned
-`pmc:PMC[0-9]+\.[0-9]+` cross-reference, `xrefs` preserves it and `domain_fields.core`
-sets `in_pmc: Y` while skipping `ncbi-pmc-oai` and withholding file locators.
-Pretty show labels known fields, and ordinary file listings carry optional `license`.
-Archive presence is not retrieval permission, and OA is the reporter's designation,
-not an independent licence judgment. These core concepts can be supplied by other
-adapters when supported; equivalent upstream definitions are not assumed.
-
-On `europepmc`, `files` lists `<PMCID>.xml` (`www.ebi.ac.uk` `fullTextXML`) when
-`open_access=Y`, `in_epmc=Y`, and `pmcid` is an unversioned `PMC[0-9]+`. On `pubmed`,
-`files` lists `<PMCID>.xml` (NCBI E-utilities `efetch.fcgi?db=pmc&id=<PMCID>&retmode=xml`,
-media type application/xml) and `<PMCID>.bioc.json` (NCBI PubTator3
-`pmc_export/biocjson?pmcids=<PMCID>`, media type application/json, which fails closed with HTTP 400
-on non-OA records) when `open_access=Y` (`pmc-prop-open-access=yes`), `in_pmc=Y`,
-`pmc-status-embargo=no`, `pmc-prop-pdf-only=no`, and `pmcid` is an unversioned `PMC[0-9]+`
-(excluding non-OA NIH author manuscripts in OAI set `pmc-open` where
-`pmc-prop-open-access=no`). `quarry` omits ineligible routes without probing article bytes.
-Empty files means no eligible full-text route: preprint full text, publisher PDFs,
-supplements, books and other copies are outside this inventory. OA metadata does not
-guarantee route uptime or that PubTator3 (which updates weekly) has already indexed a newly
-released OA article. `--acquisition` retains its existing schema without a licence field;
-use `--file "*.xml"` or `--file "*.bioc.json"` on `pubmed` to select one representation, and
-retain the ordinary listing for licence metadata. Empty selections raise `no_files`.
-
-Phrase queries disable synonym expansion, combine phrases with OR and inclusive
-first-publication dates with AND, and report conservative `match: expanded`.
-`--exact` and organism filtering refuse; unrepresentable literal phrase syntax points
-to `--native`. Native queries pass unchanged, while `-n` still limits output.
-Cursor/count inconsistencies fail instead of claiming a complete listing.
-Abstracts are absent from output, although upstream core responses and replay fixtures
-can contain them. Metadata preflight grants no consumer exposure authorization:
-byte acquisition, in-memory fetching, section isolation and display policy remain
-with the consumer and kernel, outside quarry.
+Automation can request JSON with `--json`. The formats are currently
+unversioned. `files --acquisition` emits a request naming selected files,
+HTTP(S) locations and available SHA-256 expectations. A consuming retrieval
+tool sets its own bounds, retrieves bytes and records provenance.
 
 ## License
 
