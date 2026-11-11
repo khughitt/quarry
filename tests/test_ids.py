@@ -1,4 +1,4 @@
-"""Identifiers: canonical CURIEs from the pinned snapshot (spec §7)."""
+"""Identifiers: canonical CURIEs from the pinned snapshot."""
 import pytest
 import refs.ids
 import refs.registry
@@ -38,14 +38,14 @@ def test_registry_comes_from_refs():
 
 
 def test_non_ascii_digits_are_now_malformed():
-    # The recorded narrowing of refs spec 5.2: Bioregistry's \d patterns are ASCII under refs' dialect.
+    # Bioregistry's \d patterns are ASCII under refs' dialect.
     with pytest.raises(QuarryError) as caught:
         ids.parse("pubmed:\u0661\u0662\u0663", REG)
     assert caught.value.kind == "malformed"
 
 
 def test_a_refused_prefix_says_what_refs_refuses():
-    # Ten Bioregistry patterns have no dialect form; every id under them is refused (refs spec 4.1).
+    # Ten Bioregistry patterns have no dialect form; every id under them is refused.
     with pytest.raises(QuarryError) as caught:
         ids.parse("wikipedia.en:Myeloma", REG)
     assert caught.value.kind == "unsupported_pattern"
@@ -114,7 +114,7 @@ def test_check_ids_reports_each_bad_id():
 
 
 def test_bare_accession_matches_owned_prefixes_only():
-    # ena.embl's pattern matches nearly any accession, so it is never owned (spec §7).
+    # ena.embl's pattern matches nearly any accession, so it is never owned.
     assert str(ids.normalize("GSE24080", REG, ["geo", "bioproject", "insdc.sra"])) == "geo:GSE24080"
     assert str(ids.normalize("GEO:GSE24080", REG, [])) == "geo:GSE24080"
 

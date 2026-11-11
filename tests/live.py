@@ -1,5 +1,5 @@
 """Live checks: `just live` makes the smallest real request on every catalog route and
-reports each one. Opt-in and never part of a test run (spec §12); it reports, it does not gate."""
+reports each one. Opt-in and never part of a test run; it reports, it does not gate."""
 import sys
 from collections.abc import Callable
 from datetime import date

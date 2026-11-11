@@ -213,7 +213,7 @@ def test_adapter_warnings_reach_the_report_but_not_the_coverage_object(catalog):
 
 @pytest.fixture
 def mixed(make_catalog):
-    """A default set holding one resource that cannot express --organism or --exact (spec §8.2)."""
+    """A default set holding one resource that cannot express --organism or --exact."""
     fakes = {rid: FAKE.format(id=rid, role="repository", prefix="") for rid in ("alpha", "expanding")}
     return make_catalog(fakes, ["alpha", "expanding"], ["alpha", "expanding"])
 

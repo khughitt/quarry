@@ -13,7 +13,7 @@
 # Every recipe runs through the vendored timing wrapper so the run is recorded. The
 # wrapper counts tests from stdout; if the runner reports on stderr (python unittest
 # does), end that command with `2>&1`.
-# Design: ops docs/specs/2026-09-04-test-ci-audit-design.md, docs/specs/2026-09-28-test-ci-act-design.md.
+# References: ops docs/tooling.md and docs/test-execution-policy.md.
 # Recipe lines are not echoed: the wrapper records every command it runs, `tasks check`
 # is silent when clean, and a clean commit should print nothing. `just --verbose` shows them.
 set quiet
@@ -60,7 +60,7 @@ ci_remote := "origin"
 #   node       --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=\"${TT_JUNIT_DIR:?run through tt}/node.xml\"
 #   playwright PLAYWRIGHT_JUNIT_OUTPUT_FILE=\"${TT_JUNIT_DIR:?run through tt}/playwright.xml\" before the command, --reporter=<current>,junit
 #   unittest   --durations 10 (printed; no JUnit writer)
-# The \" are justfile string escapes. Design: ops docs/specs/2026-10-08-tt-content-and-slowest-design.md §4.3.
+# The \" are justfile string escapes. Reference: ops docs/test-execution-policy.md.
 one_cmd := "uv run pytest"
 
 # What a fresh checkout or worktree needs before the suite can run: dependency installs
@@ -131,10 +131,10 @@ docs:
 # quarry depends on ../refs, and refs on ../../nodes, by path. In a worktree the
 # siblings are not beside it, so link them into .worktrees/ (where refs' relative path to
 # nodes also lands), pointing at the siblings of the main checkout. In the main
-# checkout this only checks that they exist and that refs' own setup has written its
+# checkout this only checks that they exist and that refs' registry-sync has written its
 # registry data (without it every quarry command fails reading that data).
 link-siblings:
-    {{tt}} link-siblings -- sh -c 'common="$(git rev-parse --git-common-dir)"; for name in refs nodes; do if [ "$common" != ".git" ]; then main="$(cd "$common/.." && pwd -P)"; target="$main/../$name"; link="../$name"; if [ -L "$link" ] && [ "$(readlink "$link")" = "$target" ]; then :; elif [ -e "$link" ]; then echo "setup: $link exists and is not a link to $target" >&2; exit 1; else ln -s "$target" "$link"; fi; fi; test -f "../$name/python/pyproject.toml" || { echo "setup: ../$name/python not found; clone $name beside this checkout" >&2; exit 1; }; done; test -f ../refs/python/src/refs/data/bioregistry.json || { echo "setup: ../refs has no registry data; run just setup in ../refs" >&2; exit 1; }'
+    {{tt}} link-siblings -- sh -c 'common="$(git rev-parse --git-common-dir)"; for name in refs nodes; do if [ "$common" != ".git" ]; then main="$(cd "$common/.." && pwd -P)"; target="$main/../$name"; link="../$name"; if [ -L "$link" ] && [ "$(readlink "$link")" = "$target" ]; then :; elif [ -e "$link" ]; then echo "setup: $link exists and is not a link to $target" >&2; exit 1; else ln -s "$target" "$link"; fi; fi; test -f "../$name/python/pyproject.toml" || { echo "setup: ../$name/python not found; clone $name beside this checkout" >&2; exit 1; }; done; test -f ../refs/python/src/refs/data/bioregistry.json || { echo "setup: ../refs has no registry data; run (cd ../refs && just registry-sync)" >&2; exit 1; }'
 
 # Ask work-link to put the named generated directories (.venv, target; never
 # node_modules) off the synced tree behind in-tree links. Absent command: this machine

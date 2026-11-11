@@ -20,7 +20,7 @@ def test_phrases_are_quoted_all_fields_or_clauses():
 
 
 @pytest.mark.parametrize("text", ['the "MM" cohort', "transcript*"])
-def test_phrases_refuse_entrez_syntax(text):        # §8.2: a phrase is literal; a quote or a wildcard would widen it
+def test_phrases_refuse_entrez_syntax(text):        # A phrase is literal; a quote or a wildcard would widen it
     with pytest.raises(QuarryError) as caught:
         eutils.phrases(Query(phrases=(text,)))
     assert caught.value.kind == "unsupported_filter" and "--native" in caught.value.detail

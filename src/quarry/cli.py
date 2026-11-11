@@ -323,7 +323,7 @@ def search_command(ctx, phrases, in_, domain, organism, exact, native, allow_par
 
 
 def _owned(env: context.Env, text: str) -> tuple[idmod.Curie, Resource]:
-    """The CURIE and the data-holding resource that owns its prefix (spec §7)."""
+    """The CURIE and the data-holding resource that owns its prefix."""
     parsed = idmod.parse(text, env.registry)
     owner = env.catalog.owner(parsed.prefix)
     if owner is None:
@@ -368,7 +368,7 @@ def _pretty_files(listed: list[files_mod.File]) -> str:
 @output_options
 @click.argument("curie")
 @click.option("--file", "globs", multiple=True, help="Only files whose name matches this glob; repeatable, widening.")
-@click.option("--acquisition", "as_request", is_flag=True, help="Print the acquisition request the kernel takes (spec §9).")
+@click.option("--acquisition", "as_request", is_flag=True, help="Emit a request for a consumer to retrieve the selected files.")
 @click.pass_context
 @reports_errors
 def files_command(ctx: click.Context, curie: str, globs: tuple[str, ...], as_request: bool) -> None:
@@ -407,7 +407,7 @@ def _term_hint(env: context.Env, roles: frozenset[str]) -> str:
 
 
 def _term_owner(env: context.Env, text: str, roles: frozenset[str]) -> tuple[idmod.Curie, terms_mod.TermAdapter]:
-    """The CURIE and the term adapter of the resource that owns its prefix (spec §7)."""
+    """The CURIE and the term adapter of the resource that owns its prefix."""
     try:
         parsed = idmod.parse(text, env.registry)
     except QuarryError as error:

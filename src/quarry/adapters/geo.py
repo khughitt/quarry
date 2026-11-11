@@ -1,4 +1,4 @@
-"""GEO through E-utilities db=gds (spec §13): phrases become quoted [All Fields] clauses over
+"""GEO through E-utilities db=gds: phrases become quoted [All Fields] clauses over
 series (gse[ETYP]); the brief SOFT text of the accession display supplies files, SuperSeries
 relations and the sample taxon id."""
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""The shared query (spec §8.2): phrases combine with OR, filters with AND; --native replaces
+"""The shared query: phrases combine with OR, filters with AND; --native replaces
 both and carries its own dates, while -n stays quarry's."""
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""What a search returns (spec §8.3): rows with the fields every domain shares, and one
+"""What a search returns: rows with the fields every domain shares, and one
 coverage entry per resource saying what was sent and how complete the answer is."""
 from __future__ import annotations
 

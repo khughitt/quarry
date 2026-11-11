@@ -16,12 +16,12 @@ page_cap = 100
 [[pitfalls]]
 summary = "phrase queries expand through EFO synonyms with no off switch"
 handling = "coverage says match: expanded; --exact refuses BioStudies, so an exact biology search names its resources with --in"
-evidence = "mm-159cb7; the search answer lists expandedEfoTerms and expandedSynonyms"
+evidence = "the search answer lists expandedEfoTerms and expandedSynonyms"
 
 [[pitfalls]]
 summary = "search hits omit the organism"
 handling = "--organism becomes the facet.organism parameter (a taxon name) and every hit then carries it; an ncbitaxon: CURIE skips biostudies from a default set and is refused under --in; show reads the study's Organism attribute"
-evidence = "mm-159cb7 read one facet listing and one filtered pass per organism value"
+evidence = "recorded harvest read one facet listing and one filtered pass per organism value"
 
 [[pitfalls]]
 summary = "totalHits is an estimate on large result sets (isTotalHitsExact: false)"
@@ -31,7 +31,7 @@ evidence = "probe 2026-10-10: 'multiple myeloma' reports 10761 inexact hits"
 [[pitfalls]]
 summary = "E-GEOD-n is the GEO import of GSEn, and S-EPMCn holds a paper's supplementary files"
 handling = "arrayexpress:E-GEOD-n carries a geo:GSEn cross-reference; biostudies:S-EPMCn carries pmc:PMCn as its publication"
-evidence = "mm-159cb7 mapped E-GEOD to geo: for overlap"
+evidence = "recorded harvest mapped E-GEOD to geo: for overlap"
 
 [[pitfalls]]
 summary = "search also returns studies of the BioModels (MODELn, BIOMDn) and EMPIAR (EMPIAR-n) collections"

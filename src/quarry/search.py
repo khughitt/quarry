@@ -1,4 +1,4 @@
-"""Running one search across resources (spec §8.2, §8.3). Every refusal that needs no network
+"""Running one search across resources. Every refusal that needs no network
 happens before the first request."""
 from __future__ import annotations
 

@@ -16,7 +16,7 @@ page_cap = 100
 [[pitfalls]]
 summary = "the search endpoint reports no total"
 handling = "paging ends on the first short page and coverage says complete: short-page"
-evidence = "mm-159cb7"
+evidence = "tests/fixtures/figshare/search-core.json: recorded search responses are result arrays without a total"
 
 [[pitfalls]]
 summary = "published_since and published_until on articles/search are not applied"

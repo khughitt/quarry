@@ -1,7 +1,7 @@
 """The catalog: every resource and domain quarry knows, loaded from TOML and checked.
 
 Loading refuses a file whose shape is wrong (a missing or mistyped key, an unknown key);
-`check` reports what a well-shaped catalog can still get wrong (spec §6)."""
+`check` reports what a well-shaped catalog can still get wrong."""
 from __future__ import annotations
 
 import importlib.util

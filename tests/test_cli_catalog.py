@@ -1,10 +1,12 @@
 """The catalog and id commands, in-process."""
 import json
 import os
+import re
 
 import pytest
 from click.testing import CliRunner
 
+from quarry import catalog as catalog_mod
 from quarry.cli import hoist_globals, main
 
 ALPHA = """
@@ -47,6 +49,16 @@ def test_resources_show_unknown_is_an_error_object():
     out = invoke("--json", "resources", "show", "nope")
     assert out.exit_code == 1 and out.stdout == ""
     assert json.loads(out.stderr)["error"]["kind"] == "unknown_resource"
+
+
+@pytest.mark.parametrize("resource_id", sorted(catalog_mod.load().resources))
+def test_shipped_resource_evidence_is_public(resource_id):
+    out = invoke("--json", "resources", "show", resource_id)
+    assert out.exit_code == 0, out.stderr
+    for pitfall in json.loads(out.stdout)["pitfalls"]:
+        evidence = pitfall["evidence"]
+        assert isinstance(evidence, str) and evidence.strip()
+        assert re.search(r"\b[a-z][a-z0-9-]*-[0-9a-f]{6}\b", evidence) is None
 
 
 def test_check_is_silent_when_clean():

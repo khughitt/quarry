@@ -1,4 +1,4 @@
-"""A record's files (spec §8, §9): what an adapter lists, and how --file narrows the list."""
+"""A record's files: what an adapter lists, and how --file narrows the list."""
 from __future__ import annotations
 
 import fnmatch
@@ -36,7 +36,7 @@ def select(files: list[File], globs: tuple[str, ...]) -> list[File]:
 
 
 def http_url(file: File) -> str | None:
-    """The location the kernel can retrieve: https before http; None when the file has neither."""
+    """The HTTP(S) acquisition location: https before http; None when the file has neither."""
     for scheme in ("https://", "http://"):
         for url in file.urls:
             if url.startswith(scheme):

@@ -1,4 +1,4 @@
-"""Recorded exchanges for tests (spec §12). A request key of method, URL, sorted query and
+"""Recorded exchanges for tests. A request key of method, URL, sorted query and
 body, with credential parameters left out; a replaying transport that answers each recording
 once, in recorded order, and refuses any request it has none left for; and a recording
 transport that scrubs credentials before saving."""

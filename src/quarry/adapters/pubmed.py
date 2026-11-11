@@ -1,4 +1,4 @@
-"""PubMed through E-utilities db=pubmed and PMC OAI-PMH pmc_fm (spec §13): a literature index
+"""PubMed through E-utilities db=pubmed and PMC OAI-PMH pmc_fm: a literature index
 searched live per record; lit owns the snapshot. Phrases are quoted [All Fields] clauses, which
 PubMed still expands."""
 from __future__ import annotations

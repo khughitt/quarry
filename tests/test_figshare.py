@@ -122,7 +122,7 @@ def one(n, body, status=200):
     return exchange("GET", f"{BASE}/articles/{n}", status=status, body=body)
 
 
-def test_show_has_the_description_and_the_two_dois_apart():                 # the §12 pitfall, synthetic
+def test_show_has_the_description_and_the_two_dois_apart():                 # the DOI pitfall, synthetic
     shown = FIG.show(replay_client(ReplayTransport([one(34254439, json.dumps(ARTICLE))])), SUPPLEMENT)
     assert shown.summary == "Logistic regression" and shown.publication == "doi:10.1371/journal.pone.0360063"
     assert shown.xrefs == ("doi:10.1371/journal.pone.0360063.t007",)
@@ -164,7 +164,7 @@ def test_recorded_search_is_bounded_and_short_page():
     assert all(CORE_MYELOMA.since.isoformat() <= r.date <= CORE_MYELOMA.until.isoformat() for r in rows)
 
 
-def test_recorded_supplement_keeps_both_dois_apart_and_lists_its_table(monkeypatch):     # spec §12's pitfall test
+def test_recorded_supplement_keeps_both_dois_apart_and_lists_its_table(monkeypatch):     # recorded pitfall test
     shown = FIG.show(replay("show-supplement"), SUPPLEMENT)
     assert shown.publication == "doi:10.1371/journal.pone.0360063"
     assert "doi:10.1371/journal.pone.0360063.t007" in shown.xrefs

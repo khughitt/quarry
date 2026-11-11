@@ -1,4 +1,4 @@
-"""The one HTTP client (spec §9). A throttle per service and key is shared by every client in
+"""The one HTTP client. A throttle per service and key is shared by every client in
 the process; retries back off and honour Retry-After within a wait budget; redirects are
 followed for GET only, and a credential never leaves its origin or reaches a trace line or an
 error detail. A required-key route refuses to run before transport when its environment

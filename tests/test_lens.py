@@ -1,4 +1,4 @@
-"""Which domain a command uses: flag, then QUARRY_DOMAIN, then quarry.toml, then core (spec §8.1)."""
+"""Which domain a command uses: flag, then QUARRY_DOMAIN, then quarry.toml, then core."""
 from pathlib import Path
 
 import pytest

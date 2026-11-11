@@ -1,4 +1,4 @@
-"""The first version's domains (spec §6, §13): what each searches by default, how bare ids
+"""The first version's domains: what each searches by default, how bare ids
 resolve now that several numeric prefixes are owned, and one core search across recordings."""
 import json
 from pathlib import Path
@@ -98,7 +98,7 @@ def stub_searches(monkeypatch):
 
 
 def test_exact_biology_search_skips_biostudies(stub_searches):
-    """Spec §8.2: a default-set resource that cannot match exactly is left out, never searched loosely;
+    """a default-set resource that cannot match exactly is left out, never searched loosely;
     naming it with --in is refused."""
     out = invoke("search", "--domain", "biology", "--exact", "x")
     assert out.exit_code == 0, out.stderr
@@ -110,7 +110,7 @@ def test_exact_biology_search_skips_biostudies(stub_searches):
 
 
 def test_organism_on_the_biology_default_set_skips_zenodo_and_figshare(stub_searches):
-    """Spec §8.2: Zenodo and figshare sit in biology's search set through core and have no organism,
+    """Zenodo and figshare sit in biology's search set through core and have no organism,
     so --organism leaves them out with a skipped coverage row; naming one with --in is refused."""
     out = invoke("search", "--domain", "biology", "--organism", "Homo sapiens", "x")
     assert out.exit_code == 0, out.stderr
@@ -129,7 +129,7 @@ ENA_API = "https://www.ebi.ac.uk/ena/portal/api"
 
 
 def test_taxon_curie_on_the_biology_default_set_skips_biostudies_and_searches_geo_and_ena(monkeypatch):
-    """Spec 2026-10-11 §3: BioStudies cannot filter by a CURIE, so a default set leaves it out;
+    """BioStudies cannot filter by a CURIE, so a default set leaves it out;
     GEO and ENA run. A BioStudies request would find no recorded exchange and raise."""
     query = Query(phrases=("x",), filters={"organism": "ncbitaxon:10088"})
     q = ena.compile_query(query)

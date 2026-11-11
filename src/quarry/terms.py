@@ -1,5 +1,5 @@
 """Ontology and vocabulary terms: the records `term` commands print and the contract a term
-adapter satisfies (spec §4.3, §8). Ids are canonical CURIEs; OBO-cased and short-form ids that
+adapter satisfies. Ids are canonical CURIEs; OBO-cased and short-form ids that
 a service gives are turned into text for `ids.parse` by `obo_text`."""
 from __future__ import annotations
 

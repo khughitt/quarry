@@ -1,6 +1,6 @@
 """Identifiers as CURIEs, with the registry and the parsing taken from refs: Bioregistry's
 canonical prefixes from refs' pinned snapshot, refs' shared local schemes, and this
-catalog's own local declarations (spec §7). Prefix lookup is case-insensitive and accepts
+catalog's own local declarations. Prefix lookup is case-insensitive and accepts
 synonyms; local ids are kept as given and matched against the prefix's pattern.
 
 Refs raises `RefsError`; this module is the boundary that turns it into `QuarryError`

@@ -1,4 +1,4 @@
-"""BioStudies (spec §13): studies across every collection, ArrayExpress ids under arrayexpress:,
+"""BioStudies: studies across every collection, ArrayExpress ids under arrayexpress:,
 the BioModels and EMPIAR collections under their own archives' prefixes, and the rest under
 biostudies:. Phrases are quoted and ORed in `query`, dates go in the query
 as release_date, the organism is the facet.organism parameter, and totals count only when
@@ -41,7 +41,7 @@ def _quote(text: str) -> str:
 
 def unexpressed(query: Query) -> str | None:
     """facet.organism takes a label, so a taxon CURIE cannot be carried: skipped from a default set,
-    refused under --in (spec 2026-10-11 §3)."""
+    refused under --in."""
     organism = query.filters.get("organism")
     if organism and TAXON.match(organism):
         return f"biostudies filters organisms by name, not {organism}"

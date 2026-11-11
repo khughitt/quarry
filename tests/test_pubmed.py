@@ -389,7 +389,7 @@ def test_exact_refuses_pubmed_by_name(monkeypatch):
     assert out.exit_code == 1 and "pubmed" in json.loads(out.stderr)["error"]["detail"]
 
 
-def test_geo_and_pubmed_share_the_eutils_allowance():                        # spec §12
+def test_geo_and_pubmed_share_the_eutils_allowance():                        # shared E-utilities request budget
     clock, times = VirtualClock(), []
 
     def handle(request):

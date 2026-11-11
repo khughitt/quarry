@@ -23,7 +23,7 @@ class Prepared:
 
 class Adapter(Protocol):
     resource: Resource
-    match: str                 # "exact" or "expanded": how phrases match (spec §8.2)
+    match: str                 # "exact" or "expanded": how phrases match
     filters: frozenset[str]    # the domain filters this adapter can express
 
     def prepare(self, query: Query) -> Prepared:
@@ -32,7 +32,7 @@ class Adapter(Protocol):
 
     def unexpressed(self, query: Query) -> str | None:
         """Why this adapter cannot carry the query's filter values, without I/O; None when it can.
-        Asked only after the filter names passed (spec §8.2), so a default set skips it."""
+        Asked only after the filter names passed, so a default set skips it."""
         ...
 
     def search(self, client: Client, query: Query) -> tuple[Coverage, list[Result]]:

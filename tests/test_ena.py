@@ -1,4 +1,4 @@
-"""ENA: query compilation, recorded searches, and the listing guard (spec §8.2, §8.3)."""
+"""ENA: query compilation, recorded searches, and the listing guard."""
 import json
 from dataclasses import replace
 from datetime import date

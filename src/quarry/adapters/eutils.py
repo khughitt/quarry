@@ -98,7 +98,7 @@ def esearch(client: Client, route: Route, db: str, term: str,
             limit: int | None) -> tuple[int, list[str], tuple[str, ...]]:
     """(count, ids, warnings): every matching id, or the first `limit`, paged by retstart, and a
     sentence for each term Entrez found nothing for or ignored. A count the window cannot hold is
-    refused before anything else is asked (spec §8.3: no silent truncation)."""
+    refused before anything else is asked (no silent truncation)."""
     ids: list[str] = []
     warnings: list[str] = []
     wanted = WINDOW if limit is None else min(limit, WINDOW)

@@ -1,5 +1,5 @@
 """GEO: compilation, synthetic and recorded searches, show with relations, files from the brief
-text, and the credential sentinel through trace, recording and errors (spec §9, §12, §13)."""
+text, and the credential sentinel through trace, recording and errors."""
 import json
 from pathlib import Path
 
@@ -268,6 +268,6 @@ def test_recorded_files_and_acquisition(monkeypatch):
 
 
 def test_organism_compiles_to_the_taxon_subtree_by_id_and_by_name():
-    """Spec 2026-10-11 §3: [ORGN] without :noexp includes subtaxa, so GEO already means the subtree."""
+    """[ORGN] without :noexp includes subtaxa, so GEO already means the subtree."""
     assert geo.compile_query(Query(phrases=("x",), filters={"organism": "ncbitaxon:10088"})).endswith(" AND txid10088[ORGN]")
     assert geo.compile_query(Query(phrases=("x",), filters={"organism": "Mus"})).endswith(' AND "Mus"[ORGN]')

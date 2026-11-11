@@ -1,5 +1,5 @@
 """The shared client: one throttle per service and key across the process, retries within a
-wait budget, credentials that never leave their origin or reach a log (spec §9)."""
+wait budget, credentials that never leave their origin or reach a log."""
 import email.utils
 import json
 from datetime import datetime, timedelta, timezone

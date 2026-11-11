@@ -1,8 +1,6 @@
-"""The request the kernel's acquisition takes (spec §9), built from a record and its files.
-quarry emits it; the kernel retrieves the bytes and mints the dataset. The URL and digest checks
-mirror the kernel's validators (beliefs `holdings/records.py`: `_canonical_url`,
-`require_canonical_digest`) so a request quarry prints is one the kernel takes, and a refusal
-names the file here instead of failing there."""
+"""Static acquisition requests built from a record and its selected files.
+Requests use validated HTTP(S) URLs and optional lowercase SHA-256 digests.
+Refusals name the offending file before a consumer retrieves any bytes."""
 from __future__ import annotations
 
 import ipaddress
@@ -19,7 +17,7 @@ SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _fault(url: str) -> str | None:
-    """Why the kernel would refuse this http(s) URL, or None when it would take it."""
+    """Why this http(s) URL cannot enter an acquisition request, or None when valid."""
     if any(not (0x21 <= ord(c) <= 0x7E) for c in url):
         return "carries whitespace, a control byte or a non-ASCII character (the adapter must percent-encode it)"
     if "#" in url:
@@ -35,7 +33,7 @@ def _fault(url: str) -> str | None:
         return "names no host"
     if parts.netloc.startswith("["):
         try:
-            ipaddress.IPv6Address(parts.hostname)      # urlsplit also lets an IPvFuture literal through; the kernel does not
+            ipaddress.IPv6Address(parts.hostname)      # urlsplit also lets an IPvFuture literal through; acquisition requests do not
         except ValueError:
             return "brackets a host that is not an IPv6 literal"
     if port == 0:
@@ -50,10 +48,10 @@ def _retrievable(file: File) -> str:
     if url is None:
         where = ", ".join(file.urls) or "no location"
         raise QuarryError("unsupported_transport",
-                          f"{file.name} has no http(s) location ({where}); the kernel retrieves over http and https only")
+                          f"{file.name} has no http(s) location ({where}); acquisition requests support http and https only")
     fault = _fault(url)
     if fault:
-        raise QuarryError("unsupported_transport", f"{file.name}: its URL {fault}, which the kernel refuses")
+        raise QuarryError("unsupported_transport", f"{file.name}: its URL {fault}, which acquisition requests refuse")
     return url
 
 

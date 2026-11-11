@@ -1,4 +1,4 @@
-"""ENA portal API, result=study (spec §13); --organism searches the taxon's subtree (tax_tree), a name resolved to its id through ENA's taxonomy first. Phrases compile to exact-equality clauses: a
+"""ENA portal API, result=study; --organism searches the taxon's subtree (tax_tree), a name resolved to its id through ENA's taxonomy first. Phrases compile to exact-equality clauses: a
 wildcard cannot contain '-', '.' or a space and matches substrings. Every search asks the
 count endpoint too, and a listing shorter than the count fails; so does a filereport listing
 fewer run rows than the read_run count names."""
@@ -36,7 +36,7 @@ def _quote(text: str) -> str:
 
 def compile_query(query: Query, taxon: str | None = None) -> str:
     """`taxon` is the id an organism name resolved to (resolve_taxon); a CURIE carries its own.
-    tax_tree reaches the taxon and every taxon below it (spec 2026-10-11 §2)."""
+    tax_tree reaches the taxon and every taxon below it."""
     if query.native is not None:
         return query.native
     terms = " OR ".join(f"study_title={q} OR study_description={q}" for q in map(_quote, query.phrases))
@@ -57,7 +57,7 @@ def compile_query(query: Query, taxon: str | None = None) -> str:
 def _deferred_name(query: Query) -> str | None:
     """The organism name execute resolves before compiling, or None for a CURIE or no organism.
     compile_query then runs only after a request, so every refusal it would make is made here
-    first: each phrase and the name pass _quote (spec §8.2, static refusals precede requests)."""
+    first: each phrase and the name pass _quote (static refusals precede requests)."""
     organism = query.filters.get("organism")
     if not organism or TAXON.match(organism):
         return None

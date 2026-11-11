@@ -13,8 +13,8 @@ prints `{"error": {"kind", "detail"}}` on stderr. Run `quarry <command> --help` 
 - `quarry search "single cell" --in zenodo -n 5` finds records across data-holding resources.
   Each `search` argument is a phrase; phrases are ORed, filters ANDed; quote a multi-word phrase.
 - `quarry show zenodo:123456` shows one record; the prefix names the resource.
-- `quarry files zenodo:123456 --acquisition` prints the acquisition request the kernel takes
-  for the record's files. quarry never downloads; the kernel's acquisition does.
+- `quarry files zenodo:123456 --acquisition` emits a request
+  for a consumer to retrieve the record's selected files.
 - `quarry id normalize PRJNA123456` prints a canonical CURIE; `id check` prints nothing and
   exits 0 when every id is well formed (findings otherwise); `id resolve CURIE` prints the URLs
   that resolve it.

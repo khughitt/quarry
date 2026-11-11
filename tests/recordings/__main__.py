@@ -1,5 +1,5 @@
 """Record live exchanges for one resource: `just record <resource>`. A deliberate act of a
-person or agent, never part of a test run (spec §12)."""
+person or agent, never part of a test run."""
 import importlib
 import os
 import sys

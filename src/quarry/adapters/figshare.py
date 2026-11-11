@@ -1,4 +1,4 @@
-"""figshare (spec §13): dataset items through the POSTed search. No total is reported, so
+"""figshare: dataset items through the POSTed search. No total is reported, so
 paging ends on a short page; the search's date parameters are not applied by the service, so
 quarry orders by published_date and bounds the listing itself."""
 from __future__ import annotations

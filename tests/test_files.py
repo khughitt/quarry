@@ -1,4 +1,4 @@
-"""The files layer and the acquisition request (spec §8, §9), through fake adapters and the CLI."""
+"""The files layer and the acquisition request, through fake adapters and the CLI."""
 import json
 
 import pytest
@@ -68,7 +68,7 @@ def test_build_lowercases_an_uppercase_sha256():
     ([File("z.txt", urls=("https://h:0/x",))], "unsupported_transport", "z.txt"),             # port 0
     ([File("v.txt", urls=("https://[/x",))], "unsupported_transport", "v.txt"),               # unbalanced bracket
     ([File("n.txt", urls=("https://[h]/x",))], "unsupported_transport", "n.txt"),             # bracketed non-IPv6
-    ([File("i.txt", urls=("https://[v1.fe80::a]/x",))], "unsupported_transport", "i.txt"),    # IPvFuture, which the kernel refuses
+    ([File("i.txt", urls=("https://[v1.fe80::a]/x",))], "unsupported_transport", "i.txt"),    # IPvFuture, which acquisition refuses
     ([File("e.txt", urls=("https://h/x%ZZ",))], "unsupported_transport", "e.txt"),            # malformed escape
     ([File("d.txt", urls=("https://h/x",), checksums={"sha256": "garbage"})], "upstream_failed", "d.txt"),
 ])

@@ -1,4 +1,4 @@
-"""Zenodo (spec §13): dataset records through the records API. Phrases are quoted and ORed in
+"""Zenodo: dataset records through the records API. Phrases are quoted and ORed in
 `q`, dates are a publication_date range inside it, pages are 25 with or without a token, and a
 paper is found among the related identifiers."""
 from __future__ import annotations

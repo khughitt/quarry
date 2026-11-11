@@ -1,4 +1,4 @@
-"""The lens: which domain a command uses (spec §8.1)."""
+"""The lens: which domain a command uses."""
 from __future__ import annotations
 
 import tomllib

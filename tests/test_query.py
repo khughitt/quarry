@@ -1,4 +1,4 @@
-"""The shared query: phrases OR, filters AND, --native instead of both (spec §8.2)."""
+"""The shared query: phrases OR, filters AND, --native instead of both."""
 from datetime import date
 
 import pytest

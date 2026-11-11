@@ -16,7 +16,7 @@ page_cap = 1000
 [[pitfalls]]
 summary = "fullTextXML serves the PMC open-access subset; non-OA records have returned generic HTTP 500 rather than 404"
 handling = "list XML only with open_access=Y, in_epmc=Y and an unversioned validated PMCID; never probe article bytes; metadata is not an uptime guarantee"
-evidence = "2026-10-30 sci-d3044e route-500-diagnosis: non-OA 500, OA controls 200; Europe PMC full-text availability documentation: https://groups.google.com/a/ebi.ac.uk/g/epmc-webservices/c/OFOobNm5nRs"
+evidence = "2026-10-30  route-500-diagnosis: non-OA 500, OA controls 200; Europe PMC full-text availability documentation: https://groups.google.com/a/ebi.ac.uk/g/epmc-webservices/c/OFOobNm5nRs"
 
 [[pitfalls]]
 summary = "The file inventory covers only hosted PMC XML, not every article copy or asset"
