@@ -221,6 +221,8 @@ def test_dated_heliophysics_probes_verify_epoch_before_transport(tmp_path, monke
         ("stereo-ssc", "https://stereo-ssc.nascom.nasa.gov/data/ins_data"),
         ("goes-xrs", "https://data.ngdc.noaa.gov/platforms/solar-space-observing-satellites/goes"),
         ("omniweb", "https://spdf.gsfc.nasa.gov/pub/data/omni"),
+        ("swpc-events", "https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports"),
+        ("cdaw-cme", "https://cdaw.gsfc.nasa.gov/CME_list/UNIVERSAL_ver2/text_ver"),
     ):
         with pytest.raises(QuarryError) as caught:
             live.PROBES[key](BoomAdapter(), None)
@@ -394,3 +396,24 @@ def test_silso_and_omniweb_cgi_probes_are_metadata_only_offline():
     ])
     live.PROBES[("omniweb", "https://omniweb.gsfc.nasa.gov/cgi/nx1.cgi")](omni_adapter, replay_client(omni_t))
     assert omni_t.pending == []
+
+
+def test_swpc_current_text_probe_is_head_only_offline():
+    from quarry.adapters import swpc_events
+    from quarry.testing import ReplayTransport, exchange, replay_client
+
+    adapter = swpc_events.make(catalog_mod.load().resources["swpc-events"])
+    t = ReplayTransport([
+        exchange("HEAD", "https://services.swpc.noaa.gov/text/solar-geophysical-event-reports.txt",
+                 status=200, body="", content_type="text/plain"),
+    ])
+    live.PROBES[("swpc-events", "https://services.swpc.noaa.gov/text")](adapter, replay_client(t))
+    assert t.pending == []
+
+    bad_t = ReplayTransport([
+        exchange("HEAD", "https://services.swpc.noaa.gov/text/solar-geophysical-event-reports.txt",
+                 status=200, body="", content_type="text/html"),
+    ])
+    with pytest.raises(QuarryError) as caught:
+        live.PROBES[("swpc-events", "https://services.swpc.noaa.gov/text")](adapter, replay_client(bad_t))
+    assert caught.value.kind == "upstream_failed"

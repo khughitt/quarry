@@ -41,6 +41,10 @@ GOES_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
                      datetime(2025, 1, 16, 0, 0, 0, tzinfo=timezone.utc))
 OMNI_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
                      datetime(2025, 1, 16, 0, 0, 0, tzinfo=timezone.utc))
+SWPC_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
+                     datetime(2025, 1, 16, 0, 0, 0, tzinfo=timezone.utc))
+CDAW_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
+                     datetime(2025, 1, 16, 0, 0, 0, tzinfo=timezone.utc))
 HV_INSTANT = datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc)
 JSOC_SAMPLE_CURIE = Curie("jsoc", "aia.lev1_euv_12s[2025-01-15T00:00:11Z][193]")
 SOAR_SAMPLE_CURIE = Curie("soar", "solo_L1_eui-fsi304-image-short_20250115T000015208")
@@ -236,6 +240,14 @@ def omniweb_cgi_head(adapter, client: Client) -> None:
         raise QuarryError("upstream_failed", f"OMNIWeb CGI HEAD returned unexpected content-type {ct!r}")
 
 
+def swpc_current_text_head(adapter, client: Client) -> None:
+    """HEAD-only metadata probe on current SWPC text route (zero body bytes read under sun controls)."""
+    resp = client.request(adapter.current_route, "HEAD", "solar-geophysical-event-reports.txt")
+    ct = (resp.headers.get("content-type") or "").lower()
+    if "text/plain" not in ct:
+        raise QuarryError("upstream_failed", f"SWPC current text HEAD returned unexpected content-type {ct!r}")
+
+
 def terms(curie: Curie, words: str) -> Probe:
     """One OLS route's three paths: the term (through ancestors), its ancestors, and search."""
     def probe(adapter, client):
@@ -292,6 +304,12 @@ PROBES: dict[tuple[str, str], Probe] = {
     ("silso", "https://www.sidc.be/SILSO/DATA"): silso_manifest_and_head,
     ("omniweb", "https://spdf.gsfc.nasa.gov/pub/data/omni"): dated_search_one(Query(during=OMNI_WINDOW, limit=1)),
     ("omniweb", "https://omniweb.gsfc.nasa.gov/cgi/nx1.cgi"): omniweb_cgi_head,
+    ("swpc-events", "https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports"):
+        dated_search_one(Query(during=SWPC_WINDOW, limit=1)),
+    ("swpc-events", "https://services.swpc.noaa.gov/text"): swpc_current_text_head,
+    ("swpc-events", "sunpy.net.dataretriever.sources.noaa"): local_tool("sunpy.net.dataretriever.sources.noaa"),
+    ("cdaw-cme", "https://cdaw.gsfc.nasa.gov/CME_list/UNIVERSAL_ver2/text_ver"):
+        dated_search_one(Query(during=CDAW_WINDOW, limit=1)),
 }
 
 

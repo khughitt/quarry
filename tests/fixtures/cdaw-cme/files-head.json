@@ -1,0 +1,19 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "HEAD",
+   "query": [],
+   "url": "https://cdaw.gsfc.nasa.gov/CME_list/UNIVERSAL_ver2/text_ver/univ2025_01.txt"
+  },
+  "response": {
+   "body": "",
+   "headers": {
+    "content-length": "6417",
+    "content-type": "text/plain; charset=ISO-8859-1",
+    "last-modified": "Fri, 20 Nov 2026 04:36:01 GMT"
+   },
+   "status": 200
+  }
+ }
+]

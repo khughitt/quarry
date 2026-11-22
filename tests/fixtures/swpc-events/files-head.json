@@ -1,0 +1,19 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "HEAD",
+   "query": [],
+   "url": "https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/solar_region_summaries/2025/01/20250115SRS.txt"
+  },
+  "response": {
+   "body": "",
+   "headers": {
+    "content-length": "946",
+    "content-type": "text/plain; charset=UTF-8",
+    "last-modified": "Wed, 15 Jan 2025 00:30:07 GMT"
+   },
+   "status": 200
+  }
+ }
+]

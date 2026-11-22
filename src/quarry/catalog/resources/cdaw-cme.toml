@@ -1,0 +1,23 @@
+id = "cdaw-cme"
+name = "SOHO LASCO CME catalog (CDAW, version 2)"
+roles = ["knowledgebase"]
+prefixes = ["cdaw-cme"]
+adapter = "quarry.adapters.cdaw_cme"
+
+[[routes]]
+kind = "bulk"
+url = "https://cdaw.gsfc.nasa.gov/CME_list/UNIVERSAL_ver2/text_ver"
+min_interval = 1.0
+service = "cdaw"
+auth = "none"
+reports_total = false
+
+[[pitfalls]]
+summary = "a CME is identified by (date, first-appearance time, central PA) and rows are edited a year or more after the event"
+handling = "monthly files (univYYYY_MM.txt) are the discovery units and carry the file's Last-Modified"
+evidence = "sun phase-1 survey probes/cdaw-cme/04, 06"
+
+[[pitfalls]]
+summary = "the catalog is incomplete by construction (manual identification) and has a separate LASCO data-gap list"
+handling = "consult CDAW's data-gap table before interpreting missing periods; this catalog covers version 2 only"
+evidence = "probes/cdaw-cme/04"
