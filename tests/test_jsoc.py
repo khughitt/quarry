@@ -231,7 +231,9 @@ def test_jsoc_show_files_sums_and_export_safety():
     q_big = Query(phrases=("aia.lev1_euv_12s",), during=WIN, limit=1)
     ds_big = jsoc.compile_record_set(q_big)
     sample_batch = [
-        {"name": "aia.lev1_euv_12s[2025-01-14T23:59:59Z][193]", "t_rec": "2025-01-14T23:59:59Z", "date": "2025-01-24T00:07:47Z"},
+        {"name": f"aia.lev1_euv_12s[2025-01-14T23:59:59Z][{i}]", "t_rec": "2025-01-14T23:59:59Z", "date": "2025-01-24T00:07:47Z"}
+        for i in range(20)
+    ] + [
         {"name": "aia.lev1_euv_12s[2025-01-15T00:00:11Z][193]", "t_rec": "2025-01-15T00:00:11Z", "date": "2025-01-24T00:07:47Z"},
     ]
     t_big = ReplayTransport([
@@ -242,6 +244,47 @@ def test_jsoc_show_files_sums_and_export_safety():
     assert t_big.pending == []
     assert (cov_big.total, cov_big.returned, cov_big.complete) == (None, 1, "limited")
     assert len(rows_big) == 1
+
+
+def test_jsoc_large_during_exact_total_and_silent_truncation():
+    """Review Round 1: native_total > 200 reaching full native listing reports kept total + limited;
+    silent server truncation (fetched < req_n) fails incomplete_listing even when len(kept) >= limit."""
+    adapter = _adapter()
+
+    # 1. native_total=205 (>200), limit=105 -> req_n=205 fetches all native rows; 110 kept > 105 limit
+    # Must report total=110, returned=105, complete="limited" (NOT total=105, complete="total")
+    q_all_fetched = Query(phrases=("aia.lev1_euv_12s",), during=WIN, limit=105)
+    ds = jsoc.compile_record_set(q_all_fetched)
+    all_205 = [
+        {"name": f"aia.lev1_euv_12s[2025-01-14T23:59:59Z][{i}]", "t_rec": "2025-01-14T23:59:59Z", "date": "2025-01-24T00:07:47Z"}
+        for i in range(95)
+    ] + [
+        {"name": f"aia.lev1_euv_12s[2025-01-15T00:00:11Z][{i}]", "t_rec": "2025-01-15T00:00:11Z", "date": "2025-01-24T00:07:47Z"}
+        for i in range(110)
+    ]
+    t_full = ReplayTransport([
+        _summary_exchange(ds, 205),
+        _list_exchange(ds, all_205, n=205),
+    ])
+    cov, rows = adapter.search(replay_client(t_full), q_all_fetched)
+    assert t_full.pending == []
+    assert (cov.total, cov.returned, cov.complete) == (110, 105, "limited")
+    assert len(rows) == 105
+
+    # 2. Silent server truncation: native_total=500, limit=1, req_n=21, upstream returns only 2 rows
+    # Even though len(kept)==1==limit, fetched (2) < req_n (21) MUST fail incomplete_listing
+    q_trunc = Query(phrases=("aia.lev1_euv_12s",), during=WIN, limit=1)
+    short_batch = [
+        {"name": "aia.lev1_euv_12s[2025-01-14T23:59:59Z][193]", "t_rec": "2025-01-14T23:59:59Z", "date": "2025-01-24T00:07:47Z"},
+        {"name": "aia.lev1_euv_12s[2025-01-15T00:00:11Z][193]", "t_rec": "2025-01-15T00:00:11Z", "date": "2025-01-24T00:07:47Z"},
+    ]
+    t_trunc = ReplayTransport([
+        _summary_exchange(ds, 500),
+        _list_exchange(ds, short_batch, n=21),
+    ])
+    with pytest.raises(QuarryError) as caught:
+        adapter.search(replay_client(t_trunc), q_trunc)
+    assert caught.value.kind == "incomplete_listing"
 
 
 def test_jsoc_refusals_and_count_checks():

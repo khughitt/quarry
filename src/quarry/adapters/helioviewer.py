@@ -227,21 +227,16 @@ class Helioviewer:
         requested_at = _iso_utc(query.at)
         instrument = query.filters["instrument"]
         observatory = query.filters.get("observatory")
-        preview_native = urlencode([
-            ("date", requested_at),
-            ("instrument", instrument.strip()),
-            *( [("observatory", observatory.strip())] if observatory is not None else [] ),
-        ])
 
         def execute(client: Client) -> tuple[Coverage, list[Result]]:
-            src_resp = client.request(self.route, "GET", "getDataSources/", accept=frozenset({500}))
+            src_resp = client.request(self.route, "GET", "getDataSources/")
             src_data = _check_json_error(src_resp.text, src_resp.status_code, "getDataSources")
             sources = _collect_sources(src_data)
             chosen = resolve_source(sources, instrument, observatory)
 
             params = {"date": requested_at, "sourceId": str(chosen.source_id)}
             native = urlencode(sorted(params.items()))
-            img_resp = client.request(self.route, "GET", "getClosestImage/", params=params, accept=frozenset({500}))
+            img_resp = client.request(self.route, "GET", "getClosestImage/", params=params)
             payload = _check_json_error(img_resp.text, img_resp.status_code, "getClosestImage")
             if payload is None:
                 raise UpstreamError("helioviewer getClosestImage: expected a JSON object")
@@ -270,7 +265,7 @@ class Helioviewer:
             )
             return Coverage(self.resource.id, native, "none", 1, 1, "total"), [result]
 
-        return Prepared(preview_native, execute)
+        return Prepared(None, execute)
 
     def show(self, client: Client, curie: Curie) -> Result:
         resp = client.request(

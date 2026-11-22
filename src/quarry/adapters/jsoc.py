@@ -430,18 +430,27 @@ class Jsoc:
                     client.request(self.route, "GET", "jsoc_info",
                                    params={"op": "rs_list", "ds": ds, "key": "T_REC,DATE", "R": "1", "n": str(req_n)}).text
                 )
+                fetched = len(raw_rows)
+                if fetched != req_n:
+                    raise QuarryError(
+                        "incomplete_listing",
+                        f"jsoc returned {fetched} of {req_n} requested records (native total {native_total})",
+                    )
                 parsed = [_row_to_result(r) for r in raw_rows]
                 distinct([r for r, _ in parsed])
                 kept = [r for r, t_rec in parsed if query.during.admits("overlap", t_rec, None)]
-                fetched = len(raw_rows)
                 if len(kept) >= query.limit or fetched >= native_total or req_n >= native_total:
                     break
                 req_n = min(native_total, req_n * 2)
             rows = kept[:query.limit]
-            total, complete = trimmed(
-                kept=len(rows), fetched=fetched, native_total=native_total,
-                short_page=(fetched == native_total), limit=query.limit,
-            )
+            if fetched == native_total:
+                total = len(kept)
+                complete = completeness(total=total, returned=len(rows), limit=query.limit, short_page=True)
+            else:
+                total, complete = trimmed(
+                    kept=len(rows), fetched=fetched, native_total=native_total,
+                    short_page=False, limit=query.limit,
+                )
             return Coverage(self.resource.id, ds, match, total, len(rows), complete), rows
 
         return Prepared(ds, execute)

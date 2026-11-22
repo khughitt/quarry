@@ -268,3 +268,40 @@ def test_helioviewer_recorded_aia335_header_jpip_and_errno24():
     with pytest.raises(QuarryError) as caught:
         adapter.show(_replay("show-missing"), Curie("helioviewer", "999999999"))
     assert caught.value.kind == "not_found"
+
+
+def test_helioviewer_retries_transient_500_and_prepared_native_is_none():
+    """Review Round 1: getDataSources/getClosestImage retry transient HTTP 500; Prepared.native is None."""
+    from quarry import search as search_mod
+
+    adapter = _adapter()
+    q = Query(at=INSTANT, filters={"instrument": "AIA 335"})
+
+    # 1. Prepared.native is None because compiling needs getDataSources() to resolve sourceId
+    prepared = adapter.prepare(q)
+    assert prepared.native is None
+
+    # Failed --allow-partial coverage carries native=None (never a fabricated invalid query string)
+    t_fail = ReplayTransport([
+        exchange("GET", f"{BASE}/getDataSources/", status=404, body="not found"),
+    ])
+    report = search_mod.run(
+        catalog=catalog_mod.load(), client=replay_client(t_fail), query=q,
+        resource_ids=["helioviewer"], domain="heliophysics", allow_partial=True, from_defaults=False,
+    )
+    assert report["coverage"][0]["complete"] == "failed"
+    assert report["coverage"][0]["native"] is None
+
+    # 2. Transient HTTP 500 on getDataSources/ and getClosestImage/ retries and succeeds
+    closest_body = {"id": "169781913", "date": "2025-01-14 23:59:49", "name": "AIA 335"}
+    t_retry = ReplayTransport([
+        exchange("GET", f"{BASE}/getDataSources/", status=500, body="temporary error"),
+        _sources_exchange(),
+        exchange("GET", f"{BASE}/getClosestImage/", params={"date": "2025-01-15T00:00:00Z", "sourceId": "14"},
+                 status=500, body="temporary error"),
+        _closest_exchange("2025-01-15T00:00:00Z", 14, closest_body),
+    ])
+    cov, rows = adapter.search(replay_client(t_retry), q)
+    assert t_retry.pending == []
+    assert cov.native == "date=2025-01-15T00%3A00%3A00Z&sourceId=14"
+    assert rows[0].id == "helioviewer:169781913"
