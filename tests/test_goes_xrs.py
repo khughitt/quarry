@@ -178,16 +178,20 @@ def test_files_round_trip():
     assert "/goes18/l2/data/xrsf-l2-avg1m_science/2025/01/" in resolved[0]
 
     # 2. show + files via HEAD (zero NetCDF bytes read; version preserved; no fabricated digest)
-    t = ReplayTransport([
-        exchange(
-            "HEAD", f"{BASE}/{local}", status=200, body="", content_type="application/x-netcdf",
-            headers={"content-length": "299310", "last-modified": "Thu, 08 Oct 2026 22:45:36 GMT"},
-        ),
-    ])
+    head_ex = exchange(
+        "HEAD", f"{BASE}/{local}", status=200, body="", content_type="application/x-netcdf",
+        headers={"content-length": "299310", "last-modified": "Thu, 08 Oct 2026 22:45:36 GMT"},
+    )
+    t_show = ReplayTransport([head_ex])
+    shown = adapter.show(replay_client(t_show), curie)
+    assert t_show.pending == []
+    assert shown.id == f"goes:{local}"
+    assert shown.date == "2026-10-08"
+
+    t = ReplayTransport([head_ex])
     rec, listed = adapter.files(replay_client(t), curie)
     assert t.pending == []
-    assert rec.id == f"goes:{local}"
-    assert rec.date == "2026-10-08"
+    assert rec == shown
     assert rec.domain_fields["heliophysics"]["start"] == "2025-01-15T00:00:00Z"
     assert rec.domain_fields["heliophysics"]["end"] == "2025-01-16T00:00:00Z"
     assert rec.domain_fields["heliophysics"]["version"] == "v2-2-2"
@@ -197,6 +201,15 @@ def test_files_round_trip():
     assert listed[0].media_type == "application/x-netcdf"
     assert listed[0].checksums == {}
     assert http_url(listed[0]) == f"{BASE}/{local}"
+
+    # 2b. HTTP 200 text/html on HEAD fails early as upstream_failed
+    for verb in (adapter.show, adapter.files):
+        t_html = ReplayTransport([
+            exchange("HEAD", f"{BASE}/{local}", status=200, body="", content_type="text/html"),
+        ])
+        with pytest.raises(QuarryError) as caught:
+            verb(replay_client(t_html), curie)
+        assert caught.value.kind == "upstream_failed"
 
     # 3. Guessed processing version (404) -> not_found
     wrong_ver = "goes18/l2/data/xrsf-l2-avg1m_science/2025/01/sci_xrsf-l2-avg1m_g18_d20250115_v2-2-0.nc"
@@ -235,9 +248,11 @@ def test_goes_xrs_recorded_x25_listing_and_head():
     assert all(r.domain_fields["heliophysics"]["start"] == "2025-01-15T00:00:00Z" for r in rows)
     assert all(r.domain_fields["heliophysics"]["end"] == "2025-01-16T00:00:00Z" for r in rows)
 
-    curie = Curie("goes", "goes18/l2/data/xrsf-l2-avg1m_science/2025/01/sci_xrsf-l2-avg1m_g18_d20250115_v2-2-2.nc")
+    curie = Curie(*rows[0].id.split(":", 1))
+    shown = adapter.show(_replay("files-head"), curie)
+    assert shown == rows[0]
     rec, listed = adapter.files(_replay("files-head"), curie)
-    assert rec.id == str(curie)
+    assert rec == shown
     assert listed[0].size == 299310
     assert listed[0].media_type == "application/x-netcdf"
     assert listed[0].checksums == {}

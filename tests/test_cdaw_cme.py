@@ -113,16 +113,20 @@ def test_files_round_trip():
 
     assert ids.resolve(curie, reg) == [f"{BASE}/univ2025_01.txt"]
 
-    t = ReplayTransport([
-        exchange(
-            "HEAD", f"{BASE}/univ2025_01.txt", status=200, body="", content_type="text/plain; charset=ISO-8859-1",
-            headers={"content-length": "6417", "last-modified": "Fri, 20 Nov 2026 04:36:01 GMT"},
-        ),
-    ])
+    head_ex = exchange(
+        "HEAD", f"{BASE}/univ2025_01.txt", status=200, body="", content_type="text/plain; charset=ISO-8859-1",
+        headers={"content-length": "6417", "last-modified": "Fri, 20 Nov 2026 04:36:01 GMT"},
+    )
+    t_show = ReplayTransport([head_ex])
+    shown = adapter.show(replay_client(t_show), curie)
+    assert t_show.pending == []
+    assert shown.id == "cdaw-cme:univ2025_01.txt"
+    assert shown.date == "2026-11-20"
+
+    t = ReplayTransport([head_ex])
     rec, listed = adapter.files(replay_client(t), curie)
     assert t.pending == []
-    assert rec.id == "cdaw-cme:univ2025_01.txt"
-    assert rec.date == "2026-11-20"
+    assert rec == shown
     assert rec.domain_fields["heliophysics"]["start"] == "2025-01-01T00:00:00Z"
     assert rec.domain_fields["heliophysics"]["end"] == "2025-02-01T00:00:00Z"
     assert len(listed) == 1
@@ -131,6 +135,15 @@ def test_files_round_trip():
     assert listed[0].media_type == "text/plain"
     assert listed[0].checksums == {}
     assert http_url(listed[0]) == f"{BASE}/univ2025_01.txt"
+
+    # HTTP 200 text/html on HEAD fails early as upstream_failed
+    for verb in (adapter.show, adapter.files):
+        t_html = ReplayTransport([
+            exchange("HEAD", f"{BASE}/univ2025_01.txt", status=200, body="", content_type="text/html"),
+        ])
+        with pytest.raises(QuarryError) as caught:
+            verb(replay_client(t_html), curie)
+        assert caught.value.kind == "upstream_failed"
 
     # Missing file (404) -> not_found
     t_nf = ReplayTransport([
@@ -163,7 +176,10 @@ def test_cdaw_cme_recorded_x25_listing_and_head():
     assert (cov.total, cov.returned, cov.complete) == (2, 2, "total")
     assert [r.id for r in rows] == ["cdaw-cme:univ2025_01.txt", "cdaw-cme:univ2025_02.txt"]
 
-    rec, listed = adapter.files(_replay("files-head"), Curie("cdaw-cme", "univ2025_01.txt"))
-    assert rec.id == "cdaw-cme:univ2025_01.txt"
+    curie = Curie(*rows[0].id.split(":", 1))
+    shown = adapter.show(_replay("files-head"), curie)
+    assert shown == rows[0]
+    rec, listed = adapter.files(_replay("files-head"), curie)
+    assert rec == shown
     assert listed[0].size == 6417
     assert http_url(listed[0]) == f"{BASE}/univ2025_01.txt"

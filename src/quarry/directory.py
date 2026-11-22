@@ -20,6 +20,7 @@ MONTH_ABBR = {
     "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
     "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
 }
+HTML_MEDIA_TYPES = frozenset({"text/html", "application/xhtml+xml"})
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,14 @@ def parse_content_length(header: str | None) -> int | None:
     if not stripped or not stripped.isdigit():
         return None
     return int(stripped)
+
+
+def data_media_type(header: str | None, fallback: str, source: str) -> str:
+    """Return the media type of a data-file HEAD response, failing early on HTML error/landing pages."""
+    raw = (header or "").split(";", 1)[0].strip()
+    if raw.lower() in HTML_MEDIA_TYPES:
+        raise UpstreamError(f"{source}: HEAD returned {raw!r} instead of a data file")
+    return raw if raw else fallback
 
 
 def _extract_modified_date(text: str) -> str | None:

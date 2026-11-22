@@ -382,7 +382,8 @@ def test_silso_and_omniweb_cgi_probes_are_metadata_only_offline():
     sha = "a" * 64
     silso_t = ReplayTransport([
         exchange("GET", "https://www.sidc.be/SILSO/DATA/manifest-paired.sha256",
-                 body=f"{sha}  /home/wds/sidc/archive/SN_d_tot_V2.0.txt\n", content_type="text/plain"),
+                 body=f"{sha}  /home/wds/sidc/archive/SN_d_tot_V2.0.txt\n", content_type="text/plain",
+                 headers={"last-modified": "Sun, 01 Nov 2026 09:45:38 GMT"}),
         exchange("HEAD", "https://www.sidc.be/SILSO/DATA/SN_d_tot_V2.0.txt",
                  status=200, body="", content_type="text/plain"),
     ])

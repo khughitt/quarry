@@ -9,6 +9,7 @@ from types import MappingProxyType
 from quarry.adapters.base import Prepared
 from quarry.catalog import Resource
 from quarry.directory import (
+    data_media_type,
     day_span,
     is_safe_relative_path,
     iso_utc,
@@ -203,8 +204,7 @@ class SwpcEvents:
             raise QuarryError("not_found", f"{curie} is not in the NCEI SWPC daily reports archive")
         modified = parse_http_date(resp.headers.get("last-modified"))
         size = parse_content_length(resp.headers.get("content-length"))
-        raw_ct = (resp.headers.get("content-type") or "").split(";", 1)[0].strip()
-        media_type = raw_ct if raw_ct else "text/plain"
+        media_type = data_media_type(resp.headers.get("content-type"), "text/plain", f"swpc-events {curie}")
         record = _daily_result(curie.local, product, report_day, modified)
         file_obj = File(name=filename, urls=(url,), size=size, media_type=media_type)
         return record, file_obj

@@ -156,17 +156,21 @@ def test_files_round_trip():
 
     assert ids.resolve(curie, reg) == [f"{BASE}/{local}"]
 
-    t = ReplayTransport([
-        exchange(
-            "HEAD", f"{BASE}/{local}", status=200, body="", content_type="image/fits",
-            headers={"content-length": "8409600", "last-modified": "Fri, 17 Jan 2025 15:25:58 GMT"},
-        ),
-    ])
+    head_ex = exchange(
+        "HEAD", f"{BASE}/{local}", status=200, body="", content_type="image/fits",
+        headers={"content-length": "8409600", "last-modified": "Fri, 17 Jan 2025 15:25:58 GMT"},
+    )
+    t_show = ReplayTransport([head_ex])
+    shown = adapter.show(replay_client(t_show), curie)
+    assert t_show.pending == []
+    assert shown.id == f"stereo-ssc:{local}"
+    assert shown.date == "2025-01-17"
+    assert shown.domain_fields["heliophysics"]["start"] == "2025-01-15T00:05:00Z"
+
+    t = ReplayTransport([head_ex])
     rec, listed = adapter.files(replay_client(t), curie)
     assert t.pending == []
-    assert rec.id == f"stereo-ssc:{local}"
-    assert rec.date == "2025-01-17"
-    assert rec.domain_fields["heliophysics"]["start"] == "2025-01-15T00:05:00Z"
+    assert rec == shown
     assert "end" not in rec.domain_fields["heliophysics"]
     assert len(listed) == 1
     assert listed[0].name == "20250115_000500_n4euA.fts"
@@ -174,6 +178,15 @@ def test_files_round_trip():
     assert listed[0].media_type == "image/fits"
     assert listed[0].checksums == {}
     assert http_url(listed[0]) == f"{BASE}/{local}"
+
+    # HTTP 200 text/html on HEAD fails early as upstream_failed
+    for verb in (adapter.show, adapter.files):
+        t_html = ReplayTransport([
+            exchange("HEAD", f"{BASE}/{local}", status=200, body="", content_type="text/html"),
+        ])
+        with pytest.raises(QuarryError) as caught:
+            verb(replay_client(t_html), curie)
+        assert caught.value.kind == "upstream_failed"
 
     # Missing leaf -> not_found
     t_nf = ReplayTransport([
@@ -210,9 +223,11 @@ def test_stereo_ssc_recorded_x25_day_listing_and_head():
     assert rows[0].domain_fields["heliophysics"]["start"] == "2025-01-15T00:05:00Z"
     assert "end" not in rows[0].domain_fields["heliophysics"]
 
-    curie = Curie("stereo-ssc", "secchi/L0/a/img/euvi/20250115/20250115_000500_n4euA.fts")
+    curie = Curie(*rows[0].id.split(":", 1))
+    shown = adapter.show(_replay("files-head"), curie)
+    assert shown == rows[0]
     rec, listed = adapter.files(_replay("files-head"), curie)
-    assert rec.id == str(curie)
+    assert rec == shown
     assert listed[0].size == 8409600
     assert listed[0].media_type == "image/fits"
     assert listed[0].checksums == {}

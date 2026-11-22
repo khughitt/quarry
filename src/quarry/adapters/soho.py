@@ -9,6 +9,7 @@ from types import MappingProxyType
 from quarry.adapters.base import Prepared
 from quarry.catalog import Resource
 from quarry.directory import (
+    data_media_type,
     is_safe_relative_path,
     iso_utc,
     months_in_window,
@@ -190,8 +191,9 @@ class Soho:
             raise QuarryError("not_found", f"{curie} is not in the SOHO SDAC archive")
         modified = parse_http_date(resp.headers.get("last-modified"))
         size = parse_content_length(resp.headers.get("content-length"))
+        media_type = data_media_type(resp.headers.get("content-type"), "application/fits", f"soho {curie}")
         record = _eit_result(curie.local, filename, obs, modified)
-        file_obj = File(name=filename, urls=(url,), size=size, media_type="application/fits")
+        file_obj = File(name=filename, urls=(url,), size=size, media_type=media_type)
         return record, file_obj
 
     def show(self, client: Client, curie: Curie) -> Result:

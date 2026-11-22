@@ -9,6 +9,7 @@ from types import MappingProxyType
 from quarry.adapters.base import Prepared
 from quarry.catalog import Resource
 from quarry.directory import (
+    data_media_type,
     day_span,
     is_safe_relative_path,
     iso_utc,
@@ -294,8 +295,7 @@ class GoesXrs:
             raise QuarryError("not_found", f"{curie} is not in the NOAA NCEI GOES L2 archive")
         modified = parse_http_date(resp.headers.get("last-modified"))
         size = parse_content_length(resp.headers.get("content-length"))
-        raw_ct = (resp.headers.get("content-type") or "").split(";", 1)[0].strip()
-        media_type = raw_ct if raw_ct else "application/x-netcdf"
+        media_type = data_media_type(resp.headers.get("content-type"), "application/x-netcdf", f"goes-xrs {curie}")
         record = _granule_result(curie.local, sat_num, product, filename, granule_day, version, modified)
         file_obj = File(name=filename, urls=(url,), size=size, media_type=media_type)
         return record, file_obj

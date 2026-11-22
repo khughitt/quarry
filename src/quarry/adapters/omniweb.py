@@ -8,6 +8,7 @@ from types import MappingProxyType
 from quarry.adapters.base import Prepared
 from quarry.catalog import Resource
 from quarry.directory import (
+    data_media_type,
     iso_utc,
     month_span,
     parse_content_length,
@@ -149,8 +150,7 @@ class Omniweb:
             raise QuarryError("not_found", f"{curie} is not in the SPDF OMNI bulk tree")
         modified = parse_http_date(resp.headers.get("last-modified"))
         size = parse_content_length(resp.headers.get("content-length"))
-        raw_ct = (resp.headers.get("content-type") or "").split(";", 1)[0].strip()
-        media_type = raw_ct if raw_ct and raw_ct.lower() != "text/html" else "text/plain"
+        media_type = data_media_type(resp.headers.get("content-type"), "text/plain", f"omniweb {curie}")
         record = _granule_result(curie.local, year, month, modified)
         file_obj = File(name=curie.local, urls=(url,), size=size, media_type=media_type)
         return record, file_obj

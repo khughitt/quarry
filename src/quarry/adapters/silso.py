@@ -8,7 +8,7 @@ from types import MappingProxyType
 
 from quarry.adapters.base import Prepared
 from quarry.catalog import Resource
-from quarry.directory import iso_utc, parse_content_length, parse_http_datetime
+from quarry.directory import data_media_type, iso_utc, parse_content_length, parse_http_datetime
 from quarry.errors import QuarryError
 from quarry.files import File
 from quarry.http import Client, UpstreamError
@@ -94,25 +94,24 @@ def parse_manifest(text: str) -> dict[str, dict[str, str]]:
     return by_stem
 
 
-def _series_result(stem: str, release_dt: datetime | None) -> tuple[Result, datetime, datetime | None]:
+def _series_result(stem: str, release_dt: datetime) -> tuple[Result, datetime, datetime]:
     info = SERIES_INFO.get(stem)
     if info is None:
         raise UpstreamError(f"silso: undocumented series {stem!r} has no known observation span")
     title, start_dt, cadence = info
     helio: dict[str, str] = {
         "start": iso_utc(start_dt),
+        "end": iso_utc(release_dt),
         "cadence": cadence,
         "series": stem,
         "license": SILSO_LICENSE,
     }
-    if release_dt is not None:
-        helio["end"] = iso_utc(release_dt)
     result = Result(
         id=f"silso:{stem}",
         resource="silso",
         kind="dataset",
         title=title,
-        date=release_dt.date().isoformat() if release_dt is not None else None,
+        date=release_dt.date().isoformat(),
         domain_fields={"heliophysics": helio},
     )
     return result, start_dt, release_dt
@@ -131,10 +130,12 @@ class Silso:
     def search(self, client: Client, query: Query) -> tuple[Coverage, list[Result]]:
         return self.prepare(query).execute(client)
 
-    def _fetch_manifest(self, client: Client) -> tuple[dict[str, dict[str, str]], datetime | None]:
+    def _fetch_manifest(self, client: Client) -> tuple[dict[str, dict[str, str]], datetime]:
         resp = client.request(self.route, "GET", MANIFEST_FILE)
         manifest = parse_manifest(resp.text)
         release_dt = parse_http_datetime(resp.headers.get("last-modified"))
+        if release_dt is None:
+            raise UpstreamError(f"silso {MANIFEST_FILE}: missing or invalid Last-Modified header")
         return manifest, release_dt
 
     def unexpressed(self, query: Query) -> str | None:
@@ -174,8 +175,7 @@ class Silso:
                     continue
                 fetched += 1
                 record, r_start, r_end = _series_result(stem, release_dt)
-                effective_end = r_end if r_end is not None else datetime.max.replace(tzinfo=timezone.utc)
-                if not window.admits("overlap", r_start, effective_end):
+                if not window.admits("overlap", r_start, r_end):
                     continue
                 if query.limit is not None and len(kept) == query.limit:
                     exhausted = False
@@ -204,8 +204,8 @@ class Silso:
         head = client.request(self.route, "HEAD", filename, accept=frozenset({404}))
         if head.status_code == 404:
             raise QuarryError("not_found", f"{curie} file {filename} was not found at SILSO")
-        file_dt = parse_http_datetime(head.headers.get("last-modified")) or manifest_dt
-        return _series_result(curie.local, file_dt)[0]
+        data_media_type(head.headers.get("content-type"), MEDIA_TYPES[primary_ext], f"silso {curie} ({filename})")
+        return _series_result(curie.local, manifest_dt)[0]
 
     def files(self, client: Client, curie: Curie) -> tuple[Result, list[File]]:
         manifest, manifest_dt = self._fetch_manifest(client)
@@ -215,7 +215,6 @@ class Silso:
 
         ordered_exts = [e for e in ("txt", "csv") if e in exts]
         listed: list[File] = []
-        latest_dt = manifest_dt
         base_url = self.route.url.rstrip("/")
 
         for ext in ordered_exts:
@@ -223,9 +222,7 @@ class Silso:
             head = client.request(self.route, "HEAD", filename, accept=frozenset({404}))
             if head.status_code == 404:
                 raise QuarryError("not_found", f"{curie} file {filename} was not found at SILSO")
-            file_dt = parse_http_datetime(head.headers.get("last-modified"))
-            if file_dt is not None:
-                latest_dt = file_dt if latest_dt is None else max(latest_dt, file_dt)
+            data_media_type(head.headers.get("content-type"), MEDIA_TYPES[ext], f"silso {curie} ({filename})")
             size = parse_content_length(head.headers.get("content-length"))
             listed.append(
                 File(
@@ -237,7 +234,7 @@ class Silso:
                     license=SILSO_LICENSE,
                 )
             )
-        record = _series_result(curie.local, latest_dt)[0]
+        record = _series_result(curie.local, manifest_dt)[0]
         return record, listed
 
 

@@ -105,11 +105,17 @@ def test_during_boundary():
     assert (cov6.total, cov6.returned, cov6.complete) == (0, 0, "total")
     assert rows6 == []
 
-    # 5. Malformed manifest digest fails upstream_failed (never fabricates/accepts bad digest)
+    # 5. Malformed manifest digest or missing/invalid Last-Modified fails upstream_failed (never falls back to instant/max)
     t_bad = ReplayTransport([_manifest_ex(body="not-a-sha256  /home/wds/sidc/archive/SN_d_tot_V2.0.txt\n")])
     with pytest.raises(QuarryError) as caught:
         adapter.search(replay_client(t_bad), Query(during=win_x25))
     assert caught.value.kind == "upstream_failed"
+
+    for bad_lm in (None, "not-an-http-date"):
+        t_no_lm = ReplayTransport([_manifest_ex(last_modified=bad_lm)])
+        with pytest.raises(QuarryError) as caught:
+            adapter.search(replay_client(t_no_lm), Query(during=win_x25))
+        assert caught.value.kind == "upstream_failed"
 
     # 6. Refusals before transport
     for bad_q in (
@@ -134,24 +140,59 @@ def test_files_round_trip():
 
     assert ids.resolve(curie, reg) == [f"{BASE}/SN_d_tot_V2.0.txt"]
 
-    # Manifest GET + HEAD on .txt and .csv (NEVER GET .txt/.csv data bytes!); verifies manifest SHA-256 in acquisition!
-    t = ReplayTransport([
+    # Manifest GET + HEAD on .txt and .csv (NEVER GET .txt/.csv data bytes!); search, show and files emit the same canonical Result
+    win_x25 = Window(datetime(2025, 1, 15, tzinfo=timezone.utc), datetime(2025, 1, 16, tzinfo=timezone.utc))
+    _, searched = adapter.search(replay_client(ReplayTransport([_manifest_ex()])), Query(during=win_x25))
+    search_rec = next(r for r in searched if r.id == "silso:SN_d_tot_V2.0")
+
+    t_show = ReplayTransport([
         _manifest_ex(),
         exchange("HEAD", f"{BASE}/SN_d_tot_V2.0.txt", status=200, body="", content_type="text/plain",
                  headers={"last-modified": "Sun, 01 Nov 2026 09:45:07 GMT"}),
+    ])
+    shown = adapter.show(replay_client(t_show), curie)
+    assert t_show.pending == []
+    assert shown == search_rec
+    assert shown.domain_fields["heliophysics"]["end"] == "2026-11-01T09:45:38Z"
+
+    t = ReplayTransport([
+        _manifest_ex(),
+        exchange("HEAD", f"{BASE}/SN_d_tot_V2.0.txt", status=200, body="", content_type="text/plain",
+                 headers={"last-modified": "Sun, 01 Nov 2026 09:46:00 GMT"}),
         exchange("HEAD", f"{BASE}/SN_d_tot_V2.0.csv", status=200, body="", content_type="text/csv",
                  headers={"last-modified": "Sun, 01 Nov 2026 09:45:07 GMT"}),
     ])
     rec, listed = adapter.files(replay_client(t), curie)
     assert t.pending == []
+    assert rec == shown
+    assert rec == search_rec
     assert rec.id == "silso:SN_d_tot_V2.0"
     assert rec.date == "2026-11-01"
     assert rec.domain_fields["heliophysics"]["start"] == "1818-01-01T00:00:00Z"
+    assert rec.domain_fields["heliophysics"]["end"] == "2026-11-01T09:45:38Z"
     assert [f.name for f in listed] == ["SN_d_tot_V2.0.txt", "SN_d_tot_V2.0.csv"]
     assert listed[0].checksums == {"sha256": D_TOT_TXT}
     assert listed[1].checksums == {"sha256": D_TOT_CSV}
     assert listed[0].license == "CC-BY-NC-4.0"
     assert http_url(listed[0]) == f"{BASE}/SN_d_tot_V2.0.txt"
+
+    # HTTP 200 text/html or application/xhtml+xml on HEAD fails early as upstream_failed
+    for html_ct in ("text/html", "application/xhtml+xml"):
+        t_html = ReplayTransport([
+            _manifest_ex(),
+            exchange("HEAD", f"{BASE}/SN_d_tot_V2.0.txt", status=200, body="", content_type=html_ct),
+        ])
+        with pytest.raises(QuarryError) as caught:
+            adapter.files(replay_client(t_html), curie)
+        assert caught.value.kind == "upstream_failed"
+
+    # Missing Last-Modified on manifest also fails show() and files() before any file HEAD
+    for verb in (adapter.show, adapter.files):
+        t_no_lm = ReplayTransport([_manifest_ex(last_modified=None)])
+        with pytest.raises(QuarryError) as caught:
+            verb(replay_client(t_no_lm), curie)
+        assert caught.value.kind == "upstream_failed"
+        assert t_no_lm.pending == []
 
     req = acquisition.build(rec, listed)
     assert req["resources"] == [
@@ -181,10 +222,16 @@ def test_silso_recorded_manifest_and_head():
     win = Window(datetime(2025, 1, 15, tzinfo=timezone.utc), datetime(2025, 1, 16, tzinfo=timezone.utc))
     cov, rows = adapter.search(_replay("search-manifest"), Query(during=win))
     assert (cov.total, cov.returned, cov.complete) == (7, 7, "total")
-    assert "silso:SN_d_tot_V2.0" in [r.id for r in rows]
+    daily_row = next(r for r in rows if r.id == "silso:SN_d_tot_V2.0")
+    curie = Curie(*daily_row.id.split(":", 1))
 
-    rec, listed = adapter.files(_replay("files-head"), Curie("silso", "SN_d_tot_V2.0"))
-    assert rec.id == "silso:SN_d_tot_V2.0"
+    # Replay show() with manifest + .txt HEAD from the recorded files-head fixture
+    files_exchanges = json.loads((FX / "files-head.json").read_text())
+    shown = adapter.show(replay_client(ReplayTransport(files_exchanges[:2])), curie)
+    assert shown == daily_row
+
+    rec, listed = adapter.files(_replay("files-head"), curie)
+    assert rec == shown
     assert [f.name for f in listed] == ["SN_d_tot_V2.0.txt", "SN_d_tot_V2.0.csv"]
     for f in listed:
         assert len(f.checksums.get("sha256", "")) == 64

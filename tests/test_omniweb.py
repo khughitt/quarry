@@ -107,16 +107,20 @@ def test_files_round_trip():
 
     assert ids.resolve(curie, reg) == [f"{BASE}/"]
 
-    t = ReplayTransport([
-        exchange(
-            "HEAD", f"{MONTHLY_URL}omni_min202501.asc", status=200, body="", content_type="text/plain; charset=UTF-8",
-            headers={"last-modified": "Thu, 22 Jan 2026 18:06:42 GMT"},
-        ),
-    ])
+    head_ex = exchange(
+        "HEAD", f"{MONTHLY_URL}omni_min202501.asc", status=200, body="", content_type="text/plain; charset=UTF-8",
+        headers={"last-modified": "Thu, 22 Jan 2026 18:06:42 GMT"},
+    )
+    t_show = ReplayTransport([head_ex])
+    shown = adapter.show(replay_client(t_show), curie)
+    assert t_show.pending == []
+    assert shown.id == "omni:omni_min202501.asc"
+    assert shown.date == "2026-01-22"
+
+    t = ReplayTransport([head_ex])
     rec, listed = adapter.files(replay_client(t), curie)
     assert t.pending == []
-    assert rec.id == "omni:omni_min202501.asc"
-    assert rec.date == "2026-01-22"
+    assert rec == shown
     assert rec.domain_fields["heliophysics"]["start"] == "2025-01-01T00:00:00Z"
     assert rec.domain_fields["heliophysics"]["end"] == "2025-02-01T00:00:00Z"
     assert len(listed) == 1
@@ -126,6 +130,16 @@ def test_files_round_trip():
     assert http_url(listed[0]) == f"{MONTHLY_URL}omni_min202501.asc"
     # CGI HTML is never emitted as a data file
     assert all("nx1.cgi" not in u and (f.media_type or "") != "text/html" for f in listed for u in f.urls)
+
+    # HTTP 200 text/html or application/xhtml+xml on HEAD fails early as upstream_failed (never relabeled text/plain)
+    for html_ct in ("text/html; charset=utf-8", "application/xhtml+xml"):
+        for verb in (adapter.show, adapter.files):
+            t_html = ReplayTransport([
+                exchange("HEAD", f"{MONTHLY_URL}omni_min202501.asc", status=200, body="", content_type=html_ct),
+            ])
+            with pytest.raises(QuarryError) as caught:
+                verb(replay_client(t_html), curie)
+            assert caught.value.kind == "upstream_failed"
 
     # Missing granule (404) -> not_found
     t_nf = ReplayTransport([
@@ -159,7 +173,10 @@ def test_omniweb_recorded_x25_listing_and_head():
     assert (cov.total, cov.returned, cov.complete) == (2, 2, "total")
     assert [r.id for r in rows] == ["omni:omni_min202501.asc", "omni:omni_min202502.asc"]
 
-    rec, listed = adapter.files(_replay("files-head"), Curie("omni", "omni_min202501.asc"))
-    assert rec.id == "omni:omni_min202501.asc"
+    curie = Curie(*rows[0].id.split(":", 1))
+    shown = adapter.show(_replay("files-head"), curie)
+    assert shown == rows[0]
+    rec, listed = adapter.files(_replay("files-head"), curie)
+    assert rec == shown
     assert http_url(listed[0]) == f"{MONTHLY_URL}omni_min202501.asc"
     assert listed[0].checksums == {}

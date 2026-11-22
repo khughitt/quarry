@@ -143,17 +143,22 @@ def test_files_round_trip():
     # 1. Resolver produces exact SDAC URL
     assert ids.resolve(curie, reg) == [f"{BASE}/eit/lz/2025/01/efz20250115.130013"]
 
-    # 2. show + files via HEAD (zero body bytes, extension/instrument FITS media_type, no fabricated digests)
+    # 2. show + files via HEAD on the same CURIE search returned (zero body bytes, FITS media_type, no digests)
     head_ex = exchange(
         "HEAD", f"{BASE}/eit/lz/2025/01/efz20250115.130013", status=200, body="", content_type="",
         headers={"content-length": "2108160", "last-modified": "Wed, 16 Apr 2025 16:45:03 GMT"},
     )
+    t_show = ReplayTransport([head_ex])
+    shown = adapter.show(replay_client(t_show), curie)
+    assert t_show.pending == []
+    assert shown.id == "soho:eit/lz/2025/01/efz20250115.130013"
+    assert shown.date == "2025-04-16"
+    assert shown.domain_fields["heliophysics"]["start"] == "2025-01-15T13:00:13Z"
+
     t = ReplayTransport([head_ex])
     rec, listed = adapter.files(replay_client(t), curie)
     assert t.pending == []
-    assert rec.id == "soho:eit/lz/2025/01/efz20250115.130013"
-    assert rec.date == "2025-04-16"
-    assert rec.domain_fields["heliophysics"]["start"] == "2025-01-15T13:00:13Z"
+    assert rec == shown
     assert "end" not in rec.domain_fields["heliophysics"]
     assert len(listed) == 1
     assert listed[0].name == "efz20250115.130013"
@@ -161,6 +166,15 @@ def test_files_round_trip():
     assert listed[0].checksums == {}
     assert listed[0].media_type == "application/fits"
     assert http_url(listed[0]) == f"{BASE}/eit/lz/2025/01/efz20250115.130013"
+
+    # 2b. HTTP 200 text/html on HEAD fails early as upstream_failed (never treated as a data file)
+    for verb in (adapter.show, adapter.files):
+        t_html = ReplayTransport([
+            exchange("HEAD", f"{BASE}/eit/lz/2025/01/efz20250115.130013", status=200, body="", content_type="text/html; charset=utf-8"),
+        ])
+        with pytest.raises(QuarryError) as caught:
+            verb(replay_client(t_html), curie)
+        assert caught.value.kind == "upstream_failed"
 
     # 3. Missing leaf returns not_found
     t_nf = ReplayTransport([
@@ -193,9 +207,11 @@ def test_soho_recorded_x25_listing_and_head():
     assert rows[0].domain_fields["heliophysics"]["start"] == "2025-01-15T13:00:13Z"
     assert "end" not in rows[0].domain_fields["heliophysics"]
 
-    curie = Curie("soho", "eit/lz/2025/01/efz20250115.130013")
+    curie = Curie(*rows[0].id.split(":", 1))
+    shown = adapter.show(_replay("files-head"), curie)
+    assert shown == rows[0]
     rec, listed = adapter.files(_replay("files-head"), curie)
-    assert rec.id == str(curie)
+    assert rec == shown
     assert listed[0].size == 2108160
     assert listed[0].urls == (f"{BASE}/eit/lz/2025/01/efz20250115.130013",)
     assert listed[0].checksums == {}

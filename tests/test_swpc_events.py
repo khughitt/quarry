@@ -175,16 +175,20 @@ def test_files_round_trip():
     srs_curie = Curie("swpc-events", srs_local)
     assert ids.resolve(srs_curie, reg) == [f"{BASE}/{srs_local}"]
 
-    t = ReplayTransport([
-        exchange(
-            "HEAD", f"{BASE}/{srs_local}", status=200, body="", content_type="text/plain; charset=UTF-8",
-            headers={"content-length": "946", "last-modified": "Wed, 15 Jan 2025 00:30:07 GMT"},
-        ),
-    ])
+    head_ex = exchange(
+        "HEAD", f"{BASE}/{srs_local}", status=200, body="", content_type="text/plain; charset=UTF-8",
+        headers={"content-length": "946", "last-modified": "Wed, 15 Jan 2025 00:30:07 GMT"},
+    )
+    t_show = ReplayTransport([head_ex])
+    shown = adapter.show(replay_client(t_show), srs_curie)
+    assert t_show.pending == []
+    assert shown.id == f"swpc-events:{srs_local}"
+    assert shown.date == "2025-01-15"
+
+    t = ReplayTransport([head_ex])
     rec, listed = adapter.files(replay_client(t), srs_curie)
     assert t.pending == []
-    assert rec.id == f"swpc-events:{srs_local}"
-    assert rec.date == "2025-01-15"
+    assert rec == shown
     assert rec.domain_fields["heliophysics"]["start"] == "2025-01-15T00:00:00Z"
     assert rec.domain_fields["heliophysics"]["end"] == "2025-01-16T00:00:00Z"
     assert len(listed) == 1
@@ -193,6 +197,15 @@ def test_files_round_trip():
     assert listed[0].media_type == "text/plain"
     assert listed[0].checksums == {}
     assert http_url(listed[0]) == f"{BASE}/{srs_local}"
+
+    # 2b. HTTP 200 text/html on HEAD fails early as upstream_failed
+    for verb in (adapter.show, adapter.files):
+        t_html = ReplayTransport([
+            exchange("HEAD", f"{BASE}/{srs_local}", status=200, body="", content_type="text/html"),
+        ])
+        with pytest.raises(QuarryError) as caught:
+            verb(replay_client(t_html), srs_curie)
+        assert caught.value.kind == "upstream_failed"
 
     # 3. Missing daily file (404) -> not_found
     miss_local = "solar_event_reports/1970/01/19700101events.txt"
@@ -235,8 +248,10 @@ def test_swpc_events_recorded_x25_listing_and_head():
         "swpc-events:solar_region_summaries/2025/01/20250115SRS.txt",
     ]
 
-    curie = Curie("swpc-events", "solar_region_summaries/2025/01/20250115SRS.txt")
+    curie = Curie(*rows[1].id.split(":", 1))
+    shown = adapter.show(_replay("files-head"), curie)
+    assert shown == rows[1]
     rec, listed = adapter.files(_replay("files-head"), curie)
-    assert rec.id == str(curie)
+    assert rec == shown
     assert listed[0].size == 946
     assert http_url(listed[0]) == f"{BASE}/solar_region_summaries/2025/01/20250115SRS.txt"
