@@ -1,15 +1,22 @@
 """Live checks: `just live` makes the smallest real request on every catalog route and
 reports each one. Opt-in and never part of a test run; it reports, it does not gate."""
+import importlib
+import importlib.util
+import json
+import os
+import re
+import subprocess
 import sys
 from collections.abc import Callable
-from datetime import date
+from datetime import date, datetime, timezone
+from pathlib import Path
 
 from quarry import catalog as catalog_mod, ids
 from quarry.adapters import base
 from quarry.errors import QuarryError
 from quarry.http import Client
 from quarry.ids import Curie
-from quarry.query import Query
+from quarry.query import Query, Window, parse_instant
 
 Probe = Callable[[object, Client], None]
 
@@ -17,9 +24,106 @@ REGISTRY = ids.registry_for(catalog_mod.load())
 SMOLDERING = Query(phrases=("smoldering myeloma",), limit=1)
 MYELOMA_SINCE = Query(phrases=("multiple myeloma",), since=date(2024, 1, 1), limit=1)
 
+ASSIGNMENT_RE = re.compile(r"^([0-9]{4}-[0-9]{2}-[0-9]{2})-epoch-assignment-([0-9]+)\.md$")
+VSO_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
+                    datetime(2025, 1, 15, 0, 1, 0, tzinfo=timezone.utc))
+HEK_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
+                    datetime(2025, 1, 15, 0, 30, 0, tzinfo=timezone.utc))
+
+
+def _resolve_sun_root(sun_root: Path | None = None) -> Path:
+    if sun_root is not None:
+        return sun_root
+    env = os.environ.get("QUARRY_SUN_ROOT", "").strip()
+    if env:
+        return Path(env)
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--git-common-dir"],
+            cwd=Path(__file__).resolve().parent,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        common = Path(out)
+        if not common.is_absolute():
+            common = (Path(__file__).resolve().parent / common).resolve()
+        else:
+            common = common.resolve()
+        return common.parent.parent / "sun"
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise QuarryError("upstream_failed", f"cannot locate sun checkout for epoch verification: {exc}") from None
+
+
+def _parse_exploration_epochs(text: str) -> list[tuple[datetime | None, datetime | None]]:
+    in_section = False
+    epochs: list[tuple[datetime | None, datetime | None]] = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if line.startswith("## "):
+            if in_section:
+                break
+            in_section = line == "## Epochs"
+            continue
+        if not in_section or not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) < 4 or cells[0].lower() == "epoch" or set(cells[0]) <= {"-"}:
+            continue
+        _, raw_from, raw_to, role = cells[:4]
+        if role.lower() != "exploration":
+            continue
+        lower = None if raw_from.lower() == "start of each series" else parse_instant(raw_from)
+        upper = None if raw_to.lower() == "open" else parse_instant(raw_to)
+        epochs.append((lower, upper))
+    return epochs
+
+
+def require_exploration_window(start: datetime, end: datetime, *, sun_root: Path | None = None) -> Path:
+    """Verify [start, end) lies strictly inside an exploration epoch in sun's latest epoch assignment."""
+    if start.tzinfo is not timezone.utc or end.tzinfo is not timezone.utc or start >= end:
+        raise QuarryError("upstream_failed", "probe window must be a non-empty UTC interval [start, end)")
+    root = _resolve_sun_root(sun_root)
+    notes_dir = root / "docs" / "notes"
+    if not notes_dir.is_dir():
+        raise QuarryError("upstream_failed", f"sun epoch assignment directory not found: {notes_dir}")
+    candidates: list[tuple[int, str, Path]] = []
+    for path in notes_dir.iterdir():
+        m = ASSIGNMENT_RE.fullmatch(path.name)
+        if m and path.is_file():
+            candidates.append((int(m.group(2)), m.group(1), path))
+    if not candidates:
+        raise QuarryError("upstream_failed", f"no epoch assignment file found under {notes_dir}")
+    _, _, latest = max(candidates)
+    try:
+        epochs = _parse_exploration_epochs(latest.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise QuarryError("upstream_failed", f"cannot parse exploration epochs from {latest.name}: {exc}") from None
+    if not epochs:
+        raise QuarryError("upstream_failed", f"no exploration epochs found in {latest.name}")
+    for lower, upper in epochs:
+        lower_ok = lower is None or start > lower
+        upper_ok = upper is None or end < upper
+        if lower_ok and upper_ok:
+            return latest
+    raise QuarryError(
+        "upstream_failed",
+        f"probe window {start.isoformat()}..{end.isoformat()} is not strictly inside an exploration epoch in {latest.name}",
+    )
+
 
 def search_one(query: Query) -> Probe:
     def probe(adapter, client):
+        _, rows = adapter.search(client, query)
+        if not rows:
+            raise QuarryError("upstream_failed", "the search answered no results")
+    return probe
+
+
+def dated_search_one(query: Query) -> Probe:
+    assert query.during is not None
+    window = query.during
+
+    def probe(adapter, client):
+        require_exploration_window(window.start, window.end)
         _, rows = adapter.search(client, query)
         if not rows:
             raise QuarryError("upstream_failed", "the search answered no results")
@@ -32,6 +136,33 @@ def show(curie: Curie) -> Probe:
 
 def files(curie: Curie) -> Probe:
     return lambda adapter, client: adapter.files(client, curie)
+
+
+def local_tool(module_name: str) -> Probe:
+    def probe(adapter, client):
+        try:
+            spec = importlib.util.find_spec(module_name)
+        except ModuleNotFoundError:
+            spec = None
+        if spec is None:
+            raise QuarryError("upstream_failed", f"optional local tool {module_name!r} is not installed")
+        importlib.import_module(module_name)
+    return probe
+
+
+def cdaweb_hapi(adapter, client: Client) -> None:
+    route = next(r for r in adapter.resource.routes if r.url == "https://cdaweb.gsfc.nasa.gov/hapi")
+    cat = json.loads(client.request(route, "GET", "catalog").text)
+    if type(cat) is not dict or not cat.get("catalog"):
+        raise QuarryError("upstream_failed", "CDAWeb HAPI /catalog returned no datasets")
+    info = json.loads(client.request(route, "GET", "info", params={"id": "OMNI_HRO2_1MIN"}).text)
+    if type(info) is not dict or not info.get("parameters"):
+        raise QuarryError("upstream_failed", "CDAWeb HAPI /info returned no parameters")
+
+
+def cdaweb_bulk(adapter, client: Client) -> None:
+    route = next(r for r in adapter.resource.routes if r.url == "https://cdaweb.gsfc.nasa.gov/sp_phys/data")
+    client.request(route, "HEAD", f"{route.url}/")
 
 
 def terms(curie: Curie, words: str) -> Probe:
@@ -60,6 +191,16 @@ PROBES: dict[tuple[str, str], Probe] = {
     ("go", "https://www.ebi.ac.uk/ols4/api/ontologies/go"): terms(Curie("go", "0006915"), "apoptotic process"),
     ("uberon", "https://www.ebi.ac.uk/ols4/api/ontologies/uberon"): terms(Curie("uberon", "0000948"), "heart"),
     ("ncbitaxon", "https://www.ebi.ac.uk/ols4/api/ontologies/ncbitaxon"): terms(Curie("ncbitaxon", "9606"), "human"),
+    ("vso", "http://vso.nso.edu/cgi-bin/VSO/PROD/vsoi_wsdl.cgi"):
+        dated_search_one(Query(during=VSO_WINDOW, filters={"instrument": "AIA", "observatory": "SDO"}, limit=1)),
+    ("vso", "sunpy.net.vso"): local_tool("sunpy.net.vso"),
+    ("cdaweb", "https://cdaweb.gsfc.nasa.gov/WS/cdasr/1/dataviews/sp_phys"): show(Curie("cdaweb", "OMNI_HRO2_1MIN")),
+    ("cdaweb", "https://cdaweb.gsfc.nasa.gov/hapi"): cdaweb_hapi,
+    ("cdaweb", "https://cdaweb.gsfc.nasa.gov/sp_phys/data"): cdaweb_bulk,
+    ("cdaweb", "sunpy.net.cdaweb"): local_tool("sunpy.net.cdaweb"),
+    ("hek", "https://www.lmsal.com/hek/her"):
+        dated_search_one(Query(during=HEK_WINDOW, filters={"instrument": "HMI"}, limit=1)),
+    ("hek", "sunpy.net.hek"): local_tool("sunpy.net.hek"),
 }
 
 

@@ -1,0 +1,41 @@
+id = "hek"
+name = "Heliophysics Events Knowledgebase"
+roles = ["knowledgebase"]
+prefixes = ["hek"]
+adapter = "quarry.adapters.hek"
+
+[[routes]]
+kind = "rest"
+url = "https://www.lmsal.com/hek/her"
+min_interval = 1.0
+service = "lmsal"
+auth = "none"
+reports_total = false
+
+[[routes]]
+kind = "local-tool"
+url = "sunpy.net.hek"
+min_interval = 0.0
+service = "lmsal"
+auth = "none"
+reports_total = false
+
+[[pitfalls]]
+summary = "interval search is by overlap and returns events that began before the interval or touch an endpoint"
+handling = "event_starttime and event_endtime are returned with every record and trimmed to half-open [START, END) overlap"
+evidence = "sun phase-1 survey probes/hek/01"
+
+[[pitfalls]]
+summary = "no total count; overmax flags that more exist"
+handling = "page until overmax is false or the cap is hit; coverage says limited when capped and fails incomplete_listing if overmax stays true"
+evidence = "probes/hek/01, 02"
+
+[[pitfalls]]
+summary = "the spatial box is mandatory in the column search"
+handling = "the adapter supplies the full-disk helioprojective box by default"
+evidence = "probes/hek/01, 03"
+
+[[pitfalls]]
+summary = "records carry scientific values (peak flux, GOES class, intensities)"
+handling = "the adapter requests structural metadata columns only via return= and exposes no scientific values in records"
+evidence = "probes/hek/03"
