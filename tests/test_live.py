@@ -220,6 +220,7 @@ def test_dated_heliophysics_probes_verify_epoch_before_transport(tmp_path, monke
         ("soho", "https://umbra.nascom.nasa.gov/pub"),
         ("stereo-ssc", "https://stereo-ssc.nascom.nasa.gov/data/ins_data"),
         ("goes-xrs", "https://data.ngdc.noaa.gov/platforms/solar-space-observing-satellites/goes"),
+        ("omniweb", "https://spdf.gsfc.nasa.gov/pub/data/omni"),
     ):
         with pytest.raises(QuarryError) as caught:
             live.PROBES[key](BoomAdapter(), None)
@@ -368,3 +369,28 @@ def test_goes_swpc_rolling_probe_is_head_only_offline():
     with pytest.raises(QuarryError) as caught:
         live.PROBES[("goes-xrs", "https://services.swpc.noaa.gov/json/goes/primary")](adapter, replay_client(bad_t))
     assert caught.value.kind == "upstream_failed"
+
+
+def test_silso_and_omniweb_cgi_probes_are_metadata_only_offline():
+    from quarry.adapters import omniweb, silso
+    from quarry.testing import ReplayTransport, exchange, replay_client
+
+    cat = catalog_mod.load()
+    silso_adapter = silso.make(cat.resources["silso"])
+    sha = "a" * 64
+    silso_t = ReplayTransport([
+        exchange("GET", "https://www.sidc.be/SILSO/DATA/manifest-paired.sha256",
+                 body=f"{sha}  /home/wds/sidc/archive/SN_d_tot_V2.0.txt\n", content_type="text/plain"),
+        exchange("HEAD", "https://www.sidc.be/SILSO/DATA/SN_d_tot_V2.0.txt",
+                 status=200, body="", content_type="text/plain"),
+    ])
+    live.PROBES[("silso", "https://www.sidc.be/SILSO/DATA")](silso_adapter, replay_client(silso_t))
+    assert silso_t.pending == []
+
+    omni_adapter = omniweb.make(cat.resources["omniweb"])
+    omni_t = ReplayTransport([
+        exchange("HEAD", "https://omniweb.gsfc.nasa.gov/cgi/nx1.cgi",
+                 status=200, body="", content_type="text/html"),
+    ])
+    live.PROBES[("omniweb", "https://omniweb.gsfc.nasa.gov/cgi/nx1.cgi")](omni_adapter, replay_client(omni_t))
+    assert omni_t.pending == []

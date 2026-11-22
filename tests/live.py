@@ -39,6 +39,8 @@ STEREO_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
                        datetime(2025, 1, 15, 0, 15, 0, tzinfo=timezone.utc))
 GOES_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
                      datetime(2025, 1, 16, 0, 0, 0, tzinfo=timezone.utc))
+OMNI_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
+                     datetime(2025, 1, 16, 0, 0, 0, tzinfo=timezone.utc))
 HV_INSTANT = datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc)
 JSOC_SAMPLE_CURIE = Curie("jsoc", "aia.lev1_euv_12s[2025-01-15T00:00:11Z][193]")
 SOAR_SAMPLE_CURIE = Curie("soar", "solo_L1_eui-fsi304-image-short_20250115T000015208")
@@ -219,6 +221,21 @@ def goes_swpc_rolling_head(adapter, client: Client) -> None:
         raise QuarryError("upstream_failed", f"SWPC GOES rolling HEAD returned unexpected content-type {ct!r}")
 
 
+def silso_manifest_and_head(adapter, client: Client) -> None:
+    """Metadata-only SILSO probe: checksum manifest + HEAD on SN_d_tot_V2.0 (zero data file bytes)."""
+    _, listed = adapter.files(client, Curie("silso", "SN_d_tot_V2.0"))
+    if not listed or not listed[0].checksums.get("sha256"):
+        raise QuarryError("upstream_failed", "SILSO manifest probe returned no SHA-256 digest")
+
+
+def omniweb_cgi_head(adapter, client: Client) -> None:
+    """HEAD-only metadata probe on OMNIWeb CGI form (no scientific query, zero body bytes)."""
+    resp = client.request(adapter.cgi_route, "HEAD", adapter.cgi_route.url)
+    ct = (resp.headers.get("content-type") or "").lower()
+    if "html" not in ct:
+        raise QuarryError("upstream_failed", f"OMNIWeb CGI HEAD returned unexpected content-type {ct!r}")
+
+
 def terms(curie: Curie, words: str) -> Probe:
     """One OLS route's three paths: the term (through ancestors), its ancestors, and search."""
     def probe(adapter, client):
@@ -272,6 +289,9 @@ PROBES: dict[tuple[str, str], Probe] = {
         dated_search_one(Query(during=GOES_WINDOW, filters={"observatory": "GOES-18", "instrument": "xrsf-l2-avg1m_science"}, limit=1)),
     ("goes-xrs", "https://services.swpc.noaa.gov/json/goes/primary"): goes_swpc_rolling_head,
     ("goes-xrs", "sunpy.net.dataretriever.sources.goes"): local_tool("sunpy.net.dataretriever.sources.goes"),
+    ("silso", "https://www.sidc.be/SILSO/DATA"): silso_manifest_and_head,
+    ("omniweb", "https://spdf.gsfc.nasa.gov/pub/data/omni"): dated_search_one(Query(during=OMNI_WINDOW, limit=1)),
+    ("omniweb", "https://omniweb.gsfc.nasa.gov/cgi/nx1.cgi"): omniweb_cgi_head,
 }
 
 

@@ -1,0 +1,18 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "HEAD",
+   "query": [],
+   "url": "https://spdf.gsfc.nasa.gov/pub/data/omni/high_res_omni/monthly_1min/omni_min202501.asc"
+  },
+  "response": {
+   "body": "",
+   "headers": {
+    "content-type": "text/plain; charset=UTF-8",
+    "last-modified": "Thu, 22 Jan 2026 18:06:42 GMT"
+   },
+   "status": 200
+  }
+ }
+]

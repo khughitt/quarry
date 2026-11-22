@@ -1,0 +1,31 @@
+id = "omniweb"
+name = "OMNIWeb and the SPDF OMNI bulk tree"
+roles = ["repository"]
+prefixes = ["omni"]
+adapter = "quarry.adapters.omniweb"
+
+[[routes]]
+kind = "bulk"
+url = "https://spdf.gsfc.nasa.gov/pub/data/omni"
+min_interval = 1.0
+service = "spdf"
+auth = "none"
+reports_total = false
+
+[[routes]]
+kind = "rest"
+url = "https://omniweb.gsfc.nasa.gov/cgi/nx1.cgi"
+min_interval = 1.0
+service = "spdf"
+auth = "none"
+reports_total = false
+
+[[pitfalls]]
+summary = "the CGI returns data inside an HTML page, not as a file"
+handling = "described, not used for acquisition; the bulk tree and cdaweb are"
+evidence = "sun phase-1 survey probes/omniweb/04"
+
+[[pitfalls]]
+summary = "the data set is revised in place as better source data arrive"
+handling = "every download dated and hashed"
+evidence = "probes/omniweb/01, 03"

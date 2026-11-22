@@ -1,0 +1,28 @@
+id = "silso"
+name = "WDC-SILSO sunspot number"
+roles = ["repository"]
+prefixes = ["silso"]
+adapter = "quarry.adapters.silso"
+
+[[routes]]
+kind = "bulk"
+url = "https://www.sidc.be/SILSO/DATA"
+min_interval = 1.0
+service = "sidc"
+auth = "none"
+reports_total = false
+
+[[pitfalls]]
+summary = "one file per series, reissued monthly with the recent rows provisional"
+handling = "a dataset is a dated release: the file, its manifest sha256 and Last-Modified"
+evidence = "sun phase-1 survey probes/silso/02, 05, 06, 08"
+
+[[pitfalls]]
+summary = "missing values are -1; provisional rows carry '*'"
+handling = "documented; never filled"
+evidence = "probes/silso/05"
+
+[[pitfalls]]
+summary = "digests are published in manifest-paired.sha256 and verify (the one surveyed resource with digests)"
+handling = "expected is taken from the manifest"
+evidence = "probes/silso/08"
