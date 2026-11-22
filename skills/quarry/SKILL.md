@@ -12,6 +12,7 @@ prints `{"error": {"kind", "detail"}}` on stderr. Run `quarry <command> --help` 
 
 - `quarry search "single cell" --in zenodo -n 5` finds records across data-holding resources.
   Each `search` argument is a phrase; phrases are ORed, filters ANDed; quote a multi-word phrase.
+  A search may omit phrases when it carries a domain filter.
 - `quarry show zenodo:123456` shows one record; the prefix names the resource.
 - `quarry files zenodo:123456 --acquisition` emits a request
   for a consumer to retrieve the record's selected files.
@@ -38,7 +39,9 @@ Each resource searched has a `coverage` entry. `complete` is one of `total` (the
 the reported total), `short-page` (no total reported; paging ended on a short page), `limited`
 (`-n` stopped early), `skipped` (the resource cannot express the query; the reason is given) or
 `failed` (only with `--allow-partial`, which `search` alone takes). `search` coverage also has
-`match` (`exact`, `expanded`, or `native` after `--native`); `term search` coverage has `exact`.
+`match` (`exact`, `expanded`, `native` after `--native`, or `none` with no phrases) and, after
+`--during` or `--at`, `time` (`overlap`, `start` or `nearest`: how records met the time filter;
+`start` misses records that began before the interval); `term search` coverage has `exact`.
 A resource that fails fails the command unless you pass `--allow-partial` to `search`, which
 records the failure in coverage and warnings; `term search` has no such option and fails when
 any resource fails.

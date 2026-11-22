@@ -45,14 +45,16 @@ The report contains `domain` (selected domain ID), `results` (record array),
 | --- | --- |
 | `resource` | Selected resource ID string. |
 | `native` | Sent provider query string, or null when query preparation failed before it was built. Absent on a skipped row. |
-| `match` | exact, expanded or native. |
+| `match` | exact, expanded, native, or none when the search had no phrases. |
+| `time` | overlap, start or nearest: how records met `--during` or `--at`. Present only when the search carried one; absent on a skipped row. |
 | `total` | Integer reported total, or null when unknown. Absent on a skipped row. |
 | `returned` | Integer count. Zero on failure. Absent on a skipped row. |
 | `complete` | total, short-page, limited, failed or skipped. |
 | `error` | Present on failure as an object with string `kind` and `detail`. |
 | `reason` | Present on skipped rows as an explanatory string. |
 
-Skipped rows contain only resource, match, complete and reason. Failed rows
+Skipped rows contain only resource, match, complete and reason.
+A failed row keeps its `time`. Failed rows
 occur with `--allow-partial`, retain a nullable native query and total,
 and carry returned 0. Duplicate IDs or a listing that cannot establish
 completeness cause `incomplete_listing`. A caller-specified limit can produce

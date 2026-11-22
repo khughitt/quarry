@@ -12,7 +12,7 @@ from refs import Registry
 
 from quarry import ids
 from quarry.adapters import eutils
-from quarry.adapters.base import Prepared
+from quarry.adapters.base import NO_TIME, Prepared
 from quarry.catalog import Resource
 from quarry.errors import QuarryError
 from quarry.files import File
@@ -200,6 +200,8 @@ def _parse_pmc_fm(content: bytes, status_code: int, pmcid: str, expected_pmid: s
 class Pubmed:
     match = "expanded"
     filters = frozenset()
+    phrases = "required"
+    time_relations = NO_TIME
 
     def __init__(self, resource: Resource):
         self.resource = resource

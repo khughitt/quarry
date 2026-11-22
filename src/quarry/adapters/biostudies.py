@@ -10,7 +10,7 @@ import re
 from collections.abc import Iterator
 from urllib.parse import quote
 
-from quarry.adapters.base import Prepared
+from quarry.adapters.base import NO_TIME, Prepared
 from quarry.catalog import Resource
 from quarry.errors import QuarryError
 from quarry.files import File
@@ -179,6 +179,8 @@ def _leaves(value: object) -> Iterator[dict]:
 class Biostudies:
     match = "expanded"
     filters = frozenset({"organism"})
+    phrases = "required"
+    time_relations = NO_TIME
 
     def __init__(self, resource: Resource):
         self.resource = resource

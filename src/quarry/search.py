@@ -2,6 +2,7 @@
 happens before the first request."""
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Protocol
 
 from quarry.adapters import base
@@ -44,12 +45,53 @@ def distinct[Row: _HasId](rows: list[Row]) -> list[Row]:
     return rows
 
 
+def trimmed(*, kept: int, fetched: int, native_total: int | None, short_page: bool,
+            limit: int | None) -> tuple[int | None, str]:
+    """The (total, complete) of a listing an adapter trimmed by record time. Completeness is
+    established on the native listing: the rows fetched against the provider's total, or a short
+    page. The kept rows are the total only when that listing was fetched to its end; a listing
+    stopped by -n reports no total, since trimming could discard the rows left unfetched."""
+    if limit is not None and kept > limit:
+        raise ValueError("cut the kept rows to -n before reporting them")
+    if native_total is not None and fetched > native_total:
+        raise QuarryError("incomplete_listing", f"the resource returned {fetched} rows of a total of {native_total}")
+    if (fetched == native_total) if native_total is not None else short_page:
+        return kept, "total"
+    if limit is not None and kept == limit:
+        return None, "limited"
+    of = f" of {native_total}" if native_total is not None else ""
+    raise QuarryError("incomplete_listing", f"paging stopped after {fetched}{of} rows, before the listing ended "
+                                            f"or -n was reached")
+
+
+def _match(adapter, query: Query) -> str:
+    if query.native is not None:
+        return "native"
+    return adapter.match if query.phrases else "none"
+
+
+def _time_form(query: Query) -> str | None:
+    return "during" if query.during is not None else "at" if query.at is not None else None
+
+
+def _stamped(row: Coverage, adapter, query: Query) -> Coverage:
+    """The row with the match and time relation the search applied, decided here for every row."""
+    form = _time_form(query)
+    time = None if form is None or row.complete == "skipped" else adapter.time_relations[form]
+    return replace(row, match=_match(adapter, query), time=time)
+
+
 def _unexpressed(adapter, query: Query) -> str | None:
-    """Why the adapter cannot carry the query's filters or matching mode, or None when it can."""
+    """Why the adapter cannot carry the query's filters, phrases or matching mode, or None when it can."""
     rid = adapter.resource.id
-    missing = set(query.filters) - adapter.filters
+    missing = query.filter_names() - adapter.filters - set(adapter.time_relations)
     if missing:
         return f"{rid} cannot filter by {', '.join(sorted(missing))}"
+    if query.native is None:
+        if not query.phrases and adapter.phrases == "required":
+            return f"{rid} needs at least one phrase"
+        if query.phrases and adapter.phrases == "none":
+            return f"{rid} has no text search"
     reason = adapter.unexpressed(query)
     if reason is not None:
         return reason
@@ -73,7 +115,7 @@ def run(*, catalog: Catalog, client: Client, query: Query, resource_ids: list[st
         reason = _unexpressed(adapter, query)
         if reason is not None and not from_defaults:
             raise QuarryError("unsupported_filter", f"{reason}; leave it out of --in")
-        planned.append(adapter if reason is None else Coverage.skipped(rid, adapter.match, reason))
+        planned.append(adapter if reason is None else _stamped(Coverage.skipped(rid, adapter.match, reason), adapter, query))
     if all(isinstance(p, Coverage) for p in planned):
         raise QuarryError("unsupported_filter", "no resource can carry this query: "
                                                 + "; ".join(p.reason for p in planned))
@@ -90,12 +132,15 @@ def run(*, catalog: Catalog, client: Client, query: Query, resource_ids: list[st
         except QuarryError as error:
             if not allow_partial:
                 raise
-            coverage.append(Coverage(adapter.resource.id, prepared.native,
-                                     "native" if query.native is not None else adapter.match, None, 0, "failed",
-                                     {"kind": error.kind, "detail": error.detail}))
+            coverage.append(_stamped(Coverage(adapter.resource.id, prepared.native, adapter.match, None, 0, "failed",
+                                              {"kind": error.kind, "detail": error.detail}), adapter, query))
             warnings.append(f"{adapter.resource.id} failed: {error.detail}")
             continue
+        cov = _stamped(cov, adapter, query)
         coverage.append(cov)
+        if cov.time == "start":
+            warnings.append(f"{cov.resource} matched --during by start time: records that began before START "
+                            f"are not returned")
         warnings += list(cov.warnings)
         results += rows
     return {"domain": domain, "coverage": [c.as_dict() for c in coverage],

@@ -44,10 +44,13 @@ uv run quarry search --in pubmed --native 'myeloma[Title]' -n 5 --json
 Each positional argument is a phrase. Phrases combine with OR, and filters
 and inclusive release-date bounds combine with AND. Dates accept YYYY-MM-DD,
 a number of days followed by d, or a number of weeks followed by w.
-A multiword phrase needs shell quoting. `--exact` requires a resource that
-can preserve literal matching. `--native` requires exactly one `--in` and
-replaces phrases, organism, exact and date options. Its query passes through
-unchanged, while `-n` still bounds returned records per resource.
+A multiword phrase needs shell quoting. A search may omit phrases when it
+carries a domain filter; a resource that needs phrases is then skipped or
+refused like any other it cannot express. `--exact` needs phrases and
+requires a resource that can preserve literal matching. `--native` requires
+exactly one `--in` and replaces phrases, domain filters, exact and date
+options. Its query passes through unchanged, while `-n` still bounds returned
+records per resource.
 
 Inspect each coverage row before trusting a count.
 
@@ -59,11 +62,23 @@ Inspect each coverage row before trusting a count.
 | `skipped` | A default-set resource could not express this query. Read `reason`. |
 | `failed` | `--allow-partial` retained another resource's results after this resource failed. |
 
-Coverage `match` is exact, expanded or native. A default-set resource that
+Coverage `match` is exact, expanded, native, or none when the search had no
+phrases. A default-set resource that
 cannot express a filter or matching mode is skipped with a warning. Naming
 that resource explicitly with `--in` causes refusal. Nothing left to search,
 duplicate paged IDs and incomplete listings fail. `--allow-partial` applies
 to record search, recording resource failures in coverage and warnings.
+
+`--during START/END` and `--at INSTANT` bound observation time, where
+`--since` and `--until` bound release date. They are filters of a domain that
+declares them; no shipped domain declares them yet. Each endpoint is a date
+(YYYY-MM-DD) or a UTC datetime ending in Z (YYYY-MM-DDTHH:MM[:SS[.ffffff]]Z).
+A date END includes its whole day; a datetime END is exclusive. `--during`
+returns records whose observation overlaps the interval, and its coverage
+rows say `time: overlap`; a resource that can select only by start time says
+`time: start` and the report warns that records begun earlier are missed.
+`--at` returns the record a resource reports nearest the instant
+(`time: nearest`). The two cannot be combined, and `--native` refuses both.
 
 `--organism` accepts a name or ncbitaxon CURIE in biology. GEO and ENA include
 subtaxa. ENA resolves a name first and refuses absent or ambiguous matches.

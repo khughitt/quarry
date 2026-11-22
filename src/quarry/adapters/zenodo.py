@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import re
 
-from quarry.adapters.base import Prepared
+from quarry.adapters.base import NO_TIME, Prepared
 from quarry.catalog import Resource
 from quarry.errors import QuarryError
 from quarry.files import File
@@ -107,6 +107,8 @@ def _files(h: dict) -> list[File]:
 class Zenodo:
     match = "exact"
     filters = frozenset()
+    phrases = "required"
+    time_relations = NO_TIME
 
     def __init__(self, resource: Resource):
         self.resource = resource

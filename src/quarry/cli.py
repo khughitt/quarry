@@ -20,7 +20,7 @@ from quarry.catalog import DATA_ROLES, ROLES, ROUTE_KINDS, CatalogError, Finding
 from quarry.errors import QuarryError
 from quarry.lens import resolve_domain
 from quarry.output import CONTEXT, emit, fail, output_options
-from quarry.query import WHEN, Query
+from quarry.query import INSTANT_TIME, WHEN, WINDOW, Query
 from quarry.results import Result
 
 
@@ -275,7 +275,8 @@ def check_command(ctx: click.Context) -> None:
 def _pretty_coverage(c: dict) -> str:
     if c["complete"] == "skipped":
         return f"# {c['resource']}: skipped ({c['reason']})"
-    return f"# {c['resource']}: {c['returned']} of {c['total'] if c['total'] is not None else '?'} ({c['complete']}, {c['match']})"
+    how = ", ".join([c["complete"], c["match"], *([c["time"]] if "time" in c else [])])
+    return f"# {c['resource']}: {c['returned']} of {c['total'] if c['total'] is not None else '?'} ({how})"
 
 
 def _pretty_search(report: dict) -> str:
@@ -291,6 +292,10 @@ def _pretty_search(report: dict) -> str:
 @click.option("--in", "in_", multiple=True, help="Search this resource; repeatable. Replaces the domain's default set.")
 @click.option("--domain", help="Search this domain's default resources (also QUARRY_DOMAIN).")
 @click.option("--organism", help="Biology: a taxon name or an ncbitaxon: CURIE.")
+@click.option("--during", type=WINDOW, help="Records observed during START/END (dates, or UTC datetimes ending in Z; "
+                                            "a date END includes its day), where a domain declares it.")
+@click.option("--at", "at", type=INSTANT_TIME, help="The record observed nearest this UTC datetime (ending in Z), "
+                                                    "where a domain declares it.")
 @click.option("--exact", is_flag=True, help="Require exact phrase matching from every resource searched.")
 @click.option("--native", help="One resource's own query, sent unchanged; needs exactly one --in.")
 @click.option("--allow-partial", is_flag=True, help="Report a failed resource in coverage instead of failing.")
@@ -299,18 +304,18 @@ def _pretty_search(report: dict) -> str:
 @click.option("-n", "--limit", type=int, help="At most this many records from each resource.")
 @click.pass_context
 @reports_errors
-def search_command(ctx, phrases, in_, domain, organism, exact, native, allow_partial, since, until, limit):
+def search_command(ctx, phrases, in_, domain, organism, during, at, exact, native, allow_partial, since, until, limit):
     """Search records across data-holding resources."""
     if native is not None and len(in_) != 1:
         raise click.UsageError("--native needs exactly one --in", ctx)
     try:
         query = Query(phrases=tuple(phrases), filters={"organism": organism} if organism is not None else {}, since=since,
-                      until=until, limit=limit, exact=exact, native=native)
+                      until=until, limit=limit, exact=exact, native=native, during=during, at=at)
     except ValueError as error:
         raise click.UsageError(str(error), ctx) from None
     env = context.open_env()
     chosen = resolve_domain(domain, os.environ, state(ctx).config, Path.cwd(), env.catalog)
-    for name in query.filters:
+    for name in sorted(query.filter_names()):
         if name not in env.catalog.domain_filters(chosen):
             raise QuarryError("unsupported_filter", f"--{name} is not a filter of the {chosen} domain")
     resource_ids = list(dict.fromkeys(in_)) or env.catalog.search_set(chosen)

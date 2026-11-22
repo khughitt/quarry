@@ -1,5 +1,5 @@
 """An adapter that needs no network, for framework tests."""
-from quarry.adapters.base import Prepared
+from quarry.adapters.base import NO_TIME, Prepared
 from quarry.errors import QuarryError
 from quarry.files import File
 from quarry.results import Coverage, Result
@@ -11,6 +11,8 @@ FILES: list[File] = []          # what Fake.files lists; a test sets it
 class Fake:
     match = "exact"
     filters = frozenset({"organism"})
+    phrases = "required"
+    time_relations = NO_TIME
 
     def __init__(self, resource):
         self.resource = resource
@@ -48,5 +50,28 @@ class Expanding(Fake):
     filters = frozenset()
 
 
+class Timed(Fake):
+    """Carries --during by overlap and searches with or without phrases."""
+    filters = frozenset()
+    phrases = "optional"
+    time_relations = {"during": "overlap"}
+
+
+class Starting(Timed):
+    """Can select only by a record's start time."""
+    time_relations = {"during": "start"}
+
+
+class Nearest(Fake):
+    """Answers --at alone, with no text search."""
+    filters = frozenset()
+    phrases = "none"
+    time_relations = {"at": "nearest"}
+
+
+KINDS = {"expanding": Expanding, "timed": Timed, "starting": Starting, "nearest": Nearest}
+
+
 def make(resource):
-    return Expanding(resource) if resource.id.startswith("expanding") else Fake(resource)
+    kind = next((cls for prefix, cls in KINDS.items() if resource.id.startswith(prefix)), Fake)
+    return kind(resource)

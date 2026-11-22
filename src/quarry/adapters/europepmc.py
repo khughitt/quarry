@@ -7,7 +7,7 @@ from datetime import date
 
 from refs import Registry
 
-from quarry.adapters.base import Prepared
+from quarry.adapters.base import NO_TIME, Prepared
 from quarry.catalog import Resource
 from quarry.errors import QuarryError
 from quarry.files import File
@@ -112,6 +112,8 @@ def _page(text: str) -> tuple[int, list[dict], str | None]:
 class Europepmc:
     match = "expanded"
     filters = frozenset()
+    phrases = "required"
+    time_relations = NO_TIME
 
     def __init__(self, resource: Resource):
         self.resource = resource
