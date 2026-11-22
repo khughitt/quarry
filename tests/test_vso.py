@@ -359,6 +359,51 @@ def test_vso_getdata_error_and_edge_cases():
     assert caught.value.kind == "upstream_failed"
 
 
+@pytest.mark.parametrize("message", [
+    "failed to start transfer",
+    "target server timeout",
+    "server restarting",
+    "invalid email address",
+])
+def test_vso_getdata_ordinary_errors_are_not_misclassified_as_unsupported_id(message):
+    adapter = _adapter()
+    fid = "aia__lev1:193:1515974443"
+    curie = Curie("vso.file", f"JSOC/~{_b64(fid)}")
+    resp = _soap_envelope(
+        "<VSO:GetDataResponse><body><getdataresponseitem>"
+        "<provider>JSOC</provider><method><methodtype>URL-FILE</methodtype></method>"
+        f"<error>{message}</error>"
+        "</getdataresponseitem></body></VSO:GetDataResponse>"
+    )
+    with pytest.raises(QuarryError) as caught:
+        adapter.files(replay_client(ReplayTransport([_getdata_exchange("JSOC", fid, resp)])), curie)
+    assert caught.value.kind == "upstream_failed"
+    assert message in caught.value.detail
+
+
+@pytest.mark.parametrize("tag,message", [
+    ("status", "staging required"),
+    ("status", "offline"),
+    ("error", "URL-tar only"),
+    ("error", "tar archive required"),
+    ("status", "delivered by email"),
+    ("error", "unsupported method"),
+])
+def test_vso_getdata_non_link_transfer_notes_raise_unsupported_id(tag, message):
+    adapter = _adapter()
+    fid = "aia__lev1:193:1515974443"
+    curie = Curie("vso.file", f"JSOC/~{_b64(fid)}")
+    resp = _soap_envelope(
+        "<VSO:GetDataResponse><body><getdataresponseitem>"
+        "<provider>JSOC</provider><method><methodtype>URL-FILE</methodtype></method>"
+        f"<{tag}>{message}</{tag}>"
+        "</getdataresponseitem></body></VSO:GetDataResponse>"
+    )
+    with pytest.raises(QuarryError) as caught:
+        adapter.files(replay_client(ReplayTransport([_getdata_exchange("JSOC", fid, resp)])), curie)
+    assert caught.value.kind == "unsupported_id"
+
+
 def test_vso_preserves_whitespace_in_fileid_through_query_and_getdata_round_trip():
     adapter = _adapter()
     query = Query(during=WIN, filters={"instrument": "AIA"})

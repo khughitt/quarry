@@ -40,6 +40,9 @@ REQUEST_EMAIL = "quarry@example.invalid"
 PROVIDER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_\-]*$")
 B64URL_RE = re.compile(r"^[A-Za-z0-9_\-]+$")
 VSO_TIME_RE = re.compile(r"^([0-9]{4})([0-9]{2})([0-9]{2})([0-9]{2})([0-9]{2})([0-9]{2})(?:\.([0-9]{1,6}))?$")
+UNSUPPORTED_METHOD_RE = re.compile(
+    r"\b(?:staging|offline|tar|tar_gz|url-tar)\b|unsupported method|by email|email delivery|email only"
+)
 
 
 @dataclass(frozen=True)
@@ -347,7 +350,7 @@ def _parse_getdata(xml_text: str, provider: str, fileid: str, curie: Curie) -> t
             chosen_method = next(m for m in methods if m in LINK_ONLY_SET)
 
         combined_note = " ".join(x for x in (status, error) if x).lower()
-        if any(tok in combined_note for tok in ("staging", "offline", "unsupported method", "email", "tar")):
+        if UNSUPPORTED_METHOD_RE.search(combined_note):
             unsupported_reason = f"{curie}: VSO link-only GetData unavailable ({status or error})"
             continue
         if any(tok in combined_note for tok in ("not found", "no data", "missing", "unknown file")):
