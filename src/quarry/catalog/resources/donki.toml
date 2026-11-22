@@ -1,0 +1,33 @@
+id = "donki"
+name = "CCMC DONKI"
+roles = ["knowledgebase"]
+prefixes = ["donki"]
+adapter = "quarry.adapters.donki"
+
+[[routes]]
+kind = "rest"
+url = "https://ccmc.gsfc.nasa.gov/DONKI-API/get"
+min_interval = 1.0
+service = "ccmc"
+auth = "none"
+reports_total = false
+
+[[pitfalls]]
+summary = "the API base moved on 2026-09-30; the old base answers HTTP 200 with an HTML page"
+handling = "content-type is checked on every response; non-JSON is upstream_failed"
+evidence = "sun phase-1 survey probes/donki/01, 04"
+
+[[pitfalls]]
+summary = "records are revised (versionId) and link to each other (linkedEvents)"
+handling = "versionId and submissionTime are kept with every record and linkedEvents become donki: xrefs"
+evidence = "probes/donki/07, 08, 09"
+
+[[pitfalls]]
+summary = "date-wide queries select by event start time and record timestamps have minute precision (YYYY-MM-DDTHH:MMZ)"
+handling = "--during declares start, widens to whole calendar days, trims by verified provider timestamps, and refuses sub-minute query bounds before transport"
+evidence = "probes/donki/07, 08, 09; X-25 cross-midnight flare fixture"
+
+[[pitfalls]]
+summary = "no native per-id lookup endpoint exists"
+handling = "show donki:<id> parses UTC date and event kind, queries that kind's single-day window, and requires an exact match to the response ID field"
+evidence = "probes/donki/07, 08, 09"

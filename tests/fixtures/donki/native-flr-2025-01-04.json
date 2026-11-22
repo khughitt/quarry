@@ -1,0 +1,27 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "endDate",
+     "2025-01-04"
+    ],
+    [
+     "startDate",
+     "2025-01-04"
+    ]
+   ],
+   "url": "https://ccmc.gsfc.nasa.gov/DONKI-API/get/FLR"
+  },
+  "response": {
+   "body": "[{\"flrID\":\"2025-01-04T00:34:00-FLR-001\",\"catalog\":\"M2M_CATALOG\",\"instruments\":[{\"displayName\":\"GOES-P: EXIS 1.0-8.0\"}],\"beginTime\":\"2025-01-04T00:34Z\",\"peakTime\":\"2025-01-04T00:36Z\",\"endTime\":\"2025-01-04T00:41Z\",\"classType\":\"M1.5\",\"sourceLocation\":\"N11E58\",\"activeRegionNum\":13947,\"note\":\"\",\"link\":\"https://ccmc.gsfc.nasa.gov/DONKI/view/FLR/36229/-1\",\"linkedEvents\":null,\"sentNotifications\":null,\"submissionTime\":\"2025-01-04T01:01Z\",\"versionId\":1},{\"flrID\":\"2025-01-04T04:58:00-FLR-001\",\"catalog\":\"M2M_CATALOG\",\"instruments\":[{\"displayName\":\"GOES-P: EXIS 1.0-8.0\"}],\"beginTime\":\"2025-01-04T04:58Z\",\"peakTime\":\"2025-01-04T05:18Z\",\"endTime\":\"2025-01-04T05:27Z\",\"classType\":\"M7.6\",\"sourceLocation\":\"N12E54\",\"activeRegionNum\":13947,\"note\":\"\",\"link\":\"https://ccmc.gsfc.nasa.gov/DONKI/view/FLR/36235/-1\",\"linkedEvents\":null,\"sentNotifications\":[{\"messageID\":\"20250104-AL-003\",\"messageIssueTime\":\"2025-01-04T05:21Z\",\"messageURL\":\"https://ccmc.gsfc.nasa.gov/DONKI/view/Alert/36236/1\"},{\"messageID\":\"20250104-AL-005\",\"messageIssueTime\":\"2025-01-04T13:17Z\",\"messageURL\":\"https://ccmc.gsfc.nasa.gov/DONKI/view/Alert/36239/1\"}],\"submissionTime\":\"2025-01-04T13:15Z\",\"versionId\":2},{\"flrID\":\"2025-01-04T12:34:00-FLR-001\",\"catalog\":\"M2M_CATALOG\",\"instruments\":[{\"displayName\":\"GOES-P: EXIS 1.0-8.0\"}],\"beginTime\":\"2025-01-04T12:34Z\",\"peakTime\":\"2025-01-04T12:48Z\",\"endTime\":\"2025-01-04T12:56Z\",\"classType\":\"X1.8\",\"sourceLocation\":\"N12E50\",\"activeRegionNum\":13947,\"note\":\"\",\"link\":\"https://ccmc.gsfc.nasa.gov/DONKI/view/FLR/36237/-1\",\"linkedEvents\":[{\"activityID\":\"2025-01-04T13:25:00-CME-001\"}],\"sentNotifications\":[{\"messageID\":\"20250104-AL-004\",\"messageIssueTime\":\"2025-01-04T12:49Z\",\"messageURL\":\"https://ccmc.gsfc.nasa.gov/DONKI/view/Alert/36238/1\"},{\"messageID\":\"20250104-AL-006\",\"messageIssueTime\":\"2025-01-04T13:22Z\",\"messageURL\":\"https://ccmc.gsfc.nasa.gov/DONKI/view/Alert/36240/1\"}],\"submissionTime\":\"2025-01-04T13:21Z\",\"versionId\":2},{\"flrID\":\"2025-01-04T14:24:00-FLR-001\",\"catalog\":\"M2M_CATALOG\",\"instruments\":[{\"displayName\":\"GOES-P: EXIS 1.0-8.0\"}],\"beginTime\":\"2025-01-04T14:24Z\",\"peakTime\":\"2025-01-04T15:08Z\",\"endTime\":\"2025-01-04T15:56Z\",\"classType\":\"C9.3\",\"sourceLocation\":\"S17W55\",\"activeRegionNum\":13939,\"note\":\"\",\"link\":\"https://ccmc.gsfc.nasa.gov/DONKI/view/FLR/36258/-1\",\"linkedEvents\":[{\"activityID\":\"2025-01-04T15:12:00-CME-001\"},{\"activityID\":\"2025-01-04T21:46:00-SEP-001\"},{\"activityID\":\"2025-01-04T22:15:00-SEP-001\"},{\"activityID\":\"2025-01-04T22:23:00-SEP-001\"},{\"activityID\":\"2025-01-05T01:03:00-SEP-001\"},{\"activityID\":\"2025-01-05T02:35:00-SEP-001\"}],\"sentNotifications\":null,\"submissionTime\":\"2025-01-04T21:54Z\",\"versionId\":2},{\"flrID\":\"2025-01-04T18:46:00-FLR-001\",\"catalog\":\"M2M_CATALOG\",\"instruments\":[{\"displayName\":\"GOES-P: EXIS 1.0-8.0\"}],\"beginTime\":\"2025-01-04T18:46Z\",\"peakTime\":\"2025-01-04T19:15Z\",\"endTime\":\"2025-01-04T19:52Z\",\"classType\":\"C7.6\",\"sourceLocation\":\"S17W57\",\"activeRegionNum\":13939,\"note\":\"\",\"link\":\"https://ccmc.gsfc.nasa.gov/DONKI/view/FLR/36259/-1\",\"linkedEvents\":[{\"activityID\":\"2025-01-04T18:48:00-CME-001\"},{\"activityID\":\"2025-01-04T21:46:00-SEP-001\"},{\"activityID\":\"2025-01-04T22:15:00-SEP-001\"},{\"activityID\":\"2025-01-04T22:23:00-SEP-001\"},{\"activityID\":\"2025-01-05T01:03:00-SEP-001\"},{\"activityID\":\"2025-01-05T02:35:00-SEP-001\"}],\"sentNotifications\":null,\"submissionTime\":\"2025-01-04T21:56Z\",\"versionId\":1},{\"flrID\":\"2025-01-04T23:08:00-FLR-001\",\"catalog\":\"M2M_CATALOG\",\"instruments\":[{\"displayName\":\"GOES-P: EXIS 1.0-8.0\"}],\"beginTime\":\"2025-01-04T23:08Z\",\"peakTime\":\"2025-01-04T23:26Z\",\"endTime\":\"2025-01-04T23:36Z\",\"classType\":\"M2.1\",\"sourceLocation\":\"N11E44\",\"activeRegionNum\":13947,\"note\":\"\",\"link\":\"https://ccmc.gsfc.nasa.gov/DONKI/view/FLR/36272/-1\",\"linkedEvents\":null,\"sentNotifications\":null,\"submissionTime\":\"2025-01-04T23:41Z\",\"versionId\":2},{\"flrID\":\"2025-01-04T23:57:00-FLR-001\",\"catalog\":\"M2M_CATALOG\",\"instruments\":[{\"displayName\":\"GOES-P: EXIS 1.0-8.0\"}],\"beginTime\":\"2025-01-04T23:57Z\",\"peakTime\":\"2025-01-05T00:06Z\",\"endTime\":\"2025-01-05T00:16Z\",\"classType\":\"M1.1\",\"sourceLocation\":\"N10E42\",\"activeRegionNum\":13947,\"note\":\"\",\"link\":\"https://ccmc.gsfc.nasa.gov/DONKI/view/FLR/36273/-1\",\"linkedEvents\":null,\"sentNotifications\":null,\"submissionTime\":\"2025-01-07T17:49Z\",\"versionId\":2}]",
+   "headers": {
+    "content-length": "4252",
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ }
+]

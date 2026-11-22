@@ -45,9 +45,13 @@ SWPC_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
                      datetime(2025, 1, 16, 0, 0, 0, tzinfo=timezone.utc))
 CDAW_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
                      datetime(2025, 1, 16, 0, 0, 0, tzinfo=timezone.utc))
+DONKI_WINDOW = Window(datetime(2025, 1, 4, 0, 0, 0, tzinfo=timezone.utc),
+                      datetime(2025, 1, 5, 0, 0, 0, tzinfo=timezone.utc))
 HV_INSTANT = datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc)
 JSOC_SAMPLE_CURIE = Curie("jsoc", "aia.lev1_euv_12s[2025-01-15T00:00:11Z][193]")
 SOAR_SAMPLE_CURIE = Curie("soar", "solo_L1_eui-fsi304-image-short_20250115T000015208")
+HPDE_OMNI_CURIE = Curie("spase", "NASA/NumericalData/OMNI/HighResolutionObservations/Version2/PT1M")
+HPDE_SPDF_CURIE = Curie("spase", "SMWG/Repository/NASA/GSFC/SPDF")
 
 
 def _resolve_sun_root(sun_root: Path | None = None) -> Path:
@@ -248,6 +252,13 @@ def swpc_current_text_head(adapter, client: Client) -> None:
         raise QuarryError("upstream_failed", f"SWPC current text HEAD returned unexpected content-type {ct!r}")
 
 
+def hpde_github_raw(adapter, client: Client) -> None:
+    """Independent GitHub raw SPASE XML metadata probe (pure registry metadata, no observation values)."""
+    rec = adapter.show_github(client, HPDE_SPDF_CURIE)
+    if not rec.domain_fields.get("heliophysics", {}).get("spase_version"):
+        raise QuarryError("upstream_failed", "HPDE GitHub raw probe returned no SPASE Version")
+
+
 def terms(curie: Curie, words: str) -> Probe:
     """One OLS route's three paths: the term (through ancestors), its ancestors, and search."""
     def probe(adapter, client):
@@ -310,6 +321,10 @@ PROBES: dict[tuple[str, str], Probe] = {
     ("swpc-events", "sunpy.net.dataretriever.sources.noaa"): local_tool("sunpy.net.dataretriever.sources.noaa"),
     ("cdaw-cme", "https://cdaw.gsfc.nasa.gov/CME_list/UNIVERSAL_ver2/text_ver"):
         dated_search_one(Query(during=CDAW_WINDOW, limit=1)),
+    ("donki", "https://ccmc.gsfc.nasa.gov/DONKI-API/get"):
+        dated_search_one(Query(during=DONKI_WINDOW, limit=1)),
+    ("hpde", "https://spase-metadata.org"): show(HPDE_OMNI_CURIE),
+    ("hpde", "https://raw.githubusercontent.com/hpde"): hpde_github_raw,
 }
 
 

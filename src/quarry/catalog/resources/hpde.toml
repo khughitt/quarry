@@ -1,0 +1,36 @@
+id = "hpde"
+name = "HPDE SPASE metadata registry"
+roles = ["knowledgebase"]
+prefixes = ["spase"]
+adapter = "quarry.adapters.hpde"
+
+[[routes]]
+kind = "rest"
+url = "https://spase-metadata.org"
+min_interval = 1.0
+service = "spase-metadata"
+auth = "none"
+reports_total = false
+
+[[routes]]
+kind = "bulk"
+url = "https://raw.githubusercontent.com/hpde"
+min_interval = 1.0
+service = "github-raw"
+auth = "none"
+reports_total = false
+
+[[pitfalls]]
+summary = "coverage dates in registry records lag the repository by years (OMNI StopDate 2020-01-01; CDAWeb 2026-07-08)"
+handling = "coverage is never read from the registry; HPDE declares no time relation and omits TemporalDescription from records"
+evidence = "sun phase-1 survey probes/hpde/14; probes/cdaweb/01"
+
+[[pitfalls]]
+summary = "hpde.io may not resolve; the same records are served by spase-metadata.org and GitHub"
+handling = "two routes (spase-metadata.org JSON and raw.githubusercontent.com/hpde XML) to one record set; hpde.io is never contacted"
+evidence = "probes/hpde/01, 10, 11, 14"
+
+[[pitfalls]]
+summary = "records exist in several schema minor versions at once (2.7.0, 2.7.1, 2.7.2)"
+handling = "the adapter reads Version and tolerates SPASE 2.x minor versions"
+evidence = "probes/hpde/14, 15"

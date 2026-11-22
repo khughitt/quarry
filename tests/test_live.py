@@ -223,6 +223,7 @@ def test_dated_heliophysics_probes_verify_epoch_before_transport(tmp_path, monke
         ("omniweb", "https://spdf.gsfc.nasa.gov/pub/data/omni"),
         ("swpc-events", "https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports"),
         ("cdaw-cme", "https://cdaw.gsfc.nasa.gov/CME_list/UNIVERSAL_ver2/text_ver"),
+        ("donki", "https://ccmc.gsfc.nasa.gov/DONKI-API/get"),
     ):
         with pytest.raises(QuarryError) as caught:
             live.PROBES[key](BoomAdapter(), None)
@@ -418,3 +419,47 @@ def test_swpc_current_text_probe_is_head_only_offline():
     with pytest.raises(QuarryError) as caught:
         live.PROBES[("swpc-events", "https://services.swpc.noaa.gov/text")](adapter, replay_client(bad_t))
     assert caught.value.kind == "upstream_failed"
+
+
+def test_hpde_rest_and_github_probes_offline():
+    import json
+    from quarry.adapters import hpde
+    from quarry.testing import ReplayTransport, exchange, replay_client
+
+    adapter = hpde.make(catalog_mod.load().resources["hpde"])
+    rest_t = ReplayTransport([
+        exchange(
+            "GET",
+            f"https://spase-metadata.org/{live.HPDE_OMNI_CURIE.local}.json",
+            body=json.dumps({
+                "Spase": {
+                    "Version": "2.7.2",
+                    "NumericalData": {
+                        "ResourceID": f"spase://{live.HPDE_OMNI_CURIE.local}",
+                        "ResourceHeader": {"ResourceName": "OMNI 1-min"},
+                    },
+                }
+            }),
+        ),
+    ])
+    live.PROBES[("hpde", "https://spase-metadata.org")](adapter, replay_client(rest_t))
+    assert rest_t.pending == []
+
+    gh_xml = (
+        '<Spase xmlns="http://www.spase-group.org/data/schema">'
+        "<Version>2.7.0</Version>"
+        "<Repository>"
+        f"<ResourceID>spase://{live.HPDE_SPDF_CURIE.local}</ResourceID>"
+        "<ResourceHeader><ResourceName>SPDF</ResourceName></ResourceHeader>"
+        "</Repository></Spase>"
+    )
+    gh_t = ReplayTransport([
+        exchange(
+            "GET",
+            "https://raw.githubusercontent.com/hpde/SMWG/master/Repository/NASA/GSFC/SPDF.xml",
+            body=gh_xml,
+            content_type="text/plain; charset=utf-8",
+        ),
+    ])
+    live.PROBES[("hpde", "https://raw.githubusercontent.com/hpde")](adapter, replay_client(gh_t))
+    assert gh_t.pending == []
