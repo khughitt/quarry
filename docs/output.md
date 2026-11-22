@@ -34,6 +34,18 @@ GEO and ENA can supply both. BioStudies supplies the organism label.
 Unavailable biology values are omitted. When none is available, the biology
 entry is omitted as well.
 
+Heliophysics metadata uses `domain_fields.heliophysics`. Whenever a
+heliophysics resource supplies observation time, its records carry ISO 8601
+UTC `start` and, when the observation is a span rather than an instant,
+`end`—whether or not the search carried `--during` or `--at`. `Result.date`
+remains the independent release or archive date (omitted when the resource
+provides none). Adapters may include additional string-valued metadata keys
+under `domain_fields.heliophysics` when supplied by the provider (such as
+`instrument`, `observatory`, `provider`, `fileid`, `event_type`, `source_id`,
+`spase_version`, `wavelength`, `jpip_uri`, `requested_at`, `series` and
+`product`). Unavailable values are omitted. When none is available, the
+heliophysics entry is omitted as well.
+
 ## Search report
 
 The report contains `domain` (selected domain ID), `results` (record array),

@@ -27,17 +27,21 @@ and term search and determines available filters. Selecting a resource with
 owning resource.
 
 Core defaults to Zenodo and figshare. Biology adds GEO, ENA and BioStudies.
-PubMed and Europe PMC are literature indexes selected with `--in`.
-Resource inspection reports roles, routes, service limits and pitfalls.
-The shipped [core](../skills/quarry/SKILL.md#resource-notes) and
-[biology](../skills/quarry-biology/SKILL.md#resource-notes) notes summarize
-resource-specific behavior.
+Heliophysics adds VSO, CDAWeb and HEK. Literature indexes (PubMed, Europe PMC,
+NASA ADS and arXiv) are selected with `--in`. Resource inspection reports
+roles, routes, service limits and pitfalls. The shipped
+[core](../skills/quarry/SKILL.md#resource-notes),
+[biology](../skills/quarry-biology/SKILL.md#resource-notes) and
+[heliophysics](../skills/quarry-heliophysics/SKILL.md#resource-notes) notes
+summarize resource-specific behavior.
 
 ## Search records and read coverage
 
 ```sh
 uv run quarry search --domain biology -n 10 "multiple myeloma"
 uv run quarry search --domain biology --in geo --organism ncbitaxon:9606 --since 2024-01-01 "single cell"
+uv run quarry search --domain heliophysics --during 2025-01-15T00:00:00Z/2025-01-15T00:00:16Z
+uv run quarry search --domain heliophysics --in helioviewer --at 2025-01-15T00:00:00Z --instrument "AIA 335"
 uv run quarry search --in pubmed --native 'myeloma[Title]' -n 5 --json
 ```
 
@@ -71,14 +75,28 @@ to record search, recording resource failures in coverage and warnings.
 
 `--during START/END` and `--at INSTANT` bound observation time, where
 `--since` and `--until` bound release date. They are filters of a domain that
-declares them; no shipped domain declares them yet. Each endpoint is a date
-(YYYY-MM-DD) or a UTC datetime ending in Z (YYYY-MM-DDTHH:MM[:SS[.ffffff]]Z).
-A date END includes its whole day; a datetime END is exclusive. `--during`
-returns records whose observation overlaps the interval, and its coverage
-rows say `time: overlap`; a resource that can select only by start time says
-`time: start` and the report warns that records begun earlier are missed.
-`--at` returns the record a resource reports nearest the instant
-(`time: nearest`). The two cannot be combined, and `--native` refuses both.
+declares them (`heliophysics` declares `during`, `at`, `instrument`,
+`observatory` and `measurement`). Each endpoint is a date (YYYY-MM-DD) or a
+UTC datetime ending in Z (YYYY-MM-DDTHH:MM[:SS[.ffffff]]Z). A date END
+includes its whole day; a datetime END is exclusive. `--during` returns
+records whose observation overlaps the interval (`time: overlap`), running
+VSO, CDAWeb and HEK on the heliophysics default set while skipping Zenodo and
+figshare with reasons; a resource that can select only by start time (such as
+DONKI) says `time: start` and the report warns that records begun earlier are
+missed. `--at` returns the record a resource reports nearest the instant
+(`time: nearest`) and currently requires naming Helioviewer with `--in` and an
+exact source nickname (`--in helioviewer --at <instant> --instrument "AIA 335"`,
+optionally narrowed by `--observatory`); default-set `--at` fails with
+`unsupported_filter` because VSO's `near` requires `start` and `end`. The two
+time flags cannot be combined, and `--native` refuses both.
+
+`--instrument` and `--observatory` narrow archives and HEK in heliophysics
+(on Helioviewer, `--instrument` requires a unique case-insensitive source
+nickname). `--measurement` takes a SPASE `MeasurementType` term only where an
+adapter can enforce an exact mapping; approximate-only mappings are refused
+before transport with `--native` syntax hints (`<physobs>` on VSO,
+`instrumentType=` on CDAWeb). `--since` and `--until` remain release-date
+bounds (`jsoc`, `soar`, `ads` and `arxiv` in heliophysics).
 
 `--organism` accepts a name or ncbitaxon CURIE in biology. GEO and ENA include
 subtaxa. ENA resolves a name first and refuses absent or ambiguous matches.
@@ -128,8 +146,8 @@ The consumer retrieves bytes and chooses retrieval bounds.
 
 `--json` and `--pretty` select output, with `QUARRY_FORMAT` providing the
 default. The default is pretty. `--trace` writes redacted request traces to
-stderr. Optional service keys are named in the resource routes, such as
-NCBI_API_KEY and ZENODO_TOKEN.
+stderr. Optional and required service keys are named in the resource routes,
+such as NCBI_API_KEY, ZENODO_TOKEN, ADS_DEV_KEY and JSOC_NOTIFY_EMAIL.
 
 `quarry id check` is silent on success. On validation findings, read each
 `where` value as the supplied ID. Add a prefix for `not_a_curie` or

@@ -521,7 +521,7 @@ def term_search(ctx: click.Context, words: tuple[str, ...], in_: tuple[str, ...]
                         if set(env.catalog.resources[rid].roles) & terms_mod.TERM_ROLES]
         if not resource_ids:
             raise QuarryError("nothing_to_search", f"the {chosen} domain has no ontology or vocabulary resources; "
-                                                   f"name one with --in or use --domain biology")
+                                                   f"name one with --in or pick a domain from `quarry domains list`")
     adapters = [(rid, _term_adapter(env.catalog.resources[rid], terms_mod.TERM_ROLES)) for rid in resource_ids]
     text = " ".join(words)
     coverage, found, warnings = [], [], []

@@ -129,7 +129,9 @@ def test_term_search_core_has_nothing(monkeypatch):
     out = invoke("--json", "term", "search", "heart", "--domain", "core")
     assert out.exit_code == 1
     err = error(out)
-    assert err["kind"] == "nothing_to_search" and "--in" in err["detail"] and "--domain biology" in err["detail"]
+    assert err["kind"] == "nothing_to_search"
+    assert "--in" in err["detail"] and "quarry domains list" in err["detail"]
+    assert "--domain biology" not in err["detail"]
 
 
 def test_term_show_unowned_prefix(monkeypatch):
@@ -248,3 +250,22 @@ def test_heliophysics_term_search_and_show_round_trip(monkeypatch):
     bio_report = json.loads(bio.stdout)
     assert [c["resource"] for c in bio_report["coverage"]] == ["go", "uberon", "ncbitaxon"]
     assert {t["resource"] for t in bio_report["terms"]} == {"go", "uberon", "ncbitaxon"}
+
+
+def test_term_search_lens_covers_heliophysics_vocabularies(monkeypatch):
+    # Searching with --domain heliophysics covers both spase (XSD) and goes-class (inline)
+    transport = patch_client(monkeypatch, files=["spase/schema.json", "spase/schema.json"])
+    out = invoke("--json", "term", "search", "M", "--domain", "heliophysics")
+    assert out.exit_code == 0, out.stderr
+    report = json.loads(out.stdout)
+    assert report["domain"] == "heliophysics"
+    assert [c["resource"] for c in report["coverage"]] == ["spase", "goes-class"]
+    assert any(t["resource"] == "spase" for t in report["terms"])
+    assert any(t["id"] == "goes-class:M" for t in report["terms"])
+
+    # Pretty output also prints both vocabularies' coverage lines
+    pretty = invoke("term", "search", "M5.2", "--domain", "heliophysics")
+    assert pretty.exit_code == 0, pretty.stderr
+    assert "goes-class:M5.2\tM5.2" in pretty.stdout
+    assert "# spase 2.7.2:" in pretty.stdout and "# goes-class NOAA-SWPC: 1 of 1 (total)" in pretty.stdout
+    assert transport.pending == []

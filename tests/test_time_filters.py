@@ -195,3 +195,71 @@ def test_unsupported_heliophysics_filter_refuses_without_transport(catalog, monk
     monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport([])))
     unsupported = error("search", "--domain", "helio", "--in", "plain", flag, "AIA", "x")
     assert unsupported == {"kind": "unsupported_filter", "detail": f"plain cannot filter by {name}; leave it out of --in"}
+
+
+def test_heliophysics_at_helioviewer_replays_json_and_pretty(monkeypatch):
+    from pathlib import Path
+    fx = Path(__file__).parent / "fixtures" / "helioviewer" / "search-aia335.json"
+
+    transport = ReplayTransport.from_files([fx])
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(transport))
+    got = report("search", "--domain", "heliophysics", "--at", "2025-01-15T00:00:00Z",
+                 "--in", "helioviewer", "--instrument", "AIA 335")
+    assert transport.pending == []
+    assert got["domain"] == "heliophysics"
+    assert [(c["resource"], c["complete"], c["match"], c.get("time")) for c in got["coverage"]] == [
+        ("helioviewer", "total", "none", "nearest"),
+    ]
+    assert len(got["results"]) == 1
+    row = got["results"][0]
+    assert row["id"].startswith("helioviewer:") and "date" not in row
+    helio_fields = row["domain_fields"]["heliophysics"]
+    assert helio_fields["start"].endswith("Z") and "end" not in helio_fields
+    assert helio_fields["instrument"] == "AIA 335"
+
+    pretty_transport = ReplayTransport.from_files([fx])
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(pretty_transport))
+    pretty = CliRunner().invoke(
+        main,
+        ["--pretty", "search", "--domain", "heliophysics", "--at", "2025-01-15T00:00:00Z",
+         "--in", "helioviewer", "--instrument", "AIA 335"],
+        catch_exceptions=False,
+    )
+    assert pretty.exit_code == 0, pretty.stderr
+    assert pretty_transport.pending == []
+    assert "# helioviewer: 1 of 1 (total, none, nearest)" in pretty.stdout
+
+
+def test_heliophysics_at_helioviewer_refuses_absent_or_generic_instrument(monkeypatch):
+    from pathlib import Path
+    fx = Path(__file__).parent / "fixtures" / "helioviewer" / "search-aia335.json"
+
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport([])))
+    absent = error("search", "--domain", "heliophysics", "--at", "2025-01-15T00:00:00Z", "--in", "helioviewer")
+    assert absent["kind"] == "unsupported_filter" and "--instrument" in absent["detail"]
+
+    # Generic "AIA" must fail after getDataSources before calling getClosestImage
+    sources_only = [json.loads(fx.read_text())[0]]
+    transport = ReplayTransport(sources_only)
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(transport))
+    generic = error("search", "--domain", "heliophysics", "--at", "2025-01-15T00:00:00Z",
+                    "--in", "helioviewer", "--instrument", "AIA")
+    assert generic["kind"] == "unsupported_filter" and "'AIA'" in generic["detail"]
+    assert transport.pending == []
+
+
+def test_heliophysics_at_default_set_is_refused_before_transport(monkeypatch):
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport([])))
+    got = error("search", "--domain", "heliophysics", "--at", "2025-01-15T00:00:00Z")
+    assert got["kind"] == "unsupported_filter"
+    assert got["detail"].startswith("no resource can carry this query")
+    for rid in ("vso", "cdaweb", "hek", "zenodo", "figshare"):
+        assert rid in got["detail"]
+
+
+def test_shipped_biology_and_core_domains_refuse_during_and_at(monkeypatch):
+    monkeypatch.setattr(context, "make_client", lambda trace: pytest.fail("domain refusal must not open a client"))
+    bio = error("search", "--domain", "biology", "--during", DAY, "myeloma")
+    assert bio == {"kind": "unsupported_filter", "detail": "--during is not a filter of the biology domain"}
+    core = error("search", "--domain", "core", "--at", "2025-01-15T00:00:00Z")
+    assert core == {"kind": "unsupported_filter", "detail": "--at is not a filter of the core domain"}

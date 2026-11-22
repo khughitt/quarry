@@ -75,6 +75,7 @@ def test_render_notes_lists_routes_and_pitfalls(synthetic):
 def test_core_notes_go_to_the_quarry_skill(tmp_path):
     assert skills.skill_path(tmp_path, "core") == tmp_path / "quarry" / "SKILL.md"
     assert skills.skill_path(tmp_path, "biology") == tmp_path / "quarry-biology" / "SKILL.md"
+    assert skills.skill_path(tmp_path, "heliophysics") == tmp_path / "quarry-heliophysics" / "SKILL.md"
 
 
 def test_domain_notes_skip_included_resources(synthetic):
@@ -83,6 +84,11 @@ def test_domain_notes_skip_included_resources(synthetic):
     real = catalog_mod.load()
     notes = skills.render_notes(real, "biology")
     assert "(`geo`)" in notes and "(`uberon`)" in notes and "(`zenodo`)" not in notes
+    helio_notes = skills.render_notes(real, "heliophysics")
+    for rid in ("vso", "jsoc", "cdaweb", "hek", "helioviewer", "donki", "hpde", "spase", "goes-class", "ads", "arxiv"):
+        assert f"(`{rid}`)" in helio_notes
+    for core_rid in ("zenodo", "figshare", "pubmed", "europepmc"):
+        assert f"(`{core_rid}`)" not in helio_notes
 
 
 def test_build_replaces_only_between_markers(synthetic, tmp_path):
@@ -121,6 +127,15 @@ def test_every_domain_has_a_skill():
 
 def test_checked_in_skills_are_current():
     assert skills.build(catalog_mod.load(), skills.SKILLS_ROOT, write=False)[0] == []
+
+
+def test_heliophysics_skill_is_shipped_and_current():
+    cat = catalog_mod.load()
+    assert "heliophysics" in cat.domains
+    path = skills.skill_path(skills.SKILLS_ROOT, "heliophysics")
+    assert path.is_file()
+    changed, unchanged = skills.build(cat, skills.SKILLS_ROOT, write=False)
+    assert changed == [] and path in unchanged
 
 
 def test_skills_build_cli_is_idempotent(tmp_path, monkeypatch):

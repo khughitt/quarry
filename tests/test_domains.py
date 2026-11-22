@@ -8,14 +8,23 @@ from click.testing import CliRunner
 
 from quarry import catalog as catalog_mod
 from quarry import context
-from quarry.adapters import base, ena, geo
+from quarry.adapters import base, cdaweb, ena, geo, hek, vso
 from quarry.cli import main
-from quarry.query import Query
+from quarry.query import Query, parse_window
 from quarry.testing import ReplayTransport, exchange, replay_client
 from tests.recordings.common import CORE_MYELOMA
 
 FX = Path(__file__).parent / "fixtures"
 CAT = catalog_mod.load()
+HELIO_DECLARED = [
+    "jsoc", "vso", "cdaweb", "soar", "soho", "stereo-ssc", "helioviewer",
+    "goes-xrs", "silso", "omniweb",
+    "hek", "donki", "swpc-events", "cdaw-cme",
+    "hpde", "spase", "goes-class",
+    "ads", "arxiv",
+]
+CORE_RESOURCES = ["zenodo", "figshare", "pubmed", "europepmc"]
+HELIO_EFFECTIVE = [*HELIO_DECLARED, *CORE_RESOURCES]
 
 
 def invoke(*args):
@@ -25,8 +34,14 @@ def invoke(*args):
 def test_search_sets_and_effective_resources():
     assert CAT.search_set("core") == ["zenodo", "figshare"]
     assert CAT.search_set("biology") == ["geo", "ena", "biostudies", "zenodo", "figshare"]
+    assert CAT.search_set("heliophysics") == ["vso", "cdaweb", "hek", "zenodo", "figshare"]
     assert CAT.effective_resources("biology") == ["geo", "ena", "biostudies", "go", "uberon", "ncbitaxon",
                                                   "zenodo", "figshare", "pubmed", "europepmc"]
+    assert CAT.effective_resources("heliophysics") == HELIO_EFFECTIVE
+    assert CAT.domain_filters("heliophysics") == {"during", "at", "instrument", "observatory", "measurement"}
+    helio = CAT.domains["heliophysics"]
+    assert helio.includes == ("core",)
+    assert helio.beliefs_contract is None and helio.beliefs_contract_version is None and helio.facet_namespaces == {}
     assert {rid: CAT.resources[rid].roles for rid in CAT.effective_resources("biology")} == {
         "biostudies": ("repository",), "ena": ("repository",), "figshare": ("repository",), "geo": ("repository",),
         "europepmc": ("literature-index",), "pubmed": ("literature-index",), "zenodo": ("repository",),
@@ -48,6 +63,7 @@ def test_resource_outside_shipped_lenses_coexists_with_exact_inventories(tmp_pat
     assert cat.effective_resources("core") == ["zenodo", "figshare", "pubmed", "europepmc"]
     assert cat.effective_resources("biology") == ["geo", "ena", "biostudies", "go", "uberon", "ncbitaxon",
                                                   "zenodo", "figshare", "pubmed", "europepmc"]
+    assert cat.effective_resources("heliophysics") == HELIO_EFFECTIVE
     assert catalog_mod.check(cat, context.load_unchecked().registry, modules=[]) == []
 
 
@@ -104,12 +120,15 @@ def test_bare_normalize_opt_out_preserves_existing_bare_ids_and_routes_qualified
         assert json.loads(invoke("id", "normalize", qualified).stdout) == {"id": qualified}
 
 
-def test_domains_list_shows_both_domains_with_their_resources():
+def test_domains_list_shows_all_domains_with_their_resources():
     out = invoke("domains", "list")
     rows = {d["id"]: d for d in json.loads(out.stdout)["domains"]}
+    assert set(rows) == {"biology", "core", "heliophysics"}
     assert rows["biology"]["resources"] == ["geo", "ena", "biostudies", "go", "uberon", "ncbitaxon",
                                             "zenodo", "figshare", "pubmed", "europepmc"]
     assert rows["core"]["resources"] == ["zenodo", "figshare", "pubmed", "europepmc"] and rows["core"]["beliefs_contract"] is None
+    assert rows["heliophysics"]["resources"] == HELIO_EFFECTIVE
+    assert rows["heliophysics"]["includes"] == ["core"] and rows["heliophysics"]["beliefs_contract"] is None
 
 
 def test_check_is_clean_with_every_shipped_adapter():
@@ -241,3 +260,105 @@ def test_taxon_curie_with_in_biostudies_is_refused_before_any_request(monkeypatc
 def test_unexpressed_names_only_what_an_adapter_cannot_filter_by(rid, organism, reason):
     adapter = base.make(CAT.resources[rid])
     assert adapter.unexpressed(Query(phrases=("x",), filters={"organism": organism})) == reason
+
+
+def _helio_default_during_exchanges(window_text: str) -> list[dict]:
+    """Recorded VSO, CDAWeb and HEK response payloads keyed for an unfiltered default --during search."""
+    q = Query(during=parse_window(window_text))
+    vso_body = json.loads((FX / "vso" / "search-jsoc-boundary.json").read_text())[0]["response"]["body"]
+    cda_body = json.loads((FX / "cdaweb" / "show-omni.json").read_text())[0]["response"]["body"]
+    hek_body = json.loads((FX / "hek" / "search-hmi-boundary.json").read_text())[0]["response"]["body"]
+    hek_params = {**hek.compile_params(q), "result_limit": str(hek.CAP), "page": "1"}
+    return [
+        exchange(
+            "POST", "http://vso.nso.edu/cgi-bin/VSO/PROD/vsoi_wsdl.cgi",
+            request_headers={"Content-Type": vso.XML_CONTENT_TYPE, "SOAPAction": vso.SOAP_QUERY},
+            request_content=vso.compile_query(q).encode("utf-8"),
+            body=vso_body, content_type="text/xml; charset=utf-8",
+        ),
+        exchange(
+            "GET", "https://cdaweb.gsfc.nasa.gov/WS/cdasr/1/dataviews/sp_phys/datasets",
+            params=cdaweb.compile_params(q), body=cda_body,
+        ),
+        exchange("GET", "https://www.lmsal.com/hek/her", params=hek_params, body=hek_body),
+    ]
+
+
+def test_heliophysics_default_during_search_replays_vso_cdaweb_hek_and_skips_core(monkeypatch):
+    window = "2025-01-15T00:00:00Z/2025-01-15T00:00:16Z"
+    transport = ReplayTransport(_helio_default_during_exchanges(window))
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(transport))
+
+    out = invoke("search", "--domain", "heliophysics", "--during", window)
+    assert out.exit_code == 0, out.stderr
+    assert transport.pending == []
+    report = json.loads(out.stdout)
+    assert report["domain"] == "heliophysics"
+    assert [(c["resource"], c["complete"], c["match"], c.get("time")) for c in report["coverage"]] == [
+        ("vso", "total", "none", "overlap"),
+        ("cdaweb", "total", "none", "overlap"),
+        ("hek", "total", "none", "overlap"),
+        ("zenodo", "skipped", "none", None),
+        ("figshare", "skipped", "none", None),
+    ]
+    for skipped in report["coverage"][3:]:
+        assert "time" not in skipped and "during" in skipped["reason"]
+    assert "zenodo skipped: zenodo cannot filter by during" in report["warnings"]
+    assert "figshare skipped: figshare cannot filter by during" in report["warnings"]
+
+    by_res = {}
+    for row in report["results"]:
+        by_res.setdefault(row["resource"], []).append(row)
+    assert set(by_res) == {"vso", "cdaweb", "hek"}
+    # Observation time sits in domain_fields.heliophysics; Result.date stays release date (independent or absent)
+    assert "date" not in by_res["vso"][0]
+    assert by_res["vso"][0]["domain_fields"]["heliophysics"]["start"].startswith("2025-01-15T00:00:")
+    assert "date" not in by_res["cdaweb"][0]
+    assert set(by_res["cdaweb"][0]["domain_fields"]["heliophysics"]) >= {"start", "end"}
+    hek_row = by_res["hek"][0]
+    assert hek_row["date"] == "2025-01-24"
+    assert not hek_row["domain_fields"]["heliophysics"]["start"].startswith(hek_row["date"])
+    assert set(hek_row["domain_fields"]["heliophysics"]) >= {"start", "end"}
+
+    pretty_transport = ReplayTransport(_helio_default_during_exchanges(window))
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(pretty_transport))
+    pretty = CliRunner().invoke(main, ["--pretty", "search", "--domain", "heliophysics", "--during", window],
+                                catch_exceptions=False)
+    assert pretty.exit_code == 0, pretty.stderr
+    assert pretty_transport.pending == []
+    assert "# vso:" in pretty.stdout and "(total, none, overlap)" in pretty.stdout
+    assert "# cdaweb: 1 of 1 (total, none, overlap)" in pretty.stdout
+    assert "# hek:" in pretty.stdout and "(total, none, overlap)" in pretty.stdout
+    assert "# zenodo: skipped (zenodo cannot filter by during)" in pretty.stdout
+    assert "# figshare: skipped (figshare cannot filter by during)" in pretty.stdout
+
+
+def test_heliophysics_phrase_query_searches_core_defaults_and_skips_non_text_defaults(monkeypatch):
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport.from_files(
+        [FX / "zenodo" / "search-core.json", FX / "figshare" / "search-core.json"])))
+    out = invoke("search", "--domain", "heliophysics", "--since", CORE_MYELOMA.since.isoformat(),
+                 "--until", CORE_MYELOMA.until.isoformat(), *CORE_MYELOMA.phrases)
+    assert out.exit_code == 0, out.stderr
+    report = json.loads(out.stdout)
+    assert report["domain"] == "heliophysics"
+    assert [(c["resource"], c["complete"], c["match"]) for c in report["coverage"]] == [
+        ("vso", "skipped", "exact"),
+        ("cdaweb", "skipped", "exact"),
+        ("hek", "skipped", "exact"),
+        ("zenodo", "total", "exact"),
+        ("figshare", "short-page", "exact"),
+    ]
+    assert all("time" not in c for c in report["coverage"])
+    assert all(r["resource"] in ("zenodo", "figshare") for r in report["results"])
+
+
+def test_heliophysics_plain_phrase_query_skips_vso_cdaweb_and_hek_with_text_reasons(stub_searches):
+    out = invoke("search", "--domain", "heliophysics", "coronal mass ejection")
+    assert out.exit_code == 0, out.stderr
+    coverage = json.loads(out.stdout)["coverage"]
+    assert [(c["resource"], c["complete"]) for c in coverage] == [
+        ("vso", "skipped"), ("cdaweb", "skipped"), ("hek", "skipped"), ("zenodo", "total"), ("figshare", "total"),
+    ]
+    assert coverage[0]["reason"] == "vso has no text search"
+    assert "literal dataset-ID phrases only" in coverage[1]["reason"]
+    assert coverage[2]["reason"] == "hek has no text search"
