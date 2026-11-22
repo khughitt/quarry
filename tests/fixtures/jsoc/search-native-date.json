@@ -1,0 +1,58 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "ds",
+     "aia.lev1_euv_12s[2025.01.15_00:00:11_UTC-2025.01.15_00:00:23_UTC][193][? DATE >= $(2025.01.01_00:00:00_UTC) AND DATE < $(2026.01.01_00:00:00_UTC) ?]"
+    ],
+    [
+     "op",
+     "rs_summary"
+    ]
+   ],
+   "url": "http://jsoc.stanford.edu/cgi-bin/ajax/jsoc_info"
+  },
+  "response": {
+   "body": "{\n\t\"count\": 2,\n\t\"runtime\": 0.025,\n\t\"status\": 0\n}\n",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "R",
+     "1"
+    ],
+    [
+     "ds",
+     "aia.lev1_euv_12s[2025.01.15_00:00:11_UTC-2025.01.15_00:00:23_UTC][193][? DATE >= $(2025.01.01_00:00:00_UTC) AND DATE < $(2026.01.01_00:00:00_UTC) ?]"
+    ],
+    [
+     "key",
+     "T_REC,DATE"
+    ],
+    [
+     "op",
+     "rs_list"
+    ]
+   ],
+   "url": "http://jsoc.stanford.edu/cgi-bin/ajax/jsoc_info"
+  },
+  "response": {
+   "body": "{\"recinfo\":[{\"name\":\"aia.lev1_euv_12s[2025-01-15T00:00:11Z][193]\",\"online\":0},{\"name\":\"aia.lev1_euv_12s[2025-01-15T00:00:23Z][193]\",\"online\":0}],\"keywords\":[{\"name\":\"T_REC\",\"values\":[\"2025-01-15T00:00:11Z\",\"2025-01-15T00:00:23Z\"]},{\"name\":\"DATE\",\"values\":[\"2025-01-24T00:07:47Z\",\"2025-01-24T00:07:47Z\"]}],\"segments\":[],\"links\":[],\"count\":2,\"runtime\":0.026,\"status\":0}\n",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ }
+]

@@ -201,12 +201,13 @@ class Client:
                 credentials[route.key_header] = f"Bearer {key}" if route.key_scheme == "bearer" else key
         request_headers = {**caller_headers, **credentials}
         full = url if url.startswith(("http://", "https://")) else f"{route.url.rstrip('/')}/{url.lstrip('/')}"
-        shown = self._shown(httpx.URL(full, params=params), route, key)
+        req_params = params or None
+        shown = self._shown(httpx.URL(full, params=req_params), route, key)
         interval = route.keyed_min_interval if key and route.keyed_min_interval is not None else route.min_interval
         sleep = self._throttle.clock.sleep
         for attempt in range(1, MAX_ATTEMPTS + 1):
             self._throttle.wait(route.service, key, interval)
-            request = self._http.build_request(method, full, params=params, content=content,
+            request = self._http.build_request(method, full, params=req_params, content=content,
                                                json=json, data=data, headers=request_headers)
             try:
                 response = self._send(route, request, shown, key, interval, credentials, caller_headers)
@@ -216,7 +217,7 @@ class Client:
                     raise UpstreamError(f"{method} {shown}: {type(error).__name__} after {attempt} attempts") from None
                 sleep(2 ** (attempt - 1))
                 continue
-            if response.status_code in RETRY_STATUS and attempt < MAX_ATTEMPTS:
+            if response.status_code in RETRY_STATUS and response.status_code not in accept and attempt < MAX_ATTEMPTS:
                 delay = _retry_after(response)
                 if delay is not None and delay > WAIT_BUDGET:
                     raise UpstreamError(f"{method} {shown}: HTTP {response.status_code}, asked to wait "

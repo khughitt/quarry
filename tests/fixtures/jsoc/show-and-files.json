@@ -1,0 +1,38 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "R",
+     "1"
+    ],
+    [
+     "ds",
+     "aia.lev1_euv_12s[2025-01-15T00:00:11Z][193]"
+    ],
+    [
+     "key",
+     "T_REC,DATE"
+    ],
+    [
+     "op",
+     "rs_list"
+    ],
+    [
+     "seg",
+     "**ALL**"
+    ]
+   ],
+   "url": "http://jsoc.stanford.edu/cgi-bin/ajax/jsoc_info"
+  },
+  "response": {
+   "body": "{\"recinfo\":[{\"name\":\"aia.lev1_euv_12s[2025-01-15T00:00:11Z][193]\",\"online\":1}],\"keywords\":[{\"name\":\"T_REC\",\"values\":[\"2025-01-15T00:00:11Z\"]},{\"name\":\"DATE\",\"values\":[\"2025-01-24T00:07:47Z\"]}],\"segments\":[{\"name\":\"image\",\"values\":[\"\\/SUM95\\/D1825993008\\/S00000\\/image_lev1.fits\"],\"dims\":[\"4096x4096\"],\"cparms\":[\"compress Rice\"],\"bzeros\":[],\"bscales\":[]},{\"name\":\"spikes\",\"values\":[\"\\/SUM95\\/D1825993008\\/S00000\\/spikes.fits\"],\"dims\":[\"7985x3\"],\"cparms\":[\"compress Rice\"],\"bzeros\":[],\"bscales\":[]}],\"links\":[],\"count\":1,\"runtime\":0.119,\"status\":0}\n",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ }
+]

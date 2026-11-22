@@ -1,0 +1,23 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "id",
+     "999999999"
+    ]
+   ],
+   "url": "https://api.helioviewer.org/v2/getJP2Header/"
+  },
+  "response": {
+   "body": "{\"error\":\"No image found with id 999999999.\",\"errno\":24}",
+   "headers": {
+    "content-length": "56",
+    "content-type": "application/json;charset=UTF-8"
+   },
+   "status": 500
+  }
+ }
+]

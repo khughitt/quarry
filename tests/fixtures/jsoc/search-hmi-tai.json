@@ -1,0 +1,58 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "ds",
+     "hmi.m_45s[2025.01.15_00:00:00_UTC-2025.01.15_00:01:00_UTC]"
+    ],
+    [
+     "op",
+     "rs_summary"
+    ]
+   ],
+   "url": "http://jsoc.stanford.edu/cgi-bin/ajax/jsoc_info"
+  },
+  "response": {
+   "body": "{\n\t\"count\": 2,\n\t\"runtime\": 0.023,\n\t\"status\": 0\n}\n",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "R",
+     "1"
+    ],
+    [
+     "ds",
+     "hmi.m_45s[2025.01.15_00:00:00_UTC-2025.01.15_00:01:00_UTC]"
+    ],
+    [
+     "key",
+     "T_REC,DATE"
+    ],
+    [
+     "op",
+     "rs_list"
+    ]
+   ],
+   "url": "http://jsoc.stanford.edu/cgi-bin/ajax/jsoc_info"
+  },
+  "response": {
+   "body": "{\"recinfo\":[{\"name\":\"hmi.M_45s[2025.01.15_00:00:45_TAI][2]\",\"online\":0},{\"name\":\"hmi.M_45s[2025.01.15_00:01:30_TAI][2]\",\"online\":0}],\"keywords\":[{\"name\":\"T_REC\",\"values\":[\"2025.01.15_00:00:45_TAI\",\"2025.01.15_00:01:30_TAI\"]},{\"name\":\"DATE\",\"values\":[\"2025-01-22T03:09:15Z\",\"2025-01-22T03:10:13Z\"]}],\"segments\":[],\"links\":[],\"count\":2,\"runtime\":0.016,\"status\":0}\n",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ }
+]

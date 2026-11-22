@@ -530,6 +530,17 @@ def test_accepted_statuses_return_and_others_still_raise():
     assert c.request(route(), "GET", "x", accept=frozenset({404})).status_code == 404
     with pytest.raises(UpstreamError):
         c.request(route(), "GET", "x")
+    # An explicitly accepted 5xx (e.g. Helioviewer HTTP 500 errno 24) returns immediately without retrying
+    clock = FakeClock()
+    seen = []
+    c500 = client(lambda r: (seen.append(r), httpx.Response(500, text='{"errno":24}'))[1], clock)
+    assert c500.request(route(interval=0), "GET", "x", accept=frozenset({500})).status_code == 500
+    assert len(seen) == 1 and clock.slept == []
+    # Full URL query parameters are preserved when params=None
+    seen_q = []
+    cq = client(lambda r: (seen_q.append(r), httpx.Response(200))[1], FakeClock())
+    cq.request(route(interval=0), "HEAD", "https://example.org/data?a=1&b=2")
+    assert dict(seen_q[0].url.params) == {"a": "1", "b": "2"}
 
 
 def test_recording_a_gzip_response_hands_the_client_the_body_once():

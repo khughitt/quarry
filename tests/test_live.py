@@ -206,13 +206,21 @@ def test_dated_heliophysics_probes_verify_epoch_before_transport(tmp_path, monke
         def search(self, client, query):
             raise AssertionError("transport must not run when epoch verification fails")
 
+        def files(self, client, curie):
+            raise AssertionError("transport must not run when epoch verification fails")
+
     for key in (
         ("vso", "http://vso.nso.edu/cgi-bin/VSO/PROD/vsoi_wsdl.cgi"),
         ("hek", "https://www.lmsal.com/hek/her"),
+        ("jsoc", "http://jsoc.stanford.edu/cgi-bin/ajax"),
+        ("jsoc", "http://jsoc.stanford.edu"),
+        ("soar", "https://soar.esac.esa.int/soar-sl-tap/tap"),
+        ("soar", "https://soar.esac.esa.int/soar-sl-tap/data"),
+        ("helioviewer", "https://api.helioviewer.org/v2"),
     ):
         with pytest.raises(QuarryError) as caught:
             live.PROBES[key](BoomAdapter(), None)
-        assert caught.value.kind == "upstream_failed"
+        assert caught.value.kind == "upstream_failed", key
 
 
 def test_require_exploration_window_resolves_sibling_sun_from_git_common_dir(tmp_path, monkeypatch):
@@ -255,3 +263,84 @@ def test_cdaweb_hapi_and_bulk_probes_offline():
     ])
     live.PROBES[("cdaweb", "https://cdaweb.gsfc.nasa.gov/sp_phys/data")](adapter, replay_client(bulk_t))
     assert bulk_t.pending == []
+
+
+def test_jsoc_soar_helioviewer_probes_offline(tmp_path, monkeypatch):
+    import json
+    from quarry.adapters import helioviewer, jsoc, soar
+    from quarry.testing import ReplayTransport, exchange, replay_client
+
+    sun_root = _write_sun(tmp_path, {"2026-11-07-epoch-assignment-17.md": ASSIGNMENT_SAMPLE})
+    monkeypatch.setenv("QUARRY_SUN_ROOT", str(sun_root))
+
+    cat = catalog_mod.load()
+    # 1. JSOC export probe: missing JSOC_NOTIFY_EMAIL fails before transport; keyed sends non-submitting op=exp_status
+    jsoc_adapter = jsoc.make(cat.resources["jsoc"])
+    no_key = replay_client(ReplayTransport([]))
+    no_key._environ = {}
+    with pytest.raises(QuarryError) as caught:
+        live.PROBES[("jsoc", "http://jsoc.stanford.edu/cgi-bin/ajax/jsoc_fetch")](jsoc_adapter, no_key)
+    assert caught.value.kind == "missing_required_key" and "JSOC_NOTIFY_EMAIL" in caught.value.detail
+
+    exp_t = ReplayTransport(
+        [exchange("GET", "http://jsoc.stanford.edu/cgi-bin/ajax/jsoc_fetch",
+                  params={"op": "exp_status", "requestid": "JSOC_20000101_000"},
+                  body=json.dumps({"status": 4, "error": "invalid export DRMS record"}))],
+        secrets=frozenset({"notify"}),
+    )
+    keyed = replay_client(exp_t)
+    keyed._environ = {"JSOC_NOTIFY_EMAIL": "probe@example.invalid"}
+    live.PROBES[("jsoc", "http://jsoc.stanford.edu/cgi-bin/ajax/jsoc_fetch")](jsoc_adapter, keyed)
+    assert exp_t.pending == []
+
+    # 2. JSOC SUMS HEAD probe: resolves segment via R=1 then sends HEAD (zero image bytes)
+    sums_t = ReplayTransport([
+        exchange("GET", "http://jsoc.stanford.edu/cgi-bin/ajax/jsoc_info",
+                 params={"op": "rs_list", "ds": live.JSOC_SAMPLE_CURIE.local,
+                         "key": "T_REC,DATE", "seg": "**ALL**", "R": "1"},
+                 body=json.dumps({
+                     "recinfo": [{"name": live.JSOC_SAMPLE_CURIE.local, "online": 1}],
+                     "keywords": [
+                         {"name": "T_REC", "values": ["2025-01-15T00:00:11Z"]},
+                         {"name": "DATE", "values": ["2025-01-24T00:07:47Z"]},
+                     ],
+                     "segments": [{"name": "image", "values": ["/SUM95/D1825993008/S00000/image_lev1.fits"]}],
+                     "links": [], "count": 1, "status": 0,
+                 })),
+        exchange("HEAD", "http://jsoc.stanford.edu/SUM95/D1825993008/S00000/image_lev1.fits",
+                 status=200, body="", content_type="application/fits", headers={"content-length": "12363840"}),
+    ])
+    live.PROBES[("jsoc", "http://jsoc.stanford.edu")](jsoc_adapter, replay_client(sums_t))
+    assert sums_t.pending == []
+
+    # 3. SOAR download metadata probe: TAP lookup + HEAD with Content-Length (zero file bytes)
+    soar_adapter = soar.make(cat.resources["soar"])
+    item_id = live.SOAR_SAMPLE_CURIE.local
+    soar_sql = f"SELECT {soar.COLUMNS_SQL} FROM v_sc_data_item WHERE data_item_id = '{item_id}'"
+    soar_t = ReplayTransport([
+        exchange("GET", "https://soar.esac.esa.int/soar-sl-tap/tap/sync",
+                 params={"REQUEST": "doQuery", "LANG": "ADQL", "FORMAT": "json", "QUERY": soar_sql},
+                 body=json.dumps({
+                     "metadata": [{"name": c, "datatype": "char"} for c in soar.COLUMNS],
+                     "data": [[item_id, f"{item_id}_V02.fits", 207360, "EUI", "eui-fsi304-image-short", "L1",
+                               "2025-01-15T00:00:15.208", "2025-01-15T00:00:15.408",
+                               "2025-11-03T06:23:27.805", True]],
+                 })),
+        exchange("HEAD", "https://soar.esac.esa.int/soar-sl-tap/data",
+                 params={"retrieval_type": "LAST_PRODUCT", "data_item_id": item_id, "product_type": "SCIENCE"},
+                 status=200, body="", content_type="application/octet-stream", headers={"content-length": "207360"}),
+    ])
+    live.PROBES[("soar", "https://soar.esac.esa.int/soar-sl-tap/data")](soar_adapter, replay_client(soar_t))
+    assert soar_t.pending == []
+
+    # 4. Helioviewer probe: getDataSources + getClosestImage inside X-25 (zero image bytes)
+    hv_adapter = helioviewer.make(cat.resources["helioviewer"])
+    hv_t = ReplayTransport([
+        exchange("GET", "https://api.helioviewer.org/v2/getDataSources/",
+                 body=json.dumps({"SDO": {"AIA": {"335": {"sourceId": 14, "nickname": "AIA 335"}}}})),
+        exchange("GET", "https://api.helioviewer.org/v2/getClosestImage/",
+                 params={"date": "2025-01-15T00:00:00Z", "sourceId": "14"},
+                 body=json.dumps({"id": "169781913", "date": "2025-01-14 23:59:49", "name": "AIA 335"})),
+    ])
+    live.PROBES[("helioviewer", "https://api.helioviewer.org/v2")](hv_adapter, replay_client(hv_t))
+    assert hv_t.pending == []

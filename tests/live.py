@@ -8,7 +8,7 @@ import re
 import subprocess
 import sys
 from collections.abc import Callable
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from quarry import catalog as catalog_mod, ids
@@ -29,6 +29,13 @@ VSO_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
                     datetime(2025, 1, 15, 0, 1, 0, tzinfo=timezone.utc))
 HEK_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
                     datetime(2025, 1, 15, 0, 30, 0, tzinfo=timezone.utc))
+JSOC_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
+                     datetime(2025, 1, 15, 0, 0, 36, tzinfo=timezone.utc))
+SOAR_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
+                     datetime(2025, 1, 15, 0, 5, 0, tzinfo=timezone.utc))
+HV_INSTANT = datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc)
+JSOC_SAMPLE_CURIE = Curie("jsoc", "aia.lev1_euv_12s[2025-01-15T00:00:11Z][193]")
+SOAR_SAMPLE_CURIE = Curie("soar", "solo_L1_eui-fsi304-image-short_20250115T000015208")
 
 
 def _resolve_sun_root(sun_root: Path | None = None) -> Path:
@@ -165,6 +172,39 @@ def cdaweb_bulk(adapter, client: Client) -> None:
     client.request(route, "HEAD", f"{route.url}/")
 
 
+def jsoc_export_status(adapter, client: Client) -> None:
+    """Non-submitting op=exp_status metadata probe; refuses via MissingKeyError when JSOC_NOTIFY_EMAIL is absent."""
+    adapter.export_status(client, "JSOC_20000101_000")
+
+
+def jsoc_sums_head(adapter, client: Client) -> None:
+    """Metadata-only HEAD on one online X-25 SUMS segment (no image bytes)."""
+    require_exploration_window(JSOC_WINDOW.start, JSOC_WINDOW.end)
+    _, seg_files = adapter.files(client, JSOC_SAMPLE_CURIE)
+    if not seg_files or not seg_files[0].urls:
+        raise QuarryError("upstream_failed", "JSOC sample record has no online SUMS segment URL")
+    client.request(adapter.sums_route, "HEAD", seg_files[0].urls[0])
+
+
+def soar_download_metadata(adapter, client: Client) -> None:
+    """Metadata-only HEAD on one public X-25 SOAR item download URL (no file bytes)."""
+    require_exploration_window(SOAR_WINDOW.start, SOAR_WINDOW.end)
+    _, item_files = adapter.files(client, SOAR_SAMPLE_CURIE)
+    if not item_files or not item_files[0].urls:
+        raise QuarryError("upstream_failed", "SOAR sample public item returned no download URL")
+    resp = client.request(adapter.data_route, "HEAD", item_files[0].urls[0])
+    if not resp.headers.get("content-length"):
+        raise QuarryError("upstream_failed", "SOAR download HEAD returned no Content-Length")
+
+
+def helioviewer_nearest(adapter, client: Client) -> None:
+    """Metadata-only getDataSources + getClosestImage probe inside X-25 (no image bytes)."""
+    require_exploration_window(HV_INSTANT, HV_INSTANT + timedelta(minutes=1))
+    _, rows = adapter.search(client, Query(at=HV_INSTANT, filters={"instrument": "AIA 335"}))
+    if not rows:
+        raise QuarryError("upstream_failed", "Helioviewer nearest search answered no image")
+
+
 def terms(curie: Curie, words: str) -> Probe:
     """One OLS route's three paths: the term (through ancestors), its ancestors, and search."""
     def probe(adapter, client):
@@ -201,6 +241,15 @@ PROBES: dict[tuple[str, str], Probe] = {
     ("hek", "https://www.lmsal.com/hek/her"):
         dated_search_one(Query(during=HEK_WINDOW, filters={"instrument": "HMI"}, limit=1)),
     ("hek", "sunpy.net.hek"): local_tool("sunpy.net.hek"),
+    ("jsoc", "http://jsoc.stanford.edu/cgi-bin/ajax"):
+        dated_search_one(Query(phrases=("aia.lev1_euv_12s",), during=JSOC_WINDOW, limit=1)),
+    ("jsoc", "http://jsoc.stanford.edu/cgi-bin/ajax/jsoc_fetch"): jsoc_export_status,
+    ("jsoc", "http://jsoc.stanford.edu"): jsoc_sums_head,
+    ("soar", "https://soar.esac.esa.int/soar-sl-tap/tap"):
+        dated_search_one(Query(during=SOAR_WINDOW, filters={"instrument": "EUI"}, limit=1)),
+    ("soar", "https://soar.esac.esa.int/soar-sl-tap/data"): soar_download_metadata,
+    ("soar", "sunpy.net.soar"): local_tool("sunpy.net.soar"),
+    ("helioviewer", "https://api.helioviewer.org/v2"): helioviewer_nearest,
 }
 
 
