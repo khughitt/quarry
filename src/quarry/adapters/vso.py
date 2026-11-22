@@ -70,6 +70,16 @@ def _child_text(elem: ET.Element, name: str) -> str | None:
     return None
 
 
+def _child_raw_text(elem: ET.Element, name: str) -> str | None:
+    """Return child text verbatim (preserving leading/trailing whitespace); None if missing, nil or empty."""
+    for child in elem:
+        if _local_name(child.tag) == name:
+            if _is_nil(child):
+                return None
+            return child.text if child.text else None
+    return None
+
+
 def _child_elem(elem: ET.Element, name: str) -> ET.Element | None:
     for child in elem:
         if _local_name(child.tag) == name:
@@ -254,7 +264,7 @@ def parse_query_response(xml_text: str) -> list[ProviderReport]:
                 time_el = _child_elem(item, "time")
                 records_list.append({
                     "provider": _child_text(item, "provider") or provider,
-                    "fileid": _child_text(item, "fileid"),
+                    "fileid": _child_raw_text(item, "fileid"),
                     "start": _child_text(time_el, "start") if time_el is not None else None,
                     "end": _child_text(time_el, "end") if time_el is not None else None,
                     "source": _child_text(item, "source"),
@@ -347,7 +357,9 @@ def _parse_getdata(xml_text: str, provider: str, fileid: str, curie: Curie) -> t
             raise UpstreamError(f"vso GetDataResponse ({provider}): {error}")
 
         gdi = _child_elem(resp_item, "getdataitem")
-        dataitems = [c for c in gdi if _local_name(c.tag) == "dataitem"] if gdi is not None else []
+        if gdi is None:
+            continue
+        dataitems = [c for c in gdi if _local_name(c.tag) == "dataitem"]
         if not dataitems:
             not_found_seen = True
             continue
@@ -393,7 +405,7 @@ def _parse_getdata(xml_text: str, provider: str, fileid: str, curie: Curie) -> t
 
 class Vso:
     match = "exact"
-    filters = frozenset({"instrument", "observatory"})
+    filters = frozenset({"instrument", "observatory", "measurement"})
     phrases = "none"
     time_relations = MappingProxyType({"during": "overlap"})
 
@@ -416,6 +428,11 @@ class Vso:
         unsupported = set(query.filters) - self.filters
         if unsupported:
             return f"vso cannot filter by {', '.join(sorted(unsupported))}"
+        if "measurement" in query.filters:
+            return (
+                f"vso has no exact SPASE mapping for --measurement {query.filters['measurement']!r}; "
+                "use --native with <physobs>...</physobs>"
+            )
         if query.during is None:
             return "vso requires --during"
         return None
@@ -436,6 +453,7 @@ class Vso:
             reports = parse_query_response(response.text)
             warnings: list[str] = []
             provider_errors: list[str] = []
+            missing_counts: list[str] = []
             native_total = 0
             fetched = 0
             incomplete_native = False
@@ -459,6 +477,9 @@ class Vso:
                     )
                 if rep.found is None or rep.returned is None:
                     incomplete_native = True
+                    if not rep.error:
+                        missing_counts.append(rep.provider)
+                        warnings.append(f"vso provider {rep.provider} omitted record counts")
                 else:
                     native_total += rep.found
                     fetched += rep.returned
@@ -487,14 +508,17 @@ class Vso:
                 complete = completeness(total=total, returned=len(rows), limit=query.limit, short_page=True)
             elif query.limit is not None and len(rows) == query.limit:
                 total, complete = trimmed(
-                    kept=len(rows), fetched=fetched, native_total=None if provider_errors else native_total,
+                    kept=len(rows), fetched=fetched,
+                    native_total=None if (provider_errors or missing_counts) else native_total,
                     short_page=False, limit=query.limit,
                 )
             else:
-                detail = "; ".join(provider_errors) if provider_errors else (
-                    f"vso returned {fetched} of {native_total} native records across providers"
-                )
-                raise QuarryError("incomplete_listing", detail)
+                reasons: list[str] = list(provider_errors)
+                if missing_counts:
+                    reasons.append(f"vso provider(s) omitted record counts: {', '.join(missing_counts)}")
+                if fetched < native_total:
+                    reasons.append(f"vso returned {fetched} of {native_total} native records across providers")
+                raise QuarryError("incomplete_listing", "; ".join(reasons))
 
             return Coverage(self.resource.id, soap_body, match, total, len(rows), complete,
                             warnings=tuple(warnings)), rows

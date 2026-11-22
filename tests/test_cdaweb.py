@@ -7,7 +7,7 @@ import pytest
 from click.testing import CliRunner
 
 from quarry import catalog as catalog_mod
-from quarry import context
+from quarry import context, search as search_mod
 from quarry.adapters import cdaweb
 from quarry.cli import main
 from quarry.errors import QuarryError
@@ -55,7 +55,7 @@ def test_cdaweb_dataset_overlap_and_empty_files(monkeypatch):
     adapter = _adapter()
     assert adapter.phrases == "optional"
     assert adapter.time_relations == {"during": "overlap"}
-    assert adapter.filters == frozenset({"instrument", "observatory"})
+    assert adapter.filters == frozenset({"instrument", "observatory", "measurement"})
 
     win = Window(datetime(2024, 7, 9, 23, 0, 0, tzinfo=timezone.utc),
                  datetime(2024, 7, 10, 0, 0, 0, tzinfo=timezone.utc))
@@ -128,10 +128,22 @@ def test_cdaweb_literal_dataset_id_phrases_and_refusals():
             adapter.prepare(Query(phrases=(bad,)))
         assert caught.value.kind == "unsupported_filter"
 
-    # Approximate-only --measurement refused before transport
+    # Approximate-only --measurement refused before transport with --native instrumentType= guidance
+    q_meas = Query(filters={"measurement": "MagneticField"})
     with pytest.raises(QuarryError) as caught:
-        adapter.prepare(Query(filters={"measurement": "MagneticField"}))
+        adapter.prepare(q_meas)
     assert caught.value.kind == "unsupported_filter"
+    assert "--native" in caught.value.detail and "instrumentType=" in caught.value.detail
+
+    with pytest.raises(QuarryError) as run_caught:
+        search_mod.run(
+            catalog=catalog_mod.load(),
+            client=replay_client(ReplayTransport([])),
+            query=q_meas, resource_ids=["cdaweb"], domain="heliophysics",
+            allow_partial=False, from_defaults=False,
+        )
+    assert run_caught.value.kind == "unsupported_filter"
+    assert "--native" in run_caught.value.detail and "instrumentType=" in run_caught.value.detail
 
     # --since / --until / --at refused before transport
     with pytest.raises(QuarryError) as caught:

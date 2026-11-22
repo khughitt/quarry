@@ -164,7 +164,7 @@ def _row(d: dict) -> tuple[Result, datetime | None, datetime | None]:
 
 class Cdaweb:
     match = "exact"
-    filters = frozenset({"instrument", "observatory"})
+    filters = frozenset({"instrument", "observatory", "measurement"})
     phrases = "optional"
     time_relations = MappingProxyType({"during": "overlap"})
 
@@ -185,6 +185,11 @@ class Cdaweb:
         unsupported = set(query.filters) - self.filters
         if unsupported:
             return f"cdaweb cannot filter by {', '.join(sorted(unsupported))}"
+        if "measurement" in query.filters:
+            return (
+                f"cdaweb has no exact SPASE mapping for --measurement {query.filters['measurement']!r}; "
+                "use --native with instrumentType=..."
+            )
         for p in query.phrases:
             if not DATASET_ID_RE.fullmatch(p):
                 return f"cdaweb accepts literal dataset-ID phrases only, not {p!r}"

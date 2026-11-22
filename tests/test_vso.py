@@ -95,7 +95,7 @@ def test_vso_provider_counts_and_getdata_round_trip():
     assert adapter.phrases == "none"
     assert adapter.time_relations == {"during": "overlap"}
     assert "at" not in adapter.time_relations
-    assert adapter.filters == frozenset({"instrument", "observatory"})
+    assert adapter.filters == frozenset({"instrument", "observatory", "measurement"})
 
     query = Query(during=WIN, filters={"instrument": "AIA", "observatory": "SDO"})
     req_xml = vso.compile_query(query)
@@ -181,10 +181,25 @@ def test_vso_refuses_unsupported_filters_and_phrases_before_transport():
         adapter.prepare(Query(filters={"instrument": "AIA"}))
     assert caught.value.kind == "unsupported_filter"
 
-    # Approximate-only --measurement refused
-    with pytest.raises(QuarryError) as caught:
-        adapter.prepare(Query(during=WIN, filters={"measurement": "MagneticField"}))
-    assert caught.value.kind == "unsupported_filter"
+    # Approximate-only --measurement refused with --native <physobs> guidance (with or without --during)
+    for q_meas in (
+        Query(during=WIN, filters={"measurement": "MagneticField"}),
+        Query(filters={"measurement": "MagneticField"}),
+    ):
+        with pytest.raises(QuarryError) as caught:
+            adapter.prepare(q_meas)
+        assert caught.value.kind == "unsupported_filter"
+        assert "--native" in caught.value.detail and "<physobs>" in caught.value.detail
+
+        with pytest.raises(QuarryError) as run_caught:
+            search_mod.run(
+                catalog=catalog_mod.load(),
+                client=replay_client(ReplayTransport([])),
+                query=q_meas, resource_ids=["vso"], domain="heliophysics",
+                allow_partial=False, from_defaults=False,
+            )
+        assert run_caught.value.kind == "unsupported_filter"
+        assert "--native" in run_caught.value.detail and "<physobs>" in run_caught.value.detail
 
     # --at refused (VSO near requires start/end, so at is withheld)
     with pytest.raises(QuarryError) as caught:
@@ -246,6 +261,24 @@ def test_vso_truncation_provider_error_and_limit():
     with pytest.raises(QuarryError) as caught:
         adapter.search(replay_client(ReplayTransport([_query_exchange(query_all, with_err)])), query_all)
     assert caught.value.kind == "incomplete_listing" and "SDAC" in caught.value.detail and "provider timeout" in caught.value.detail
+
+    # Missing provider counts (without <error>) MUST NOT report complete="total" under -n or "2 of 2" without -n
+    missing_counts = _soap_envelope(
+        "<VSO:QueryResponse><body>"
+        + _provider_xml("JSOC", 2, 2, [
+            _record_xml("JSOC", "aia__lev1:193:1", "20250115000004", "20250115000005"),
+            _record_xml("JSOC", "aia__lev1:193:2", "20250115000008", "20250115000009"),
+        ])
+        + _provider_xml("SDAC", None, None, [])
+        + "</body></VSO:QueryResponse>"
+    )
+    cov_mc, rows_mc = adapter.search(replay_client(ReplayTransport([_query_exchange(query_lim, missing_counts)])), query_lim)
+    assert (cov_mc.total, cov_mc.returned, cov_mc.complete) == (None, 1, "limited") and len(rows_mc) == 1
+
+    with pytest.raises(QuarryError) as caught:
+        adapter.search(replay_client(ReplayTransport([_query_exchange(query_all, missing_counts)])), query_all)
+    assert caught.value.kind == "incomplete_listing"
+    assert "SDAC" in caught.value.detail and "2 of 2" not in caught.value.detail
 
 
 def test_vso_soap_fault_and_malformed_payloads_fail():
@@ -309,11 +342,50 @@ def test_vso_getdata_error_and_edge_cases():
         adapter.files(replay_client(ReplayTransport([_getdata_exchange("JSOC", fid, mismatched)])), curie)
     assert caught.value.kind == "upstream_failed"
 
+    # Incomplete reply omitting <getdataitem> entirely -> upstream_failed (not not_found)
+    no_gdi = _soap_envelope(
+        "<VSO:GetDataResponse><body><getdataresponseitem>"
+        "<provider>JSOC</provider><method><methodtype>URL-FILE</methodtype></method>"
+        "</getdataresponseitem></body></VSO:GetDataResponse>"
+    )
+    with pytest.raises(QuarryError) as caught:
+        adapter.show(replay_client(ReplayTransport([_getdata_exchange("JSOC", fid, no_gdi)])), curie)
+    assert caught.value.kind == "upstream_failed"
+
     # SOAP fault -> upstream_failed
     fault = _soap_envelope("<soap:Fault><faultcode>soap:Server</faultcode><faultstring>boom</faultstring></soap:Fault>")
     with pytest.raises(QuarryError) as caught:
         adapter.files(replay_client(ReplayTransport([_getdata_exchange("JSOC", fid, fault)])), curie)
     assert caught.value.kind == "upstream_failed"
+
+
+def test_vso_preserves_whitespace_in_fileid_through_query_and_getdata_round_trip():
+    adapter = _adapter()
+    query = Query(during=WIN, filters={"instrument": "AIA"})
+    raw_fid = "  aia__lev1:193:1515974443  "
+    resp = _soap_envelope(
+        "<VSO:QueryResponse><body>"
+        + _provider_xml("JSOC", 1, 1, [_record_xml("JSOC", raw_fid, "20250115000004", "20250115000005")])
+        + "</body></VSO:QueryResponse>"
+    )
+    parsed = vso.parse_query_response(resp)
+    assert parsed[0].records[0]["fileid"] == raw_fid
+
+    _, rows = adapter.search(replay_client(ReplayTransport([_query_exchange(query, resp)])), query)
+    assert rows[0].id == f"vso.file:JSOC/~{_b64(raw_fid)}"
+    assert rows[0].domain_fields["heliophysics"]["fileid"] == raw_fid
+
+    url = "https://sdo7.nascom.nasa.gov/cgi-bin/drms_export.cgi?series=aia__lev1;record=1"
+    gd_resp = _soap_envelope(
+        "<VSO:GetDataResponse><body><getdataresponseitem>"
+        "<provider>JSOC</provider><method><methodtype>URL-FILE</methodtype></method>"
+        f"<getdataitem><dataitem><provider>JSOC</provider><fileiditem><fileid>{raw_fid}</fileid></fileiditem>"
+        f"<url>{url}</url></dataitem></getdataitem>"
+        "</getdataresponseitem></body></VSO:GetDataResponse>"
+    )
+    curie = Curie("vso.file", rows[0].id.removeprefix("vso.file:"))
+    rec, files = adapter.files(replay_client(ReplayTransport([_getdata_exchange("JSOC", raw_fid, gd_resp)])), curie)
+    assert rec.id == rows[0].id and files[0].urls == (url,)
 
 
 def _replay(*names: str):
