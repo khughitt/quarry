@@ -5,8 +5,11 @@ import json
 import pytest
 from click.testing import CliRunner
 
+from quarry import catalog as catalog_mod
+from quarry import context, search
 from quarry.cli import main
-from tests.fake_adapter import Fake
+from quarry.query import Query, parse_window
+from tests.fake_adapter import Fake, Timed
 from tests.test_search import FAKE
 
 HELIO = '''id = "helio"
@@ -128,3 +131,24 @@ def test_pretty_coverage_names_the_relation(catalog):
 ])
 def test_usage_errors_exit_two(catalog, args):
     assert invoke("search", "--domain", "helio", *args).exit_code == 2
+
+
+class Misdeclared(Timed):
+    pass
+
+
+@pytest.mark.parametrize("declaration, message", [
+    ({"phrases": "optinal"}, "timed declares phrases = 'optinal'"),
+    ({"filters": frozenset({"during"})}, "timed declares during in filters"),
+    ({"time_relations": {"during": "overlaps"}}, "timed declares during = 'overlaps'"),
+    ({"time_relations": {"during": "nearest"}}, "timed declares during = 'nearest'"),
+    ({"time_relations": {"when": "overlap"}}, "timed declares when = 'overlap'"),
+])
+def test_a_misdeclared_adapter_is_refused_before_any_request(catalog, monkeypatch, declaration, message):
+    for name, value in declaration.items():
+        monkeypatch.setattr(Misdeclared, name, value)
+    monkeypatch.setattr(Misdeclared, "prepare", lambda *a: pytest.fail("a misdeclared adapter must not start"))
+    query = Query(during=parse_window(DAY))
+    with pytest.raises(ValueError, match=message):
+        search.run(catalog=catalog_mod.load(context.CATALOG_ROOT), client=None, query=query, resource_ids=["timed"],
+                   domain="helio", allow_partial=False, from_defaults=False, make=Misdeclared)

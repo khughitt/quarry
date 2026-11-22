@@ -17,7 +17,8 @@ RELATIONS = ("overlap", "start")      # how a record's observation time can sati
 
 
 def _utc(moment: datetime) -> bool:
-    return moment.tzinfo is not None and moment.utcoffset() == timedelta(0)
+    """UTC itself, not a zone that happens to sit at +00:00 on this date."""
+    return moment.tzinfo is timezone.utc
 
 
 @dataclass(frozen=True)

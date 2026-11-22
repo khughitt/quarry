@@ -1,5 +1,6 @@
 """The shared query: phrases OR, filters AND, --native instead of both."""
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -103,6 +104,7 @@ def test_valid_phraseless_queries_carry_a_domain_filter():
     ({"native": "x", "at": utc(2025, 10, 1)}, "refused beside --native"),
     ({"phrases": ("a",), "at": datetime(2025, 10, 1)}, "--at must be a UTC datetime"),
     ({"phrases": ("a",), "at": datetime(2025, 10, 1, tzinfo=timezone(timedelta(hours=1)))}, "--at must be a UTC datetime"),
+    ({"phrases": ("a",), "at": datetime(2025, 1, 1, tzinfo=ZoneInfo("Europe/London"))}, "--at must be a UTC datetime"),
 ])
 def test_invalid_time_queries(kwargs, message):
     with pytest.raises(ValueError, match=message):
@@ -114,6 +116,7 @@ def test_invalid_time_queries(kwargs, message):
     (utc(2025, 10, 1), datetime(2025, 10, 2, tzinfo=timezone(timedelta(hours=-5))), "UTC"),
     (utc(2025, 10, 2), utc(2025, 10, 1), "START must be before END"),
     (utc(2025, 10, 1), utc(2025, 10, 1), "START must be before END"),
+    (utc(2025, 1, 1), datetime(2025, 1, 2, tzinfo=ZoneInfo("Europe/London")), "UTC"),  # +00:00 in winter, not UTC
 ])
 def test_invalid_windows(start, end, message):
     with pytest.raises(ValueError, match=message):

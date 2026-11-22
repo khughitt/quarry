@@ -81,6 +81,24 @@ def _stamped(row: Coverage, adapter, query: Query) -> Coverage:
     return replace(row, match=_match(adapter, query), time=time)
 
 
+PHRASES = ("required", "optional", "none")
+TIME_RELATIONS = {"during": ("overlap", "start"), "at": ("nearest",)}
+
+
+def _check_declarations(adapter) -> None:
+    """Refuse an adapter whose own declarations are malformed, before any request."""
+    rid = adapter.resource.id
+    if adapter.phrases not in PHRASES:
+        raise ValueError(f"{rid} declares phrases = {adapter.phrases!r}; expected one of {', '.join(PHRASES)}")
+    doubled = adapter.filters & set(TIME_RELATIONS)
+    if doubled:
+        raise ValueError(f"{rid} declares {', '.join(sorted(doubled))} in filters; time filters belong in time_relations")
+    for form, relation in adapter.time_relations.items():
+        if relation not in TIME_RELATIONS.get(form, ()):
+            raise ValueError(f"{rid} declares {form} = {relation!r}; expected "
+                             + "; ".join(f"{f}: {' or '.join(r)}" for f, r in TIME_RELATIONS.items()))
+
+
 def _unexpressed(adapter, query: Query) -> str | None:
     """Why the adapter cannot carry the query's filters, phrases or matching mode, or None when it can."""
     rid = adapter.resource.id
@@ -112,6 +130,7 @@ def run(*, catalog: Catalog, client: Client, query: Query, resource_ids: list[st
         if not set(resource.roles) & DATA_ROLES:
             raise QuarryError("unsupported_role", f"{rid} holds no searchable records ({', '.join(resource.roles)})")
         adapter = make(resource)
+        _check_declarations(adapter)
         reason = _unexpressed(adapter, query)
         if reason is not None and not from_defaults:
             raise QuarryError("unsupported_filter", f"{reason}; leave it out of --in")
