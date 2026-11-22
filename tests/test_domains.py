@@ -87,6 +87,17 @@ def test_bare_normalize_opt_out_preserves_existing_bare_ids_and_routes_qualified
     assert meta["bare_normalize"] is False
     assert meta["routes"][0]["key_scheme"] is None
 
+    (cat_root / "resources" / "ads.toml").write_text(
+        'id = "ads"\nname = "ADS"\nroles = ["literature-index"]\nprefixes = ["bibcode"]\n'
+        'adapter = "tests.fake_adapter"\n'
+        '[[routes]]\nkind = "rest"\nurl = "https://api.adsabs.harvard.edu/v1"\nmin_interval = 1.0\n'
+        'service = "ads"\nauth = "required-key"\nkey_env = "ADS_DEV_KEY"\nkey_header = "Authorization"\n'
+        'key_scheme = "bearer"\nreports_total = true\n'
+    )
+    ads_meta = json.loads(invoke("resources", "show", "ads").stdout)
+    assert ads_meta["bare_normalize"] is True
+    assert ads_meta["routes"][0]["key_scheme"] == "bearer"
+
     amb = invoke("id", "normalize", "12345")
     assert amb.exit_code == 1 and json.loads(amb.stderr)["error"]["kind"] == "ambiguous_id"
     for qualified in ("figshare:12345", "pubmed:12345", "zenodo.record:12345"):

@@ -640,9 +640,12 @@ def test_body_bearing_content_length_kept_only_when_bytes_agree_after_decoding_o
 
     recorder = RecordingTransport(frozenset(), [sentinel], inner=mock(handler))
     c = Client(transport=recorder, throttle=Throttle(FakeClock()))
-    c.request(route(interval=0), "GET", "plain")
-    c.request(route(interval=0), "GET", "gzip")
-    c.request(route(interval=0), "GET", "redacted")
+    live_plain = c.request(route(interval=0), "GET", "plain")
+    live_gzip = c.request(route(interval=0), "GET", "gzip")
+    live_redacted = c.request(route(interval=0), "GET", "redacted")
+    assert live_plain.headers["Content-Length"] == str(len(plain))
+    assert live_gzip.headers["Content-Length"] == str(len(plain))
+    assert live_redacted.headers["Content-Length"] == str(len(f"token={sentinel}".encode()))
     ex_plain, ex_gzip, ex_redacted = recorder.take()
     assert ex_plain["response"]["headers"]["content-length"] == str(len(plain))
     assert ex_plain["response"]["headers"]["last-modified"] == last_mod
@@ -718,3 +721,19 @@ def test_bearer_cross_origin_redirect_drops_auth_and_keeps_same_origin():
     assert seen[0].headers["Authorization"] == f"Bearer {sentinel}"
     assert seen[1].headers["Authorization"] == f"Bearer {sentinel}"
     assert "Authorization" not in seen[2].headers
+
+
+def test_invalid_route_key_scheme_and_exchange_multiple_request_bodies_fail_early():
+    c = client(lambda r: pytest.fail("invalid route must refuse before transport"), environ={"ADS_DEV_KEY": "tok"})
+    for bad in (
+        bearer_route(key_scheme="basic"),
+        bearer_route(auth="none"),
+        bearer_route(key_header="X-Api-Key"),
+        bearer_route(key_param="api_key"),
+    ):
+        with pytest.raises(ValueError, match="key_scheme"):
+            c.request(bad, "GET", "search/query")
+    with pytest.raises(ValueError, match="at most one"):
+        exchange("POST", SOAP_URL, request_content=SOAP_BODY, json_body={"a": 1})
+    with pytest.raises(ValueError, match="at most one"):
+        exchange("POST", SOAP_URL, request_content=SOAP_BODY, form={"a": "1"})
