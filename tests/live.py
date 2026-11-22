@@ -259,6 +259,26 @@ def hpde_github_raw(adapter, client: Client) -> None:
         raise QuarryError("upstream_failed", "HPDE GitHub raw probe returned no SPASE Version")
 
 
+def spase_terms(adapter, client: Client) -> None:
+    """SPASE 2.7.2 XSD vocabulary probe: show + search MagneticField (pure schema XML)."""
+    term, release, _ = adapter.show(client, REGISTRY, Curie("spase.measurement", "MagneticField"))
+    if term.id != "spase.measurement:MagneticField" or not term.definition:
+        raise QuarryError("upstream_failed", "SPASE show MagneticField returned an unexpected term")
+    if release.version != "2.7.2":
+        raise QuarryError("upstream_failed", f"SPASE schema reported version {release.version!r}, expected '2.7.2'")
+    _, found, _, _ = adapter.search(client, REGISTRY, "MagneticField", exact=False, limit=1)
+    if not found:
+        raise QuarryError("upstream_failed", "SPASE term search answered no terms")
+
+
+def goes_class_docs_head(adapter, client: Client) -> None:
+    """HEAD-only probe on NOAA SWPC solar flare scale documentation page (zero observation data)."""
+    resp = client.request(adapter.route, "HEAD", adapter.route.url)
+    ct = (resp.headers.get("content-type") or "").lower()
+    if "html" not in ct:
+        raise QuarryError("upstream_failed", f"NOAA GOES class docs HEAD returned unexpected content-type {ct!r}")
+
+
 def terms(curie: Curie, words: str) -> Probe:
     """One OLS route's three paths: the term (through ancestors), its ancestors, and search."""
     def probe(adapter, client):
@@ -325,6 +345,8 @@ PROBES: dict[tuple[str, str], Probe] = {
         dated_search_one(Query(during=DONKI_WINDOW, limit=1)),
     ("hpde", "https://spase-metadata.org"): show(HPDE_OMNI_CURIE),
     ("hpde", "https://raw.githubusercontent.com/hpde"): hpde_github_raw,
+    ("spase", "https://spase-group.org/data/schema"): spase_terms,
+    ("goes-class", "https://www.swpc.noaa.gov/phenomena/solar-flares-radio-blackouts"): goes_class_docs_head,
 }
 
 

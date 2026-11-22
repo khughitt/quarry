@@ -463,3 +463,41 @@ def test_hpde_rest_and_github_probes_offline():
     ])
     live.PROBES[("hpde", "https://raw.githubusercontent.com/hpde")](adapter, replay_client(gh_t))
     assert gh_t.pending == []
+
+
+def test_spase_and_goes_class_probes_offline():
+    from quarry.adapters import goes_class, spase
+    from quarry.testing import ReplayTransport, exchange, replay_client
+    from tests.test_spase import MINI_XSD, SCHEMA_URL
+
+    cat = catalog_mod.load()
+    spase_adapter = spase.make(cat.resources["spase"])
+    spase_t = ReplayTransport([
+        exchange("GET", SCHEMA_URL, body=MINI_XSD, content_type="application/xml"),
+        exchange("GET", SCHEMA_URL, body=MINI_XSD, content_type="application/xml"),
+    ])
+    live.PROBES[("spase", "https://spase-group.org/data/schema")](spase_adapter, replay_client(spase_t))
+    assert spase_t.pending == []
+
+    wrong_ver = ReplayTransport([
+        exchange("GET", SCHEMA_URL, body=MINI_XSD.replace('version="2.7.2"', 'version="2.7.1"'),
+                 content_type="application/xml"),
+    ])
+    with pytest.raises(QuarryError) as caught:
+        live.PROBES[("spase", "https://spase-group.org/data/schema")](spase_adapter, replay_client(wrong_ver))
+    assert caught.value.kind == "upstream_failed"
+
+    goes_adapter = goes_class.make(cat.resources["goes-class"])
+    goes_url = "https://www.swpc.noaa.gov/phenomena/solar-flares-radio-blackouts"
+    goes_t = ReplayTransport([
+        exchange("HEAD", goes_url, status=200, body="", content_type="text/html; charset=UTF-8"),
+    ])
+    live.PROBES[("goes-class", goes_url)](goes_adapter, replay_client(goes_t))
+    assert goes_t.pending == []
+
+    goes_bad = ReplayTransport([
+        exchange("HEAD", goes_url, status=200, body="", content_type="application/json"),
+    ])
+    with pytest.raises(QuarryError) as caught:
+        live.PROBES[("goes-class", goes_url)](goes_adapter, replay_client(goes_bad))
+    assert caught.value.kind == "upstream_failed"

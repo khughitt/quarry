@@ -1,0 +1,23 @@
+id = "spase"
+name = "SPASE data model and vocabularies"
+roles = ["data-model", "vocabulary"]
+prefixes = ["spase.measurement", "spase.region"]
+adapter = "quarry.adapters.spase"
+
+[[routes]]
+kind = "bulk"
+url = "https://spase-group.org/data/schema"
+min_interval = 1.0
+service = "spase-group"
+auth = "none"
+reports_total = false
+
+[[pitfalls]]
+summary = "vocabularies (MeasurementType, ObservedRegion) are XSD enumerations; there is no term service"
+handling = "terms are read from the versioned XSD (spase-2.7.2.xsd)"
+evidence = "sun phase-1 survey probes/spase/04, 08"
+
+[[pitfalls]]
+summary = "documentation URLs move between versions; guessed paths 404"
+handling = "only /data/model/ and the versioned XSD are cited"
+evidence = "probes/spase/03, 06, 10, 11"
