@@ -1,0 +1,19 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "HEAD",
+   "query": [],
+   "url": "https://stereo-ssc.nascom.nasa.gov/data/ins_data/secchi/L0/a/img/euvi/20250115/20250115_000500_n4euA.fts"
+  },
+  "response": {
+   "body": "",
+   "headers": {
+    "content-length": "8409600",
+    "content-type": "image/fits",
+    "last-modified": "Fri, 17 Jan 2025 15:25:58 GMT"
+   },
+   "status": 200
+  }
+ }
+]

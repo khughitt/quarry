@@ -33,6 +33,10 @@ JSOC_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
                      datetime(2025, 1, 15, 0, 0, 36, tzinfo=timezone.utc))
 SOAR_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
                      datetime(2025, 1, 15, 0, 5, 0, tzinfo=timezone.utc))
+SOHO_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
+                     datetime(2025, 1, 16, 0, 0, 0, tzinfo=timezone.utc))
+STEREO_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
+                       datetime(2025, 1, 15, 0, 15, 0, tzinfo=timezone.utc))
 HV_INSTANT = datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc)
 JSOC_SAMPLE_CURIE = Curie("jsoc", "aia.lev1_euv_12s[2025-01-15T00:00:11Z][193]")
 SOAR_SAMPLE_CURIE = Curie("soar", "solo_L1_eui-fsi304-image-short_20250115T000015208")
@@ -250,6 +254,10 @@ PROBES: dict[tuple[str, str], Probe] = {
     ("soar", "https://soar.esac.esa.int/soar-sl-tap/data"): soar_download_metadata,
     ("soar", "sunpy.net.soar"): local_tool("sunpy.net.soar"),
     ("helioviewer", "https://api.helioviewer.org/v2"): helioviewer_nearest,
+    ("soho", "https://umbra.nascom.nasa.gov/pub"):
+        dated_search_one(Query(during=SOHO_WINDOW, filters={"instrument": "EIT"}, limit=1)),
+    ("stereo-ssc", "https://stereo-ssc.nascom.nasa.gov/data/ins_data"):
+        dated_search_one(Query(during=STEREO_WINDOW, filters={"instrument": "EUVI", "observatory": "STEREO-A"}, limit=1)),
 }
 
 

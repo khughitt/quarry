@@ -1,0 +1,28 @@
+id = "soho"
+name = "SOHO archive (SDAC bulk tree)"
+roles = ["repository"]
+prefixes = ["soho"]
+adapter = "quarry.adapters.soho"
+
+[[routes]]
+kind = "bulk"
+url = "https://umbra.nascom.nasa.gov/pub"
+min_interval = 1.0
+service = "sdac"
+auth = "none"
+reports_total = false
+
+[[pitfalls]]
+summary = "files carry no content-type and no digest"
+handling = "type by extension; expected omitted"
+evidence = "sun phase-1 survey probes/soho/11"
+
+[[pitfalls]]
+summary = "the archive is curated after the fact (deletions logged); three doors with different coverage"
+handling = "every download is dated and hashed; search goes through vso"
+evidence = "probes/soho/04, 13"
+
+[[pitfalls]]
+summary = "LASCO level-0.5 is organised by YYMMDD and the sample day's directory was not found"
+handling = "read: open; EIT (lz/YYYY/MM) is the proven tree and unverified archive doors are withheld"
+evidence = "probes/soho/09, 10, 12"

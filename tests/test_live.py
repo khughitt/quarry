@@ -217,6 +217,8 @@ def test_dated_heliophysics_probes_verify_epoch_before_transport(tmp_path, monke
         ("soar", "https://soar.esac.esa.int/soar-sl-tap/tap"),
         ("soar", "https://soar.esac.esa.int/soar-sl-tap/data"),
         ("helioviewer", "https://api.helioviewer.org/v2"),
+        ("soho", "https://umbra.nascom.nasa.gov/pub"),
+        ("stereo-ssc", "https://stereo-ssc.nascom.nasa.gov/data/ins_data"),
     ):
         with pytest.raises(QuarryError) as caught:
             live.PROBES[key](BoomAdapter(), None)
