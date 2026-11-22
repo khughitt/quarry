@@ -1,0 +1,39 @@
+id = "arxiv"
+name = "arXiv"
+roles = ["literature-index"]
+prefixes = ["arxiv"]
+bare_normalize = false
+adapter = "quarry.adapters.arxiv"
+
+[[routes]]
+kind = "rest"
+url = "http://export.arxiv.org/api/query"
+min_interval = 3.0
+service = "arxiv"
+auth = "none"
+reports_total = true
+
+[[pitfalls]]
+summary = "ordinary --in arxiv searches apply cat:astro-ph.SR across every lens (core, biology, heliophysics)"
+handling = "the selector is exposed in native coverage and reported in a coverage warning; use --native (for example, 'cat:cs.SE AND all:\"...\"') to search another category without the default solar filter or warning"
+evidence = "sun phase-1 survey probes/arxiv/01; heliophysics delivery contract"
+
+[[pitfalls]]
+summary = "arXiv's upstream Bioregistry pattern also matches bare accessions owned by other resources"
+handling = "bare_normalize = false opts arxiv out of bare ID inference; write qualified arxiv:<id> CURIEs for id normalize, show and files"
+evidence = "sun phase-1 survey probes/arxiv/05; Bioregistry arxiv pattern"
+
+[[pitfalls]]
+summary = "submittedDate range brackets must be URL-encoded and the API manual requests a 3-second delay between calls"
+handling = "the adapter URL-encodes query parameters, compiles --since/--until to submittedDate:[YYYYMMDD0000 TO YYYYMMDD2359], and throttles at min_interval = 3.0 s"
+evidence = "sun phase-1 survey probes/arxiv/02, 03, 06"
+
+[[pitfalls]]
+summary = "the Atom feed's top-level <title> is the query echo, not a record"
+handling = "the adapter parses <entry> elements separately from feed-level metadata and fails on malformed XML or count changes"
+evidence = "sun phase-1 survey probes/arxiv/01, 06"
+
+[[pitfalls]]
+summary = "descriptive metadata is CC0 1.0 while e-prints carry their own licences"
+handling = "metadata-only scope (files returns an empty inventory with no PDF acquisition, abstracts omitted); per-record licence metadata is preserved when present"
+evidence = "sun phase-1 survey probes/arxiv/04"

@@ -52,6 +52,8 @@ JSOC_SAMPLE_CURIE = Curie("jsoc", "aia.lev1_euv_12s[2025-01-15T00:00:11Z][193]")
 SOAR_SAMPLE_CURIE = Curie("soar", "solo_L1_eui-fsi304-image-short_20250115T000015208")
 HPDE_OMNI_CURIE = Curie("spase", "NASA/NumericalData/OMNI/HighResolutionObservations/Version2/PT1M")
 HPDE_SPDF_CURIE = Curie("spase", "SMWG/Repository/NASA/GSFC/SPDF")
+ADS_PROBE = Query(phrases=("Atmospheric Imaging Assembly",), limit=1)
+ARXIV_SAMPLE_CURIE = Curie("arxiv", "2108.02624v2")
 
 
 def _resolve_sun_root(sun_root: Path | None = None) -> Path:
@@ -347,6 +349,8 @@ PROBES: dict[tuple[str, str], Probe] = {
     ("hpde", "https://raw.githubusercontent.com/hpde"): hpde_github_raw,
     ("spase", "https://spase-group.org/data/schema"): spase_terms,
     ("goes-class", "https://www.swpc.noaa.gov/phenomena/solar-flares-radio-blackouts"): goes_class_docs_head,
+    ("ads", "https://api.adsabs.harvard.edu/v1"): search_one(ADS_PROBE),
+    ("arxiv", "http://export.arxiv.org/api/query"): show(ARXIV_SAMPLE_CURIE),
 }
 
 

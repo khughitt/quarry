@@ -243,3 +243,36 @@ def test_heliophysics_shared_schemes_parse_and_resolve(curie, expected_url_part)
     assert str(parsed) == curie
     urls = ids.resolve(parsed, REG)
     assert len(urls) == 1 and expected_url_part in urls[0]
+
+
+def test_arxiv_bare_normalize_opt_out_keeps_existing_bare_ids_unambiguous():
+    from click.testing import CliRunner
+    import json
+    from quarry.cli import main
+
+    shipped = catalog.load()
+    assert shipped.resources["arxiv"].bare_normalize is False
+    assert shipped.owner("arxiv") is shipped.resources["arxiv"]
+    assert shipped.owner("bibcode") is shipped.resources["ads"]
+
+    # Existing bare GEO/PMC/PPR/BioProject/SRA IDs stay unambiguous even with arxiv in the catalog
+    for bare, canonical in (
+        ("GSE24080", "geo:GSE24080"),
+        ("PMC3257301", "pmc:PMC3257301"),
+        ("PPR404258", "ppr:PPR404258"),
+        ("PRJNA123456", "bioproject:PRJNA123456"),
+        ("SRP123456", "insdc.sra:SRP123456"),
+        ("2012SoPh..275...17L", "bibcode:2012SoPh..275...17L"),
+    ):
+        out = CliRunner().invoke(main, ["--json", "id", "normalize", bare], catch_exceptions=False)
+        assert out.exit_code == 0, f"{bare}: {out.stderr}"
+        assert json.loads(out.stdout) == {"id": canonical}
+
+    # Bare arXiv ID is refused; qualified arxiv: IDs validate and normalize cleanly
+    out_bare = CliRunner().invoke(main, ["--json", "id", "normalize", "2108.02624v2"], catch_exceptions=False)
+    assert out_bare.exit_code == 1 and json.loads(out_bare.stderr)["error"]["kind"] == "unknown_id"
+    for qualified in ("arxiv:2108.02624", "arxiv:2108.02624v2", "arxiv:astro-ph/0601001", "ARXIV:2108.02624v2"):
+        out_q = CliRunner().invoke(main, ["--json", "id", "normalize", qualified], catch_exceptions=False)
+        assert out_q.exit_code == 0, out_q.stderr
+        assert json.loads(out_q.stdout)["id"] == f"arxiv:{qualified.split(':', 1)[1]}"
+

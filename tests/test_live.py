@@ -501,3 +501,61 @@ def test_spase_and_goes_class_probes_offline():
     with pytest.raises(QuarryError) as caught:
         live.PROBES[("goes-class", goes_url)](goes_adapter, replay_client(goes_bad))
     assert caught.value.kind == "upstream_failed"
+
+
+def test_ads_and_arxiv_probes_offline():
+    import json
+    from quarry.adapters import ads, arxiv
+    from quarry.testing import ReplayTransport, exchange, replay_client
+    from tests.test_arxiv import ENTRY_MODERN, atom_feed
+
+    cat = catalog_mod.load()
+
+    # 1. ADS probe: missing ADS_DEV_KEY refuses before transport; with fake key succeeds
+    ads_adapter = ads.make(cat.resources["ads"])
+    no_key = replay_client(ReplayTransport([]))
+    no_key._environ = {}
+    with pytest.raises(QuarryError) as caught:
+        live.PROBES[("ads", "https://api.adsabs.harvard.edu/v1")](ads_adapter, no_key)
+    assert caught.value.kind == "missing_required_key" and "ADS_DEV_KEY" in caught.value.detail
+
+    ads_t = ReplayTransport([
+        exchange(
+            "GET",
+            "https://api.adsabs.harvard.edu/v1/search/query",
+            params={
+                "q": '("Atmospheric Imaging Assembly")',
+                "fl": ads.FIELDS,
+                "rows": "1",
+                "start": "0",
+                "sort": "bibcode asc",
+            },
+            body=json.dumps({
+                "responseHeader": {"status": 0},
+                "response": {
+                    "numFound": 1,
+                    "start": 0,
+                    "docs": [{"bibcode": "2012SoPh..275...17L", "title": ["AIA"], "pubdate": "2012-01-00"}],
+                },
+            }),
+        ),
+    ])
+    keyed = replay_client(ads_t)
+    keyed._environ = {"ADS_DEV_KEY": "probe-token"}
+    live.PROBES[("ads", "https://api.adsabs.harvard.edu/v1")](ads_adapter, keyed)
+    assert ads_t.pending == []
+
+    # 2. arXiv probe: show classic solar-instrumentation paper
+    arxiv_adapter = arxiv.make(cat.resources["arxiv"])
+    arxiv_t = ReplayTransport([
+        exchange(
+            "GET",
+            "http://export.arxiv.org/api/query",
+            params={"id_list": "2108.02624v2", "start": "0", "max_results": "2"},
+            body=atom_feed([ENTRY_MODERN], total=1),
+            content_type="application/atom+xml; charset=utf-8",
+        ),
+    ])
+    live.PROBES[("arxiv", "http://export.arxiv.org/api/query")](arxiv_adapter, replay_client(arxiv_t))
+    assert arxiv_t.pending == []
+

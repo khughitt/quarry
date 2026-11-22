@@ -1,0 +1,31 @@
+id = "ads"
+name = "NASA Astrophysics Data System"
+roles = ["literature-index"]
+prefixes = ["bibcode"]
+adapter = "quarry.adapters.ads"
+
+[[routes]]
+kind = "rest"
+url = "https://api.adsabs.harvard.edu/v1"
+min_interval = 1.0
+service = "ads"
+auth = "required-key"
+key_env = "ADS_DEV_KEY"
+key_header = "Authorization"
+key_scheme = "bearer"
+reports_total = true
+
+[[pitfalls]]
+summary = "every API call needs a Bearer token; unauthenticated requests return HTTP 401 JSON"
+handling = "required-key route (ADS_DEV_KEY with Authorization: Bearer); missing key refuses before transport without leaking credentials"
+evidence = "sun phase-1 survey probes/ads/01"
+
+[[pitfalls]]
+summary = "ADS pubdate carries year (YYYY-00-00), month (YYYY-MM-00) or day (YYYY-MM-DD) precision rather than always exact days"
+handling = "records emit pubdate at its known precision without fabricating day or month; --since/--until require month-aligned bounds before transport and fail if a returned record has coarser precision whose membership in the requested interval cannot be established; use --native for exact pubdate:[...] queries"
+evidence = "sun phase-1 survey probes/ads/07"
+
+[[pitfalls]]
+summary = "API documentation pages are a client-side application (curl gets HTTP 202 with an empty body) and ADS is metadata-only in quarry"
+handling = "rate limits (x-ratelimit-limit: 5000 per token per day observed in headers) and terms are read in a browser; files returns an empty inventory and abstracts are omitted"
+evidence = "sun phase-1 survey probes/ads/02, 03, 08"
