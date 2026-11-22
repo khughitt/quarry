@@ -1,0 +1,44 @@
+id = "goes-xrs"
+name = "GOES X-ray sensor data and flare lists (NOAA NCEI, SWPC)"
+roles = ["repository"]
+prefixes = ["goes"]
+adapter = "quarry.adapters.goes_xrs"
+
+[[routes]]
+kind = "bulk"
+url = "https://data.ngdc.noaa.gov/platforms/solar-space-observing-satellites/goes"
+min_interval = 1.0
+service = "ncei"
+auth = "none"
+reports_total = false
+
+[[routes]]
+kind = "rest"
+url = "https://services.swpc.noaa.gov/json/goes/primary"
+min_interval = 1.0
+service = "swpc"
+auth = "none"
+reports_total = false
+
+[[routes]]
+kind = "local-tool"
+url = "sunpy.net.dataretriever.sources.goes"
+min_interval = 0.0
+service = "ncei"
+auth = "none"
+reports_total = false
+
+[[pitfalls]]
+summary = "file names carry a processing version (v2-2-1, v2-2-2) that changes; a constructed name is 404"
+handling = "list the month directory and match the day"
+evidence = "sun phase-1 survey probes/goes-xrs/01, 02"
+
+[[pitfalls]]
+summary = "the SWPC JSON products are rolling windows, overwritten; not an archive"
+handling = "no acquisition from them; NCEI granules are the record"
+evidence = "probes/goes-xrs/04, 05"
+
+[[pitfalls]]
+summary = "the legacy flare event lists end in 2017; later flares are in L2 flsum granules"
+handling = "two series under one id, split by epoch"
+evidence = "probes/goes-xrs/03, 06"

@@ -219,6 +219,7 @@ def test_dated_heliophysics_probes_verify_epoch_before_transport(tmp_path, monke
         ("helioviewer", "https://api.helioviewer.org/v2"),
         ("soho", "https://umbra.nascom.nasa.gov/pub"),
         ("stereo-ssc", "https://stereo-ssc.nascom.nasa.gov/data/ins_data"),
+        ("goes-xrs", "https://data.ngdc.noaa.gov/platforms/solar-space-observing-satellites/goes"),
     ):
         with pytest.raises(QuarryError) as caught:
             live.PROBES[key](BoomAdapter(), None)
@@ -346,3 +347,24 @@ def test_jsoc_soar_helioviewer_probes_offline(tmp_path, monkeypatch):
     ])
     live.PROBES[("helioviewer", "https://api.helioviewer.org/v2")](hv_adapter, replay_client(hv_t))
     assert hv_t.pending == []
+
+
+def test_goes_swpc_rolling_probe_is_head_only_offline():
+    from quarry.adapters import goes_xrs
+    from quarry.testing import ReplayTransport, exchange, replay_client
+
+    adapter = goes_xrs.make(catalog_mod.load().resources["goes-xrs"])
+    t = ReplayTransport([
+        exchange("HEAD", "https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",
+                 status=200, body="", content_type="application/json"),
+    ])
+    live.PROBES[("goes-xrs", "https://services.swpc.noaa.gov/json/goes/primary")](adapter, replay_client(t))
+    assert t.pending == []
+
+    bad_t = ReplayTransport([
+        exchange("HEAD", "https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",
+                 status=200, body="", content_type="text/html"),
+    ])
+    with pytest.raises(QuarryError) as caught:
+        live.PROBES[("goes-xrs", "https://services.swpc.noaa.gov/json/goes/primary")](adapter, replay_client(bad_t))
+    assert caught.value.kind == "upstream_failed"

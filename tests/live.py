@@ -37,6 +37,8 @@ SOHO_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
                      datetime(2025, 1, 16, 0, 0, 0, tzinfo=timezone.utc))
 STEREO_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
                        datetime(2025, 1, 15, 0, 15, 0, tzinfo=timezone.utc))
+GOES_WINDOW = Window(datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc),
+                     datetime(2025, 1, 16, 0, 0, 0, tzinfo=timezone.utc))
 HV_INSTANT = datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc)
 JSOC_SAMPLE_CURIE = Curie("jsoc", "aia.lev1_euv_12s[2025-01-15T00:00:11Z][193]")
 SOAR_SAMPLE_CURIE = Curie("soar", "solo_L1_eui-fsi304-image-short_20250115T000015208")
@@ -209,6 +211,14 @@ def helioviewer_nearest(adapter, client: Client) -> None:
         raise QuarryError("upstream_failed", "Helioviewer nearest search answered no image")
 
 
+def goes_swpc_rolling_head(adapter, client: Client) -> None:
+    """HEAD-only metadata probe on SWPC rolling GOES JSON (zero body bytes read under sun controls)."""
+    resp = client.request(adapter.swpc_route, "HEAD", "xrays-6-hour.json")
+    ct = (resp.headers.get("content-type") or "").lower()
+    if "json" not in ct:
+        raise QuarryError("upstream_failed", f"SWPC GOES rolling HEAD returned unexpected content-type {ct!r}")
+
+
 def terms(curie: Curie, words: str) -> Probe:
     """One OLS route's three paths: the term (through ancestors), its ancestors, and search."""
     def probe(adapter, client):
@@ -258,6 +268,10 @@ PROBES: dict[tuple[str, str], Probe] = {
         dated_search_one(Query(during=SOHO_WINDOW, filters={"instrument": "EIT"}, limit=1)),
     ("stereo-ssc", "https://stereo-ssc.nascom.nasa.gov/data/ins_data"):
         dated_search_one(Query(during=STEREO_WINDOW, filters={"instrument": "EUVI", "observatory": "STEREO-A"}, limit=1)),
+    ("goes-xrs", "https://data.ngdc.noaa.gov/platforms/solar-space-observing-satellites/goes"):
+        dated_search_one(Query(during=GOES_WINDOW, filters={"observatory": "GOES-18", "instrument": "xrsf-l2-avg1m_science"}, limit=1)),
+    ("goes-xrs", "https://services.swpc.noaa.gov/json/goes/primary"): goes_swpc_rolling_head,
+    ("goes-xrs", "sunpy.net.dataretriever.sources.goes"): local_tool("sunpy.net.dataretriever.sources.goes"),
 }
 
 
