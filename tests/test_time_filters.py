@@ -9,6 +9,7 @@ from quarry import catalog as catalog_mod
 from quarry import context, search
 from quarry.cli import main
 from quarry.query import Query, parse_window
+from quarry.testing import ReplayTransport, replay_client
 from tests.fake_adapter import Fake, Timed
 from tests.test_search import FAKE
 
@@ -17,7 +18,7 @@ summary = "test heliophysics"
 includes = ["core"]
 resources = ["timed", "starting", "nearest", "plain"]
 search_default = ["timed", "starting", "plain"]
-filters = ["during", "at"]
+filters = ["during", "at", "instrument", "observatory", "measurement"]
 '''
 DAY = "2025-10-01/2025-10-01"
 
@@ -152,3 +153,45 @@ def test_a_misdeclared_adapter_is_refused_before_any_request(catalog, monkeypatc
     with pytest.raises(ValueError, match=message):
         search.run(catalog=catalog_mod.load(context.CATALOG_ROOT), client=None, query=query, resource_ids=["timed"],
                    domain="helio", allow_partial=False, from_defaults=False, make=Misdeclared)
+
+
+def test_heliophysics_domain_filters_forward_to_query(catalog, monkeypatch):
+    seen = []
+
+    class FilteredTimed(Timed):
+        filters = frozenset({"instrument", "observatory", "measurement"})
+
+        def prepare(self, query):
+            seen.append(dict(query.filters))
+            return super().prepare(query)
+
+    real_make = search.base.make
+    monkeypatch.setitem(search.run.__kwdefaults__, "make",
+                        lambda r: FilteredTimed(r) if r.id == "timed" else real_make(r))
+    got = report("search", "--domain", "helio", "--in", "timed",
+                 "--instrument", "AIA 335", "--observatory", "SDO", "--measurement", "Waves.Active")
+    assert seen == [{"instrument": "AIA 335", "observatory": "SDO", "measurement": "Waves.Active"}]
+    assert got["coverage"][0]["match"] == "none"
+
+
+@pytest.mark.parametrize("flag", ["--instrument", "--observatory", "--measurement"])
+@pytest.mark.parametrize("blank", ["", " ", "\t"])
+def test_blank_heliophysics_filters_are_usage_errors_before_catalog(monkeypatch, flag, blank):
+    monkeypatch.setattr(context, "open_env", lambda: pytest.fail("blank filter reached the catalog"))
+    out = invoke("search", "--domain", "helio", flag, blank, "AIA")
+    assert out.exit_code == 2 and out.stdout == "" and "must not be empty" in out.stderr
+
+
+@pytest.mark.parametrize("flag, name", [
+    ("--instrument", "instrument"),
+    ("--observatory", "observatory"),
+    ("--measurement", "measurement"),
+])
+def test_unsupported_heliophysics_filter_refuses_without_transport(catalog, monkeypatch, flag, name):
+    monkeypatch.setattr(Fake, "prepare", lambda *a: pytest.fail("refused search must not start an adapter"))
+    monkeypatch.setattr(context, "make_client", lambda trace: pytest.fail("domain refusal must not open a client"))
+    outside = error("search", "--domain", "biology", "--in", "alpha", flag, "AIA", "x")
+    assert outside == {"kind": "unsupported_filter", "detail": f"--{name} is not a filter of the biology domain"}
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(ReplayTransport([])))
+    unsupported = error("search", "--domain", "helio", "--in", "plain", flag, "AIA", "x")
+    assert unsupported == {"kind": "unsupported_filter", "detail": f"plain cannot filter by {name}; leave it out of --in"}

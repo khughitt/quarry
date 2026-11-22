@@ -1,6 +1,6 @@
 """The one HTTP client. A throttle per service and key is shared by every client in
 the process; retries back off and honour Retry-After within a wait budget; redirects are
-followed for GET only, and a credential never leaves its origin or reaches a trace line or an
+followed for GET and HEAD only, and a credential never leaves its origin or reaches a trace line or an
 error detail. A required-key route refuses to run before transport when its environment
 variable is absent; the error names the variable, never a value."""
 from __future__ import annotations
@@ -142,10 +142,10 @@ class Client:
             self._trace(line)
 
     def _send(self, route: Route, request: httpx.Request, shown: str, key: str | None, interval: float,
-              credentials: dict[str, str]) -> httpx.Response:
-        """Send, following GET redirects. Every hop waits on the throttle and is traced, redacted.
-        Each hop is a fresh request: on the original origin it carries the credential header and
-        the key parameter again; a hop elsewhere carries neither."""
+              credentials: dict[str, str], caller_headers: dict[str, str]) -> httpx.Response:
+        """Send, following GET and HEAD redirects. Every hop waits on the throttle and is traced,
+        redacted. Each hop is a fresh request preserving the method: on the original origin it
+        carries the credential header and the key parameter again; a hop elsewhere carries neither."""
         origin = _origin(request.url)
         for hop in range(MAX_REDIRECTS + 1):
             if hop:
@@ -154,22 +154,38 @@ class Client:
             self._log(f"{request.method} {self._shown(request.url, route, key)} -> {response.status_code}")
             if not response.is_redirect:
                 return response
-            if request.method != "GET":
-                raise UpstreamError(f"{request.method} {shown}: redirected; quarry follows redirects for GET only")
+            if request.method not in ("GET", "HEAD"):
+                raise UpstreamError(f"{request.method} {shown}: redirected; quarry follows redirects for GET and HEAD only")
             target = request.url.join(response.headers["Location"])
             same = _origin(target) == origin
             if route.key_param:
                 target = _with_key_param(target, route.key_param, key if same else None)
             if not same and key and _credential_pattern([key]).search(str(target)):
                 raise UpstreamError(f"{shown}: foreign redirect contains a credential")
-            request = self._http.build_request("GET", target, headers=credentials if same else {})
+            hop_headers = ({**caller_headers, **credentials} if same else
+                           {k: v for k, v in caller_headers.items() if k.lower() not in ("authorization", "cookie")})
+            request = self._http.build_request(request.method, target, headers=hop_headers)
         raise UpstreamError(f"{shown}: more than {MAX_REDIRECTS} redirects")
 
     def request(self, route: Route, method: str, url: str, *, params: Mapping | None = None,
+                headers: Mapping[str, str] | None = None, content: bytes | None = None,
                 json: object = None, data: Mapping | None = None,
                 accept: frozenset[int] = frozenset()) -> httpx.Response:
         """`accept` names error statuses the caller reads itself (a 404 that means not found);
         every other 4xx/5xx is an upstream failure."""
+        if sum(body is not None for body in (content, json, data)) > 1:
+            raise ValueError("pass at most one of content, json and data")
+        if route.key_scheme is not None:
+            if route.key_scheme != "bearer":
+                raise ValueError(f"unsupported key_scheme {route.key_scheme!r}")
+            if (route.auth == "none" or not route.key_env or not route.key_header
+                    or route.key_header.lower() != "authorization" or route.key_param):
+                raise ValueError(
+                    "key_scheme 'bearer' requires auth != 'none', key_env, key_header 'Authorization' and no key_param"
+                )
+        caller_headers = dict(headers or {})
+        if route.key_header and any(k.lower() == route.key_header.lower() for k in caller_headers):
+            raise ValueError(f"cannot override route credential header {route.key_header!r}")
         key = self._key(route)
         if route.auth == "required-key" and key is None:
             env = route.key_env
@@ -177,21 +193,23 @@ class Client:
                 f"set the {env} environment variable to use the {route.service} route" if env
                 else f"the {route.service} route is required-key but declares no key_env")
         params = dict(params or {})
-        headers = {}
+        credentials: dict[str, str] = {}
         if key:
             if route.key_param:
                 params[route.key_param] = key
             if route.key_header:
-                headers[route.key_header] = key
+                credentials[route.key_header] = f"Bearer {key}" if route.key_scheme == "bearer" else key
+        request_headers = {**caller_headers, **credentials}
         full = url if url.startswith(("http://", "https://")) else f"{route.url.rstrip('/')}/{url.lstrip('/')}"
         shown = self._shown(httpx.URL(full, params=params), route, key)
         interval = route.keyed_min_interval if key and route.keyed_min_interval is not None else route.min_interval
         sleep = self._throttle.clock.sleep
         for attempt in range(1, MAX_ATTEMPTS + 1):
             self._throttle.wait(route.service, key, interval)
-            request = self._http.build_request(method, full, params=params, json=json, data=data, headers=headers)
+            request = self._http.build_request(method, full, params=params, content=content,
+                                               json=json, data=data, headers=request_headers)
             try:
-                response = self._send(route, request, shown, key, interval, headers)
+                response = self._send(route, request, shown, key, interval, credentials, caller_headers)
             except (httpx.TransportError, httpx.DecodingError) as error:
                 self._log(f"{method} {shown} -> {type(error).__name__}")
                 if attempt == MAX_ATTEMPTS:

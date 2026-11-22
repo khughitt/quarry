@@ -99,9 +99,12 @@ uv run quarry term ancestors go:0006915
 
 Input prefix synonyms normalize to canonical CURIEs. A bare accession is
 accepted by `id normalize` only when exactly one record-holding resource
-owns a matching prefix. Term IDs need their prefix. Term search words are
-ANDed. Literal term searches refuse query syntax such as wildcards and
-operators. The default term limit is 10 per resource.
+owns a matching prefix and has not opted out of bare inference
+(`bare_normalize = false` on a resource requires qualified `<prefix>:<id>`
+inputs while keeping explicit validation, resolution and owner routing). Term
+IDs need their prefix. Term search words are ANDed. Literal term searches refuse
+query syntax such as wildcards and operators. The default term limit is 10 per
+resource.
 
 Term outputs carry release information and warnings. Obsolete terms may
 have a replacement or consideration list. Ancestors follow is_a and can

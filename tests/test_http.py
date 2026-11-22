@@ -539,3 +539,182 @@ def test_recording_a_gzip_response_hands_the_client_the_body_once():
     recorder = RecordingTransport(frozenset(), [], inner=inner)
     assert httpx.Client(transport=recorder).get("https://example.org/x").content == body
     assert recorder.take()[0]["response"]["body"] == body.decode()
+
+
+SOAP_URL = "http://vso.nso.edu/cgi-bin/VSO/PROD/vsoi_wsdl.cgi"
+SOAP_ROUTE = Route(kind="query-endpoint", url=SOAP_URL, min_interval=0.0, service="vso", auth="none", reports_total=True)
+SOAP_BODY = b'<?xml version="1.0" encoding="utf-8"?><soap:Envelope><soap:Body><Query/></soap:Body></soap:Envelope>'
+SOAP_ACTION_QUERY = '"http://virtualsolar.org/VSO/VSOi#Query"'
+SOAP_ACTION_GETDATA = '"http://virtualsolar.org/VSO/VSOi#GetData"'
+
+
+def bearer_route(**kw):
+    return Route(kind="rest", url="https://api.adsabs.harvard.edu/v1", min_interval=0.0, service="ads",
+                 auth=kw.pop("auth", "required-key"), reports_total=True,
+                 key_env=kw.pop("key_env", "ADS_DEV_KEY"), key_header=kw.pop("key_header", "Authorization"),
+                 key_scheme=kw.pop("key_scheme", "bearer"), **kw)
+
+
+def test_request_sends_raw_soap_headers_and_content_and_refuses_multiple_bodies():
+    seen = []
+    c = client(lambda r: (seen.append(r), httpx.Response(200, text="<ok/>"))[1])
+    res = c.request(SOAP_ROUTE, "POST", SOAP_URL,
+                    headers={"SOAPAction": SOAP_ACTION_QUERY, "Content-Type": "text/xml; charset=utf-8"},
+                    content=SOAP_BODY)
+    assert res.text == "<ok/>"
+    assert seen[0].headers["SOAPAction"] == SOAP_ACTION_QUERY
+    assert seen[0].content == SOAP_BODY
+    with pytest.raises(ValueError):
+        c.request(SOAP_ROUTE, "POST", SOAP_URL, content=b"a", json={"b": 1})
+    with pytest.raises(ValueError):
+        c.request(SOAP_ROUTE, "POST", SOAP_URL, content=b"a", data={"b": "1"})
+    with pytest.raises(ValueError):
+        c.request(SOAP_ROUTE, "POST", SOAP_URL, json={"a": 1}, data={"b": "1"})
+
+
+def test_replay_distinguishes_soap_action_and_keeps_non_soap_key_shape():
+    non_soap = httpx.Request("GET", "https://h.example/p", headers={"Accept": "application/json"})
+    assert exchange_key(non_soap, frozenset()) == {"method": "GET", "url": "https://h.example/p", "query": [], "body": None}
+
+    q_ex = exchange("POST", SOAP_URL, request_headers={"SOAPAction": SOAP_ACTION_QUERY},
+                    request_content=SOAP_BODY, content_type="text/xml", body="<query/>")
+    g_ex = exchange("POST", SOAP_URL, request_headers={"SOAPAction": SOAP_ACTION_GETDATA},
+                    request_content=SOAP_BODY, content_type="text/xml", body="<getdata/>")
+    assert q_ex["request"]["soap_action"] == SOAP_ACTION_QUERY
+    assert g_ex["request"]["soap_action"] == SOAP_ACTION_GETDATA
+
+    transport = ReplayTransport([q_ex, g_ex])
+    c = Client(transport=transport, throttle=Throttle(FakeClock()))
+    assert c.request(SOAP_ROUTE, "POST", SOAP_URL, headers={"SOAPAction": SOAP_ACTION_GETDATA}, content=SOAP_BODY).text == "<getdata/>"
+    assert c.request(SOAP_ROUTE, "POST", SOAP_URL, headers={"SOAPAction": SOAP_ACTION_QUERY}, content=SOAP_BODY).text == "<query/>"
+    with pytest.raises(LookupError, match="no recorded exchange"):
+        c.request(SOAP_ROUTE, "POST", SOAP_URL, headers={"SOAPAction": SOAP_ACTION_QUERY}, content=SOAP_BODY)
+
+
+def test_head_preserves_content_length_and_last_modified_across_record_and_replay():
+    last_mod = "Wed, 01 Oct 2025 00:00:00 GMT"
+    inner = mock(lambda r: httpx.Response(200, headers={
+        "Content-Type": "application/fits",
+        "Content-Length": "11905920",
+        "Last-Modified": last_mod,
+        "Set-Cookie": "sid=secret",
+    }, content=b""))
+    recorder = RecordingTransport(frozenset(), [], inner=inner)
+    c = Client(transport=recorder, throttle=Throttle(FakeClock()))
+    live = c.request(route(interval=0), "HEAD", "file.fits", headers={"Cookie": "sid=secret"})
+    assert live.headers["Content-Length"] == "11905920"
+    assert live.headers["Last-Modified"] == last_mod
+    assert live.content == b""
+
+    recorded = recorder.take()
+    resp_headers = recorded[0]["response"]["headers"]
+    assert resp_headers["content-length"] == "11905920"
+    assert resp_headers["last-modified"] == last_mod
+    assert "set-cookie" not in resp_headers
+    assert "cookie" not in json.dumps(recorded).lower()
+
+    replayed = Client(transport=ReplayTransport(recorded), throttle=Throttle(FakeClock())).request(
+        route(interval=0), "HEAD", "file.fits")
+    assert replayed.headers["Content-Length"] == "11905920"
+    assert replayed.headers["Last-Modified"] == last_mod
+    assert replayed.content == b""
+
+
+def test_body_bearing_content_length_kept_only_when_bytes_agree_after_decoding_or_redaction():
+    import gzip
+    plain = b"hello world"
+    last_mod = "Thu, 02 Oct 2025 00:00:00 GMT"
+    sentinel = "K1"
+
+    def handler(request):
+        if request.url.path.endswith("/plain"):
+            return httpx.Response(200, headers={"Content-Length": str(len(plain)), "Last-Modified": last_mod}, content=plain)
+        if request.url.path.endswith("/gzip"):
+            gz = gzip.compress(plain)
+            return httpx.Response(200, headers={"Content-Encoding": "gzip", "Content-Length": str(len(gz)), "Last-Modified": last_mod},
+                                  stream=httpx.ByteStream(gz))
+        if request.url.path.endswith("/redacted"):
+            echo = f"token={sentinel}".encode()
+            return httpx.Response(200, headers={"Content-Length": str(len(echo))}, content=echo)
+        raise AssertionError(request.url)
+
+    recorder = RecordingTransport(frozenset(), [sentinel], inner=mock(handler))
+    c = Client(transport=recorder, throttle=Throttle(FakeClock()))
+    c.request(route(interval=0), "GET", "plain")
+    c.request(route(interval=0), "GET", "gzip")
+    c.request(route(interval=0), "GET", "redacted")
+    ex_plain, ex_gzip, ex_redacted = recorder.take()
+    assert ex_plain["response"]["headers"]["content-length"] == str(len(plain))
+    assert ex_plain["response"]["headers"]["last-modified"] == last_mod
+    assert "content-length" not in ex_gzip["response"]["headers"]
+    assert ex_gzip["response"]["headers"]["last-modified"] == last_mod
+    assert "content-length" not in ex_redacted["response"]["headers"]
+    assert ex_redacted["response"]["body"] == "token=REDACTED"
+
+
+def test_head_redirect_keeps_method_and_same_origin_auth_and_soap_post_redirect_still_refuses():
+    sentinel, seen = "ads-token-42", []
+
+    def hop(request):
+        seen.append(request)
+        if request.url.path.endswith("/first"):
+            return httpx.Response(302, headers={"Location": "https://api.adsabs.harvard.edu/v1/second"})
+        if request.url.path.endswith("/second"):
+            return httpx.Response(302, headers={"Location": "https://cdn.example/final"})
+        return httpx.Response(200, headers={"Content-Length": "42"}, content=b"")
+
+    c = client(hop, environ={"ADS_DEV_KEY": sentinel})
+    res = c.request(bearer_route(), "HEAD", "first")
+    assert res.status_code == 200 and res.headers["Content-Length"] == "42"
+    assert [r.method for r in seen] == ["HEAD", "HEAD", "HEAD"]
+    assert seen[0].headers["Authorization"] == f"Bearer {sentinel}"
+    assert seen[1].headers["Authorization"] == f"Bearer {sentinel}"
+    assert "Authorization" not in seen[2].headers
+
+    with pytest.raises(UpstreamError, match="redirected"):
+        client(lambda r: httpx.Response(307, headers={"Location": SOAP_URL})).request(
+            SOAP_ROUTE, "POST", SOAP_URL, headers={"SOAPAction": SOAP_ACTION_QUERY}, content=SOAP_BODY)
+
+
+def test_bearer_key_scheme_missing_single_prefix_override_and_scrub():
+    sentinel = "ADS-SECRET-99"
+    seen, lines = [], []
+    with pytest.raises(MissingKeyError) as caught:
+        client(lambda r: (seen.append(r), httpx.Response(200))[1], trace=lines.append).request(bearer_route(), "GET", "search/query")
+    assert seen == [] and lines == [] and "ADS_DEV_KEY" in caught.value.detail
+
+    with pytest.raises(ValueError, match="credential header"):
+        client(lambda r: (seen.append(r), httpx.Response(200))[1], environ={"ADS_DEV_KEY": sentinel}).request(
+            bearer_route(), "GET", "search/query", headers={"authorization": "Bearer override"})
+    assert seen == []
+
+    def echo(request):
+        seen.append(request)
+        return httpx.Response(200, text=f"echo {sentinel}")
+
+    recorder = RecordingTransport(frozenset(), [sentinel], inner=mock(echo))
+    c = Client(transport=recorder, throttle=Throttle(FakeClock()), trace=lines.append, environ={"ADS_DEV_KEY": sentinel})
+    c.request(bearer_route(), "GET", "search/query", params={"q": "flare"})
+    assert seen[0].headers["Authorization"] == f"Bearer {sentinel}"
+    assert not seen[0].headers["Authorization"].startswith("Bearer Bearer ")
+    recorded = json.dumps(recorder.exchanges)
+    assert sentinel not in "\n".join(lines) and sentinel not in recorded
+    assert "authorization" not in recorded.lower()
+
+
+def test_bearer_cross_origin_redirect_drops_auth_and_keeps_same_origin():
+    sentinel, seen = "ADS-SECRET-99", []
+
+    def hop(request):
+        seen.append(request)
+        if request.url.path.endswith("/start"):
+            return httpx.Response(302, headers={"Location": "/v1/same"})
+        if request.url.path.endswith("/same"):
+            return httpx.Response(302, headers={"Location": "https://other.example/dest"})
+        return httpx.Response(200)
+
+    c = client(hop, environ={"ADS_DEV_KEY": sentinel})
+    c.request(bearer_route(), "GET", "start")
+    assert seen[0].headers["Authorization"] == f"Bearer {sentinel}"
+    assert seen[1].headers["Authorization"] == f"Bearer {sentinel}"
+    assert "Authorization" not in seen[2].headers

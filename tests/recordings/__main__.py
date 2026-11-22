@@ -14,7 +14,7 @@ from quarry.testing import RecordingTransport, secret_params
 def main(resource_id: str) -> None:
     cat = catalog_mod.load()
     resource = cat.resources[resource_id]
-    scenarios = importlib.import_module(f"tests.recordings.{resource_id}").SCENARIOS
+    scenarios = importlib.import_module(f"tests.recordings.{resource_id.replace('-', '_')}").SCENARIOS
     out = Path(__file__).parents[1] / "fixtures" / resource_id
     out.mkdir(parents=True, exist_ok=True)
     values = [os.environ[r.key_env] for r in resource.routes if r.key_env and os.environ.get(r.key_env)]

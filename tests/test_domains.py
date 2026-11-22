@@ -27,10 +27,70 @@ def test_search_sets_and_effective_resources():
     assert CAT.search_set("biology") == ["geo", "ena", "biostudies", "zenodo", "figshare"]
     assert CAT.effective_resources("biology") == ["geo", "ena", "biostudies", "go", "uberon", "ncbitaxon",
                                                   "zenodo", "figshare", "pubmed", "europepmc"]
-    assert {rid: CAT.resources[rid].roles for rid in CAT.resources} == {
+    assert {rid: CAT.resources[rid].roles for rid in CAT.effective_resources("biology")} == {
         "biostudies": ("repository",), "ena": ("repository",), "figshare": ("repository",), "geo": ("repository",),
         "europepmc": ("literature-index",), "pubmed": ("literature-index",), "zenodo": ("repository",),
         "go": ("ontology",), "uberon": ("ontology",), "ncbitaxon": ("ontology",)}
+
+
+def test_resource_outside_shipped_lenses_coexists_with_exact_inventories(tmp_path, monkeypatch):
+    import shutil
+    cat_root = tmp_path / "catalog"
+    shutil.copytree(catalog_mod.CATALOG_ROOT, cat_root)
+    (cat_root / "resources" / "extra.toml").write_text(
+        'id = "extra"\nname = "Extra"\nroles = ["repository"]\nadapter = "tests.fake_adapter"\n'
+        '[[routes]]\nkind = "rest"\nurl = "https://extra.example"\nmin_interval = 0\n'
+        'service = "extra"\nauth = "none"\nreports_total = false\n'
+    )
+    monkeypatch.setattr(context, "CATALOG_ROOT", cat_root)
+    cat = catalog_mod.load(cat_root)
+    assert "extra" in cat.resources
+    assert cat.effective_resources("core") == ["zenodo", "figshare", "pubmed", "europepmc"]
+    assert cat.effective_resources("biology") == ["geo", "ena", "biostudies", "go", "uberon", "ncbitaxon",
+                                                  "zenodo", "figshare", "pubmed", "europepmc"]
+    assert catalog_mod.check(cat, context.load_unchecked().registry, modules=[]) == []
+
+
+def test_bare_normalize_opt_out_preserves_existing_bare_ids_and_routes_qualified_arxiv(tmp_path, monkeypatch):
+    import shutil
+    cat_root = tmp_path / "catalog"
+    shutil.copytree(catalog_mod.CATALOG_ROOT, cat_root)
+    (cat_root / "resources" / "arxiv.toml").write_text(
+        'id = "arxiv"\nname = "arXiv"\nroles = ["literature-index"]\nprefixes = ["arxiv"]\n'
+        'bare_normalize = false\nadapter = "tests.fake_adapter"\n'
+        '[[routes]]\nkind = "rest"\nurl = "https://export.arxiv.org/api/query"\nmin_interval = 3.0\n'
+        'service = "arxiv"\nauth = "none"\nreports_total = true\n'
+    )
+    monkeypatch.setattr(context, "CATALOG_ROOT", cat_root)
+    monkeypatch.setattr(catalog_mod, "adapter_modules", lambda: [])
+
+    for bare, expected in (
+        ("PMC3257301", "pmc:PMC3257301"), ("PPR404258", "ppr:PPR404258"),
+        ("MED/22253597", "europepmc:MED/22253597"), ("GSE24080", "geo:GSE24080"),
+        ("E-GEOD-5900", "arrayexpress:E-GEOD-5900"), ("S-BSST1234", "biostudies:S-BSST1234"),
+        ("PRJNA130207", "bioproject:PRJNA130207"), ("SRP000001", "insdc.sra:SRP000001"),
+    ):
+        out = invoke("id", "normalize", bare)
+        assert out.exit_code == 0, (bare, out.stderr)
+        assert json.loads(out.stdout) == {"id": expected}
+
+    bare_arxiv = invoke("id", "normalize", "2301.00001")
+    assert bare_arxiv.exit_code == 1 and json.loads(bare_arxiv.stderr)["error"]["kind"] == "unknown_id"
+
+    assert invoke("id", "check", "arxiv:2301.00001").exit_code == 0
+    assert json.loads(invoke("id", "normalize", "ARXIV:2301.00001").stdout) == {"id": "arxiv:2301.00001"}
+    assert json.loads(invoke("id", "resolve", "arxiv:2301.00001").stdout)["id"] == "arxiv:2301.00001"
+    shown = invoke("show", "arxiv:2301.00001")
+    assert shown.exit_code == 0 and json.loads(shown.stdout)["resource"] == "arxiv"
+
+    meta = json.loads(invoke("resources", "show", "arxiv").stdout)
+    assert meta["bare_normalize"] is False
+    assert meta["routes"][0]["key_scheme"] is None
+
+    amb = invoke("id", "normalize", "12345")
+    assert amb.exit_code == 1 and json.loads(amb.stderr)["error"]["kind"] == "ambiguous_id"
+    for qualified in ("figshare:12345", "pubmed:12345", "zenodo.record:12345"):
+        assert json.loads(invoke("id", "normalize", qualified).stdout) == {"id": qualified}
 
 
 def test_domains_list_shows_both_domains_with_their_resources():

@@ -174,9 +174,11 @@ array, including local declarations). Role/route filters narrow the rows.
 ## Resource show
 
 Resource show emits `id`, `name`, `adapter` (Python module string),
-`roles`, `prefixes`, `routes`, `local_prefixes`, `fairsharing` and
-`pitfalls`. Roles and routes are nonempty. Prefixes and pitfalls can be empty.
-`fairsharing` is a string or null.
+`roles`, `prefixes`, `routes`, `local_prefixes`, `bare_normalize`, `fairsharing`
+and `pitfalls`. Roles and routes are nonempty. Prefixes and pitfalls can be
+empty. `bare_normalize` is a boolean indicating whether `id normalize` may infer
+this resource's owned prefixes from bare accessions (default `true`; when
+`false`, callers supply qualified CURIEs). `fairsharing` is a string or null.
 Here prefixes contains the explicit registry-prefix array. Local declarations
 are separate in local_prefixes.
 
@@ -210,12 +212,15 @@ and `evidence`. Public evidence retains probe facts and usable references.
 | `key_env` | Credential environment-variable name string, or null. |
 | `keyed_min_interval` | Numeric seconds when a key is supplied, or null. |
 | `key_param`, `key_header` | Query/header placement name strings, or null. |
+| `key_scheme` | Optional credential header scheme (`bearer`), or null. When `bearer`, the route must be authenticated with `key_env`, `key_header` set to `Authorization`, and no `key_param`; the client sends `Authorization: Bearer <token>`. |
 | `page_cap` | Integer page cap, or null. |
 
 All route fields are emitted, including null optional fields. Authenticated
-routes require a key variable and a query/header placement. A missing required
-credential is refused before transport. Names are exposed, credential values
-are redacted from request traces and errors.
+routes require a key variable and a query/header placement. A route with
+`key_scheme = "bearer"` requires an authenticated `Authorization` header route
+without `key_param`; omitting `key_scheme` preserves raw key placement. A
+missing required credential is refused before transport. Names are exposed,
+credential values are redacted from request traces and errors.
 
 ## Skills build result
 

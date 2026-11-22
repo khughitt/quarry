@@ -23,6 +23,7 @@ ROLES = ("identifier-scheme", "vocabulary", "ontology", "data-model",
 DATA_ROLES = frozenset({"repository", "knowledgebase", "literature-index"})
 ROUTE_KINDS = ("rest", "query-endpoint", "bulk", "local-tool")
 AUTH = ("none", "optional-key", "required-key")
+KEY_SCHEMES = ("bearer",)
 CATALOG_ROOT = Path(__file__).parent / "catalog"
 NOT_ADAPTERS = frozenset({"base", "eutils"})
 _REQUIRED = object()
@@ -51,6 +52,7 @@ class Route:
     keyed_min_interval: float | None = None
     key_param: str | None = None
     key_header: str | None = None
+    key_scheme: str | None = None
     page_cap: int | None = None
 
 
@@ -77,6 +79,7 @@ class Resource:
     routes: tuple[Route, ...]
     prefixes: tuple[str, ...] = ()
     local_prefixes: dict[str, LocalPrefix] = field(default_factory=dict)
+    bare_normalize: bool = True
     fairsharing: str | None = None
     pitfalls: tuple[Pitfall, ...] = ()
 
@@ -181,8 +184,8 @@ def _strs(table: dict, where: str, key: str, required: bool = False) -> tuple[st
 
 
 ROUTE_KEYS = {"kind", "url", "min_interval", "service", "auth", "reports_total", "key_env",
-              "keyed_min_interval", "key_param", "key_header", "page_cap"}
-RESOURCE_KEYS = {"id", "name", "roles", "prefixes", "local_prefixes", "fairsharing", "adapter", "routes", "pitfalls"}
+              "keyed_min_interval", "key_param", "key_header", "key_scheme", "page_cap"}
+RESOURCE_KEYS = {"id", "name", "roles", "prefixes", "local_prefixes", "bare_normalize", "fairsharing", "adapter", "routes", "pitfalls"}
 DOMAIN_KEYS = {"id", "summary", "includes", "resources", "search_default", "filters", "beliefs_contract",
                "beliefs_contract_version", "facet_namespaces"}
 
@@ -196,6 +199,7 @@ def _route(t: dict, where: str) -> Route:
         key_env=_get(t, where, "key_env", str, None),
         keyed_min_interval=_get(t, where, "keyed_min_interval", float, None),
         key_param=_get(t, where, "key_param", str, None), key_header=_get(t, where, "key_header", str, None),
+        key_scheme=_get(t, where, "key_scheme", str, None),
         page_cap=_get(t, where, "page_cap", int, None))
 
 
@@ -226,6 +230,7 @@ def _resource(t: dict, where: str) -> Resource:
         adapter=_get(t, where, "adapter", str),
         routes=tuple(_route(r, f"{where} routes[{i}]") for i, r in enumerate(routes)),
         prefixes=_strs(t, where, "prefixes"), local_prefixes=locals_,
+        bare_normalize=_get(t, where, "bare_normalize", bool, True),
         fairsharing=_get(t, where, "fairsharing", str, None),
         pitfalls=tuple(_pitfall(p, f"{where} pitfalls[{i}]") for i, p in enumerate(pitfalls)))
 
@@ -302,6 +307,15 @@ def check(catalog: Catalog, registry: PrefixLookup, modules: list[str] | None = 
                 add("missing_key_env", where, f"auth {route.auth!r} needs key_env")
             if route.key_env and not (route.key_param or route.key_header):
                 add("missing_key_location", where, "a route with key_env names key_param or key_header")
+            if route.key_scheme is not None:
+                if route.key_scheme not in KEY_SCHEMES:
+                    add("unknown_key_scheme", where, f"{route.key_scheme!r} is not one of {', '.join(KEY_SCHEMES)}")
+                elif route.key_scheme == "bearer" and (
+                    route.auth == "none" or not route.key_env or not route.key_header
+                    or route.key_header.lower() != "authorization" or route.key_param
+                ):
+                    add("invalid_key_scheme", where,
+                        "key_scheme 'bearer' requires auth != 'none', key_env, key_header 'Authorization' and no key_param")
         if not _adapter_exists(r.adapter):
             add("missing_adapter", where, f"no module {r.adapter!r}")
         for p in r.prefixes:
