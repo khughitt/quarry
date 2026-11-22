@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import importlib
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Protocol
 
 from quarry.catalog import Resource
@@ -12,6 +13,8 @@ from quarry.http import Client
 from quarry.ids import Curie
 from quarry.query import Query
 from quarry.results import Coverage, Result
+
+NO_TIME: Mapping[str, str] = MappingProxyType({})   # time_relations of an adapter that carries no time filter
 
 
 @dataclass(frozen=True)
@@ -24,7 +27,10 @@ class Prepared:
 class Adapter(Protocol):
     resource: Resource
     match: str                 # "exact" or "expanded": how phrases match
-    filters: frozenset[str]    # the domain filters this adapter can express
+    filters: frozenset[str]    # the string-valued domain filters this adapter can express
+    phrases: str               # "required", "optional" or "none": whether a search may, or must, carry phrases
+    time_relations: Mapping[str, str]  # each time filter carried ("during", "at") and how records satisfy it:
+                                       # "overlap" or "start" for during, "nearest" for at
 
     def prepare(self, query: Query) -> Prepared:
         """Compile and refuse unsupported queries without I/O; return the query and its execution."""

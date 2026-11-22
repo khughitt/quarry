@@ -8,7 +8,7 @@ import json
 import re
 from urllib.parse import quote
 
-from quarry.adapters.base import Prepared
+from quarry.adapters.base import NO_TIME, Prepared
 from quarry.catalog import Resource, Route
 from quarry.errors import QuarryError
 from quarry.files import File
@@ -189,6 +189,8 @@ def _files(rows: list[dict]) -> list[File]:
 class Ena:
     match = "exact"
     filters = frozenset({"organism"})
+    phrases = "required"
+    time_relations = NO_TIME
 
     def __init__(self, resource: Resource):
         self.resource = resource

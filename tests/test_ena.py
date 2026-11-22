@@ -11,7 +11,7 @@ from click.testing import CliRunner
 from quarry import catalog as catalog_mod
 from quarry import context, search
 from quarry.adapters import ena
-from quarry.adapters.base import Prepared
+from quarry.adapters.base import NO_TIME, Prepared
 from quarry.cli import main
 from quarry.errors import QuarryError
 from quarry.http import Client, Throttle
@@ -453,6 +453,8 @@ def test_later_ena_compilation_refusal_prevents_earlier_accepting_adapter_http(a
         resource = first
         match = "exact"
         filters = frozenset({"organism"})
+        phrases = "required"
+        time_relations = NO_TIME
 
         def prepare(self, query):
             def execute(client):

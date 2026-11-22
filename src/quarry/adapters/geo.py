@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 
 from quarry.adapters import eutils
-from quarry.adapters.base import Prepared
+from quarry.adapters.base import NO_TIME, Prepared
 from quarry.catalog import Resource
 from quarry.errors import QuarryError
 from quarry.files import File
@@ -92,6 +92,8 @@ def _row(d: dict, relations: tuple[str, ...] = (), taxon: str | None = None) -> 
 class Geo:
     match = "exact"
     filters = frozenset({"organism"})
+    phrases = "required"
+    time_relations = NO_TIME
 
     def __init__(self, resource: Resource):
         self.resource = resource

@@ -32,13 +32,14 @@ class Result:
 class Coverage:
     resource: str
     native: str | None
-    match: str                          # exact | expanded | native (sent as written, not compiled)
+    match: str                          # exact | expanded | native (sent as written, not compiled) | none (no phrases)
     total: int | None
     returned: int
     complete: str                       # total | short-page | limited | failed | skipped
     error: Mapping[str, str] | None = None
     warnings: tuple[str, ...] = ()      # what the adapter wants the report to say; never in as_dict
     reason: str | None = None           # why a skipped resource was not searched
+    time: str | None = None             # overlap | start | nearest: how records met --during or --at; never on skipped rows
 
     @classmethod
     def skipped(cls, resource: str, match: str, reason: str) -> Coverage:
@@ -47,8 +48,10 @@ class Coverage:
     def as_dict(self) -> dict:
         if self.complete == "skipped":
             return {"resource": self.resource, "match": self.match, "complete": "skipped", "reason": self.reason}
-        out = {"resource": self.resource, "native": self.native, "match": self.match, "total": self.total,
-               "returned": self.returned, "complete": self.complete}
+        out = {"resource": self.resource, "native": self.native, "match": self.match}
+        if self.time is not None:
+            out["time"] = self.time
+        out |= {"total": self.total, "returned": self.returned, "complete": self.complete}
         if self.error is not None:
             out["error"] = dict(self.error)
         return out
