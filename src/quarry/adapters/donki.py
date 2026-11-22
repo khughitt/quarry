@@ -64,6 +64,19 @@ EVENT_ID_RE = re.compile(
     r"^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})-(FLR|CME|SEP|IPS|MPC|GST|RBE|HSS)-([0-9]{3})$"
 )
 ALERT_ID_RE = re.compile(r"^([0-9]{4})([0-9]{2})([0-9]{2})-AL-([0-9]{3})$")
+NON_ALERT_NOTIF_RE = re.compile(r"^([0-9]{4})([0-9]{2})([0-9]{2})-(?!AL-)[A-Z0-9]+-[0-9]{3}$")
+
+
+def _is_non_alert_notification(rec_id: str) -> bool:
+    """True for documented non-alert DONKI notifications (e.g. YYYYMMDD-7D-NNN weekly reports)."""
+    m = NON_ALERT_NOTIF_RE.fullmatch(rec_id)
+    if m is None:
+        return False
+    try:
+        date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    except ValueError:
+        return False
+    return True
 
 
 def _iso_utc(moment: datetime) -> str:
@@ -167,6 +180,16 @@ def _row(rec: dict, endpoint: str) -> tuple[Result, datetime, datetime | None]:
     rec_id = raw_id.strip()
     if endpoint in EVENT_KINDS and EVENT_ID_RE.fullmatch(rec_id) is None:
         raise UpstreamError(f"donki {endpoint}: {id_key} {rec_id!r} is not a valid DONKI event ID")
+    if endpoint == "notifications":
+        m_al = ALERT_ID_RE.fullmatch(rec_id)
+        if m_al is None:
+            raise UpstreamError(f"donki notifications: {id_key} {rec_id!r} is not a valid DONKI alert ID")
+        try:
+            date(int(m_al.group(1)), int(m_al.group(2)), int(m_al.group(3)))
+        except ValueError:
+            raise UpstreamError(
+                f"donki notifications: {id_key} {rec_id!r} has an invalid calendar date"
+            ) from None
 
     start_key = START_FIELD[endpoint]
     r_start = _parse_donki_time(rec.get(start_key), start_key)
@@ -176,7 +199,7 @@ def _row(rec: dict, endpoint: str) -> tuple[Result, datetime, datetime | None]:
     if r_end is not None and r_end < r_start:
         raise UpstreamError(f"donki {rec_id}: {end_key} precedes {start_key}")
 
-    event_kind = endpoint if endpoint in EVENT_KINDS else ("AL" if ALERT_ID_RE.fullmatch(rec_id) else "notifications")
+    event_kind = endpoint if endpoint in EVENT_KINDS else "AL"
     helio: dict[str, str] = {
         "start": _iso_utc(r_start),
         "event_kind": event_kind,
@@ -319,12 +342,37 @@ class Donki:
             def execute_native(client: Client) -> tuple[Coverage, list[Result]]:
                 resp = client.request(self.route, "GET", endpoint, params=params or None)
                 raw_rows = _parse_json_list(resp, endpoint)
-                parsed = [_row(rec, endpoint)[0] for rec in raw_rows]
+                parsed: list[Result] = []
+                skipped_non_al = 0
+                for rec in raw_rows:
+                    if endpoint == "notifications":
+                        raw_mid = rec.get("messageID")
+                        if type(raw_mid) is str and _is_non_alert_notification(raw_mid.strip()):
+                            skipped_non_al += 1
+                            continue
+                    parsed.append(_row(rec, endpoint)[0])
                 distinct(parsed)
                 rows = parsed[:query.limit] if query.limit is not None else parsed
-                total = len(parsed)
-                complete = completeness(total=total, returned=len(rows), limit=query.limit, short_page=True)
-                return Coverage(self.resource.id, native, "native", total, len(rows), complete), rows
+                warnings = (
+                    (
+                        f"donki notifications skipped {skipped_non_al} non-alert notification(s) "
+                        "without canonical donki: AL identifiers",
+                    )
+                    if skipped_non_al
+                    else ()
+                )
+                if skipped_non_al and (query.limit is None or len(parsed) <= query.limit):
+                    total, complete = trimmed(
+                        kept=len(rows),
+                        fetched=len(raw_rows),
+                        native_total=len(raw_rows),
+                        short_page=True,
+                        limit=query.limit,
+                    )
+                else:
+                    total = len(parsed)
+                    complete = completeness(total=total, returned=len(rows), limit=query.limit, short_page=True)
+                return Coverage(self.resource.id, native, "native", total, len(rows), complete, warnings=warnings), rows
 
             return Prepared(native, execute_native)
 

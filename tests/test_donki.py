@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from quarry import catalog as catalog_mod
+from quarry import ids as ids_mod
 from quarry import search as search_mod
 from quarry.adapters import donki
 from quarry.errors import QuarryError
@@ -401,3 +402,69 @@ def test_donki_recorded_start_relation_revisions_and_show():
     with pytest.raises(QuarryError) as caught:
         adapter.show(_replay("show-flr"), Curie("donki", "2025-01-04T23:59:00-FLR-001"))
     assert caught.value.kind == "not_found"
+
+
+def test_donki_native_notifications_canonical_curies_skips_non_al_and_rejects_malformed():
+    """Review Round 1: --native notifications emits only canonical donki:...AL-... CURIEs that parse
+    via ids.parse and round-trip via show, skips non-AL entries with a coverage warning, reports honest
+    completeness with and without -n, and rejects malformed alert IDs."""
+    adapter = _adapter()
+    reg = ids_mod.Registry.default()
+    notif_params = {"startDate": "2025-01-04", "endDate": "2025-01-04", "type": "all"}
+    mixed_body = json.dumps([
+        _notif("20250104-7D-001", "2025-01-04T00:05Z", msg_type="Report"),
+        _notif("20250104-AL-001", "2025-01-04T00:17Z", msg_type="FLR"),
+        _notif("20250104-AL-002", "2025-01-04T04:35Z", msg_type="CME"),
+    ])
+    q_all = Query(native="notifications?startDate=2025-01-04&endDate=2025-01-04&type=all")
+
+    # 1. Without -n: skips 1 non-AL entry with warning, emits only canonical AL CURIEs, complete="total"
+    t_all = ReplayTransport([_donki_exchange("notifications", notif_params, mixed_body)])
+    cov, rows = adapter.search(replay_client(t_all), q_all)
+    assert t_all.pending == []
+    assert [r.id for r in rows] == ["donki:20250104-AL-001", "donki:20250104-AL-002"]
+    assert (cov.total, cov.returned, cov.complete) == (2, 2, "total")
+    assert len(cov.warnings) == 1 and "1" in cov.warnings[0] and "non-alert" in cov.warnings[0].lower()
+    for row in rows:
+        parsed = ids_mod.parse(row.id, reg)
+        assert str(parsed) == row.id
+        assert row.domain_fields["heliophysics"]["event_kind"] == "AL"
+        t_show = ReplayTransport([_donki_exchange("notifications", notif_params, mixed_body)])
+        shown = adapter.show(replay_client(t_show), parsed)
+        assert shown == row
+
+    # 2. Through search.run(): coverage warning propagates into report["warnings"]
+    t_run = ReplayTransport([_donki_exchange("notifications", notif_params, mixed_body)])
+    report = search_mod.run(
+        catalog=catalog_mod.load(),
+        client=replay_client(t_run),
+        query=q_all,
+        resource_ids=["donki"],
+        domain="heliophysics",
+        allow_partial=False,
+        from_defaults=False,
+    )
+    assert [r["id"] for r in report["results"]] == ["donki:20250104-AL-001", "donki:20250104-AL-002"]
+    assert any("1" in w and "non-alert" in w.lower() for w in report["warnings"])
+
+    # 3. With -n 1: reports exact kept total=2, returned=1, complete="limited", preserving skip warning
+    q_lim = Query(native="notifications?startDate=2025-01-04&endDate=2025-01-04&type=all", limit=1)
+    t_lim = ReplayTransport([_donki_exchange("notifications", notif_params, mixed_body)])
+    cov_lim, rows_lim = adapter.search(replay_client(t_lim), q_lim)
+    assert t_lim.pending == []
+    assert [r.id for r in rows_lim] == ["donki:20250104-AL-001"]
+    assert (cov_lim.total, cov_lim.returned, cov_lim.complete) == (2, 1, "limited")
+    assert len(cov_lim.warnings) == 1 and "1" in cov_lim.warnings[0]
+
+    # 4. Malformed alert IDs fail upstream_failed in both --native notifications and _row
+    for bad_mid in ("not-a-valid-id", "20250104-AL-99", "20250230-AL-001"):
+        bad_body = json.dumps([_notif(bad_mid, "2025-01-04T00:17Z")])
+        t_bad = ReplayTransport([_donki_exchange("notifications", notif_params, bad_body)])
+        with pytest.raises(QuarryError) as caught:
+            adapter.search(replay_client(t_bad), q_all)
+        assert caught.value.kind == "upstream_failed", bad_mid
+
+    # _row enforces ALERT_ID_RE directly on notifications (including rejecting -7D- if passed straight to _row)
+    with pytest.raises(QuarryError) as caught:
+        donki._row(_notif("20250104-7D-001", "2025-01-04T00:05Z", msg_type="Report"), "notifications")
+    assert caught.value.kind == "upstream_failed"
