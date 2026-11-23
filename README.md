@@ -23,6 +23,9 @@ just setup
 
 ## Usage
 
+Run `just install` once in the main checkout to link `quarry` into `~/.local/bin`; the
+examples below use `uv run quarry`, which needs no install.
+
 ```sh
 uv run quarry domains list
 uv run quarry resources list --domain biology

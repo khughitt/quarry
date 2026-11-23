@@ -8,8 +8,10 @@ describe the checkout and maintenance routes.
 
 ## Discover resources and select a domain
 
-Run commands through `uv run quarry` in the checkout, or use the installed
-`quarry` entry point in that environment.
+Run commands through `uv run quarry` in the checkout. `just install` in the main
+checkout links `bin/quarry` into `~/.local/bin`, so `quarry` runs from any directory;
+the launcher executes the checkout's `.venv` entry point and names `just setup` when
+that is missing.
 
 ```sh
 uv run quarry domains list --json
