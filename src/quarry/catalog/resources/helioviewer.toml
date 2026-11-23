@@ -1,0 +1,28 @@
+id = "helioviewer"
+name = "Helioviewer API"
+roles = ["repository"]
+prefixes = ["helioviewer"]
+adapter = "quarry.adapters.helioviewer"
+
+[[routes]]
+kind = "rest"
+url = "https://api.helioviewer.org/v2"
+min_interval = 1.0
+service = "helioviewer"
+auth = "none"
+reports_total = false
+
+[[pitfalls]]
+summary = "getClosestImage answers with the nearest image, which may lie outside an asked interval"
+handling = "the returned date is recorded in observation time; --at compiles here, --during is refused before transport"
+evidence = "sun phase-1 survey probes/helioviewer/02"
+
+[[pitfalls]]
+summary = "an unknown image id is HTTP 500 with a JSON error, not 404"
+handling = "errno 24 maps to not_found without retrying"
+evidence = "probes/helioviewer/03"
+
+[[pitfalls]]
+summary = "JPIP streaming URIs are not HTTP(S) file downloads and browse images carry no checksums"
+handling = "JPIP URIs stay in domain metadata separate from HTTP(S) acquisition URLs; metadata lookup uses getJP2Header without downloading image bytes"
+evidence = "probes/helioviewer/04, 05, 08"

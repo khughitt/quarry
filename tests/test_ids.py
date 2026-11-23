@@ -214,3 +214,65 @@ def test_local_declarations_agree_with_canonical_owner(declarations, expected):
         curie = ids.parse("CUSTOM:1", ids.registry_for(cat))
         assert str(curie) == "custom:1"
         assert cat.owner(curie.prefix) is cat.resources["0"]
+
+
+@pytest.mark.parametrize("curie, expected_url_part", [
+    ("jsoc:aia.lev1_euv_12s[2025-10-01T00:00:00Z]", "jsoc.stanford.edu"),
+    ("vso.file:JSOC/~YWlhX19sZXYxOjE5MzoxNTM4MzUyMDQz", "sdac.virtualsolar.org/cgi/search"),
+    ("cdaweb:OMNI_HRO2_1MIN", "NotesO.html#OMNI_HRO2_1MIN"),
+    ("soar:solo_L2_eui-fsi174-image_20251001T000000_V01", "soar.esac.esa.int"),
+    ("soho:eit/lz/2025/10/efz20251001.000000", "umbra.nascom.nasa.gov/pub/eit/lz/2025/10/efz20251001.000000"),
+    ("stereo-ssc:secchi/L0/a/img/euvi/20251001/20251001_000530_n4euA.fts", "stereo-ssc.nascom.nasa.gov/data/ins_data/secchi/"),
+    ("helioviewer:12345", "api.helioviewer.org/v2/getJP2Header/?id=12345"),
+    ("goes:goes18/l2/data/xrsf-l2-avg1m_science/2025/10/sci_xrsf-l2-avg1m_g18_d20251001_v2-2-1.nc", "/goes/goes18/l2/data/"),
+    ("silso:SN_d_tot_V2.0", "SILSO/DATA/SN_d_tot_V2.0.txt"),
+    ("omni:omni_min202510.asc", "spdf.gsfc.nasa.gov/pub/data/omni/"),
+    ("hek:ivo://helio-informatics.org/FL_20251001_001", "lmsal.com/hek/her"),
+    ("donki:2025-10-01T00:00:00-FLR-001", "ccmc.gsfc.nasa.gov/tools/DONKI/"),
+    ("noaa-ar:13842", "swpc.noaa.gov/products/solar-region-summary"),
+    ("swpc-events:solar_region_summaries/2025/10/20251001SRS.txt", "daily_reports/solar_region_summaries/"),
+    ("cdaw-cme:univ2025_10.txt", "text_ver/univ2025_10.txt"),
+    ("spase:NASA/Software/Example", "spase-metadata.org/NASA/Software/Example.json"),
+    ("spase.measurement:Waves.Active", "spase-2.7.2.xsd"),
+    ("spase.region:Sun.Corona", "spase-2.7.2.xsd"),
+    ("goes-class:X1.5", "solar-flares-radio-blackouts"),
+    ("bibcode:2012SoPh..275...17L", "ui.adsabs.harvard.edu/abs/2012SoPh..275...17L"),
+])
+def test_heliophysics_shared_schemes_parse_and_resolve(curie, expected_url_part):
+    parsed = ids.parse(curie, REG)
+    assert str(parsed) == curie
+    urls = ids.resolve(parsed, REG)
+    assert len(urls) == 1 and expected_url_part in urls[0]
+
+
+def test_arxiv_bare_normalize_opt_out_keeps_existing_bare_ids_unambiguous():
+    from click.testing import CliRunner
+    import json
+    from quarry.cli import main
+
+    shipped = catalog.load()
+    assert shipped.resources["arxiv"].bare_normalize is False
+    assert shipped.owner("arxiv") is shipped.resources["arxiv"]
+    assert shipped.owner("bibcode") is shipped.resources["ads"]
+
+    # Existing bare GEO/PMC/PPR/BioProject/SRA IDs stay unambiguous even with arxiv in the catalog
+    for bare, canonical in (
+        ("GSE24080", "geo:GSE24080"),
+        ("PMC3257301", "pmc:PMC3257301"),
+        ("PPR404258", "ppr:PPR404258"),
+        ("PRJNA123456", "bioproject:PRJNA123456"),
+        ("SRP123456", "insdc.sra:SRP123456"),
+        ("2012SoPh..275...17L", "bibcode:2012SoPh..275...17L"),
+    ):
+        out = CliRunner().invoke(main, ["--json", "id", "normalize", bare], catch_exceptions=False)
+        assert out.exit_code == 0, f"{bare}: {out.stderr}"
+        assert json.loads(out.stdout) == {"id": canonical}
+
+    # Bare arXiv ID is refused; qualified arxiv: IDs validate and normalize cleanly
+    out_bare = CliRunner().invoke(main, ["--json", "id", "normalize", "2108.02624v2"], catch_exceptions=False)
+    assert out_bare.exit_code == 1 and json.loads(out_bare.stderr)["error"]["kind"] == "unknown_id"
+    for qualified in ("arxiv:2108.02624", "arxiv:2108.02624v2", "arxiv:astro-ph/0601001", "ARXIV:2108.02624v2"):
+        out_q = CliRunner().invoke(main, ["--json", "id", "normalize", qualified], catch_exceptions=False)
+        assert out_q.exit_code == 0, out_q.stderr
+        assert json.loads(out_q.stdout)["id"] == f"arxiv:{qualified.split(':', 1)[1]}"
+

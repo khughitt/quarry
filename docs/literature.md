@@ -1,9 +1,11 @@
-# PubMed and Europe PMC
+# Literature indexes
 
 Type: guide, data model; document types 1. Publication metadata and availability
-fields are currently unversioned. This covers literature queries and eligible
-full-text file locators. The [CLI guide](cli.md) covers shared commands, and
-the [JSON model](output.md) defines record, coverage and file envelopes.
+fields are currently unversioned. This covers PubMed and Europe PMC (with
+eligible hosted PMC full-text locators) as well as NASA ADS and arXiv
+(metadata-only search and lookup). The [CLI guide](cli.md) covers shared
+commands, and the [JSON model](output.md) defines record, coverage and file
+envelopes.
 
 ## Find a publication and select a representation
 
@@ -107,3 +109,72 @@ ordinary file listing. Select XML or BioC JSON with a file glob. Empty selection
 raise no_files. Abstracts are absent from quarry's output even when upstream
 core responses or replay fixtures contain them. The consuming application
 controls byte retrieval, section isolation and display policy.
+
+## NASA ADS and arXiv
+
+```sh
+ADS_DEV_KEY=<token> uv run quarry search --in ads --since 2012-01-01 --until 2012-12-31 -n 5 "Atmospheric Imaging Assembly"
+ADS_DEV_KEY=<token> uv run quarry show bibcode:2012SoPh..275...17L
+uv run quarry search --in arxiv --since 2011-01-01 --until 2022-12-31 -n 5 "Atmospheric Imaging Assembly"
+uv run quarry search --in arxiv --native 'cat:cs.SE AND ti:"software testing"' -n 5
+uv run quarry show arxiv:2108.02624v2
+uv run quarry show arxiv:astro-ph/0601001
+```
+
+Both `ads` and `arxiv` stay outside default search sets, require phrases on
+ordinary searches, carry no observation-time filters (`--during` and `--at` are
+refused before transport), and report `match: expanded` (refusing `--exact`).
+Both are metadata-only: `files` returns the record with an empty file inventory,
+there is no PDF acquisition workflow, and abstracts are omitted from quarry's
+output.
+
+### NASA ADS (`ads`)
+
+ADS owns the canonical `bibcode` prefix and requires a Bearer token in the
+`ADS_DEV_KEY` environment variable (`Authorization: Bearer <token>`). Calls
+without `ADS_DEV_KEY` refuse before transport with `missing_required_key`, and
+credentials are never echoed into `Coverage.native`, traces or error details.
+Cross-references (`doi:`, `arxiv:`) are validated through `refs` and emitted in
+`xrefs`.
+
+ADS `pubdate` values carry year (`YYYY-00-00`), month (`YYYY-MM-00`) or day
+(`YYYY-MM-DD`) precision. Quarry emits `date` at its known precision (`YYYY`,
+`YYYY-MM` or `YYYY-MM-DD`) without fabricating missing day or month fields.
+Because ADS `pubdate` indexing operates at month granularity, ordinary
+`--since`/`--until` filters require month-aligned bounds (`--since` on the first
+day of a month, `--until` on the last day of a month) and refuse sub-month
+bounds before transport, pointing to `--native` `pubdate:[...]` syntax. When a
+date-bounded ordinary search returns a record whose `pubdate` is missing or too
+coarse to establish strict membership in `[since, until]` (for example, a
+year-only `2012-00-00` record in a sub-year window), the search fails with
+`upstream_failed` rather than letting an ambiguous coarse date slip through.
+Stable offset paging checks `numFound` consistency and distinct bibcodes across
+pages.
+
+### arXiv (`arxiv`)
+
+Ordinary `--in arxiv` searches apply `cat:astro-ph.SR` across every lens
+(`core`, `biology` and `heliophysics`). The selector appears in the coverage
+row's `native` query and triggers a coverage warning naming `cat:astro-ph.SR`
+and how to override it. Passing `--native` sends the caller's `search_query`
+unchanged without injecting `cat:astro-ph.SR` and without emitting the
+default-category warning.
+
+`arxiv` sets `bare_normalize = false` in the catalog because arXiv's upstream
+Bioregistry pattern also matches bare accessions owned by other resources (such
+as GEO, PMC, PPR, BioProject and SRA). Supply qualified `arxiv:<id>` CURIEs to
+`id normalize`, `show` and `files`. Modern versioned (`arxiv:2108.02624v2`) and
+unversioned (`arxiv:2108.02624`) identifiers as well as legacy identifiers
+supported by `refs` (`arxiv:astro-ph/0601001`) are handled; when Atom returns a
+version suffix on a legacy identifier that the pinned `refs` pattern omits, the
+canonical unversioned CURIE is emitted with the version recorded in
+`domain_fields.core.version`.
+
+Release-date bounds (`--since`/`--until`) compile to
+`submittedDate:[YYYYMMDD0000 TO YYYYMMDD2359]` (using `199101010000` or
+`299912312359` for open ends) with URL-encoded range brackets, separate from the
+default category clause. Atom `<entry>` records are parsed separately from the
+feed-level query-echo `<title>`, per-record licence metadata is preserved in
+`domain_fields.core.license` when present, requests respect arXiv's 3-second
+politeness interval, and malformed XML or `opensearch:totalResults`/paging
+inconsistencies fail.

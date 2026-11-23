@@ -1,0 +1,44 @@
+id = "soar"
+name = "Solar Orbiter Archive"
+roles = ["repository"]
+prefixes = ["soar"]
+adapter = "quarry.adapters.soar"
+
+[[routes]]
+kind = "query-endpoint"
+url = "https://soar.esac.esa.int/soar-sl-tap/tap"
+min_interval = 1.0
+service = "soar"
+auth = "none"
+reports_total = true
+
+[[routes]]
+kind = "rest"
+url = "https://soar.esac.esa.int/soar-sl-tap/data"
+min_interval = 1.0
+service = "soar"
+auth = "none"
+reports_total = false
+
+[[routes]]
+kind = "local-tool"
+url = "sunpy.net.soar"
+min_interval = 0.0
+service = "soar"
+auth = "none"
+reports_total = true
+
+[[pitfalls]]
+summary = "TAP_SCHEMA names carry the schema prefix (soar.v_sc_data_item) while FROM takes the bare view name"
+handling = "prefix only in TAP_SCHEMA lookups; queries select from bare v_sc_data_item ordered by begin_time, data_item_id"
+evidence = "sun phase-1 survey probes/soar/02, 03, 05, 08"
+
+[[pitfalls]]
+summary = "no checksums in the views or on the download; filesize and Content-Length agree"
+handling = "expected omitted; Content-Length checked against filesize"
+evidence = "probes/soar/11, 14"
+
+[[pitfalls]]
+summary = "TAP_SCHEMA.columns has no units or descriptions for the data-item view"
+handling = "column meaning from documentation, not the service"
+evidence = "probes/soar/08"

@@ -1,0 +1,86 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "cmd",
+     "search"
+    ],
+    [
+     "cosec",
+     "2"
+    ],
+    [
+     "event_coordsys",
+     "helioprojective"
+    ],
+    [
+     "event_endtime",
+     "2100-01-01T00:00:00"
+    ],
+    [
+     "event_starttime",
+     "1900-01-01T00:00:00"
+    ],
+    [
+     "event_type",
+     "**"
+    ],
+    [
+     "op0",
+     "="
+    ],
+    [
+     "page",
+     "1"
+    ],
+    [
+     "param0",
+     "kb_archivid"
+    ],
+    [
+     "result_limit",
+     "2"
+    ],
+    [
+     "return",
+     "kb_archivid,kb_archivdate,event_type,event_starttime,event_endtime,obs_instrument,obs_observatory,frm_name"
+    ],
+    [
+     "type",
+     "column"
+    ],
+    [
+     "value0",
+     "ivo://helio-informatics.org/AR_SHARP_20250224T071022_20250114T200000_12567"
+    ],
+    [
+     "x1",
+     "-5000"
+    ],
+    [
+     "x2",
+     "5000"
+    ],
+    [
+     "y1",
+     "-5000"
+    ],
+    [
+     "y2",
+     "5000"
+    ]
+   ],
+   "url": "https://www.lmsal.com/hek/her"
+  },
+  "response": {
+   "body": "\n       {\n\"result\":[\n{\n\"event_starttime\":\"2025-01-14T20:00:00\",\"event_type\":\"AR\",\"frm_name\":\"HMI SHARP\",\"obs_observatory\":\"SDO\",\"kb_archivdate\":\"2025-02-24T07:10:50\",\"kb_archivid\":\"ivo://helio-informatics.org/AR_SHARP_20250224T071022_20250114T200000_12567\",\"obs_instrument\":\"HMI\",\"event_endtime\":\"2025-01-15T00:00:00\"}],\n\"association\": [\n{\n\"first_id\": 14683766,\n\"second_id\": 14684027,\n\"first_ivorn\": \"ivo://helio-informatics.org/AR_SHARP_20250224T071022_20250114T200000_12567\",\n\"second_ivorn\": \"ivo://helio-informatics.org/AR_SHARP_20250224T120936_20250115T000000_12567\",\n\"first_event_type\": \"AR\",\n\"second_event_type\": \"AR\",\n\"reported_by\": \"rtimmons\",\n\"edge_type\": \"is_followed_by\",\n\"strength\": 1.0\n}\n,\n{\n\"first_id\": 14683747,\n\"second_id\": 14683766,\n\"first_ivorn\": \"ivo://helio-informatics.org/AR_SHARP_20250224T071022_20250114T160000_12567\",\n\"second_ivorn\": \"ivo://helio-informatics.org/AR_SHARP_20250224T071022_20250114T200000_12567\",\n\"first_event_type\": \"AR\",\n\"second_event_type\": \"AR\",\n\"reported_by\": \"rtimmons\",\n\"edge_type\": \"is_followed_by\",\n\"strength\": 1.0\n}\n],\n\"overmax\": false\n}  \n",
+   "headers": {
+    "content-type": "application/json;charset=ISO-8859-1"
+   },
+   "status": 200
+  }
+ }
+]

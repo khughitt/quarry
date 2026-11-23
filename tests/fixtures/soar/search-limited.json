@@ -1,0 +1,66 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "FORMAT",
+     "json"
+    ],
+    [
+     "LANG",
+     "ADQL"
+    ],
+    [
+     "QUERY",
+     "SELECT COUNT(*) FROM v_sc_data_item WHERE begin_time < '2025-01-15T00:05:00' AND (end_time > '2025-01-15T00:00:00' OR begin_time >= '2025-01-15T00:00:00') AND UPPER(instrument) = UPPER('EUI')"
+    ],
+    [
+     "REQUEST",
+     "doQuery"
+    ]
+   ],
+   "url": "https://soar.esac.esa.int/soar-sl-tap/tap/sync"
+  },
+  "response": {
+   "body": "{\"metadata\":\n[\n{\"name\": \"COUNT_ALL\", \"datatype\": \"long\", \"xtype\": null, \"arraysize\": null, \"description\": null, \"unit\": null, \"ucd\": null, \"utype\": null}\n],\n\"data\":\n[\n[10]\n]\n}\n",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "FORMAT",
+     "json"
+    ],
+    [
+     "LANG",
+     "ADQL"
+    ],
+    [
+     "QUERY",
+     "SELECT TOP 2 data_item_id, filename, filesize, instrument, descriptor, level, begin_time, end_time, insertion_time, is_public FROM v_sc_data_item WHERE begin_time < '2025-01-15T00:05:00' AND (end_time > '2025-01-15T00:00:00' OR begin_time >= '2025-01-15T00:00:00') AND UPPER(instrument) = UPPER('EUI') ORDER BY begin_time, data_item_id"
+    ],
+    [
+     "REQUEST",
+     "doQuery"
+    ]
+   ],
+   "url": "https://soar.esac.esa.int/soar-sl-tap/tap/sync"
+  },
+  "response": {
+   "body": "{\"metadata\":\n[\n{\"name\": \"data_item_id\", \"datatype\": \"char\", \"xtype\": null, \"arraysize\": \"100\", \"description\": null, \"unit\": null, \"ucd\": null, \"utype\": null},\n{\"name\": \"filename\", \"datatype\": \"char\", \"xtype\": null, \"arraysize\": \"200\", \"description\": null, \"unit\": null, \"ucd\": null, \"utype\": null},\n{\"name\": \"filesize\", \"datatype\": \"long\", \"xtype\": null, \"arraysize\": null, \"description\": null, \"unit\": null, \"ucd\": null, \"utype\": null},\n{\"name\": \"instrument\", \"datatype\": \"char\", \"xtype\": null, \"arraysize\": \"10\", \"description\": null, \"unit\": null, \"ucd\": null, \"utype\": null},\n{\"name\": \"descriptor\", \"datatype\": \"char\", \"xtype\": null, \"arraysize\": \"50\", \"description\": null, \"unit\": null, \"ucd\": null, \"utype\": null},\n{\"name\": \"level\", \"datatype\": \"char\", \"xtype\": null, \"arraysize\": \"10\", \"description\": null, \"unit\": null, \"ucd\": null, \"utype\": null},\n{\"name\": \"begin_time\", \"datatype\": \"char\", \"xtype\": null, \"arraysize\": \"*\", \"description\": null, \"unit\": null, \"ucd\": null, \"utype\": null},\n{\"name\": \"end_time\", \"datatype\": \"char\", \"xtype\": null, \"arraysize\": \"*\", \"description\": null, \"unit\": null, \"ucd\": null, \"utype\": null},\n{\"name\": \"insertion_time\", \"datatype\": \"char\", \"xtype\": null, \"arraysize\": \"*\", \"description\": null, \"unit\": null, \"ucd\": null, \"utype\": null},\n{\"name\": \"is_public\", \"datatype\": \"boolean\", \"xtype\": null, \"arraysize\": null, \"description\": null, \"unit\": null, \"ucd\": null, \"utype\": null}\n],\n\"data\":\n[\n[\"solo_L1_eui-fsi304-image-short_20250115T000015208\",\"solo_L1_eui-fsi304-image-short_20250115T000015208_V02.fits\",207360,\"EUI\",\"eui-fsi304-image-short\",\"L1\",\"2025-01-15T00:00:15.208\",\"2025-01-15T00:00:15.408\",\"2025-11-03T06:23:27.805\",true],\n[\"solo_L2_eui-fsi304-image-short_20250115T000015208\",\"solo_L2_eui-fsi304-image-short_20250115T000015208_V02.fits\",365760,\"EUI\",\"eui-fsi304-image-short\",\"L2\",\"2025-01-15T00:00:15.208\",\"2025-01-15T00:00:15.408\",\"2026-04-18T03:38:35.21\",true]\n]\n}\n",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ }
+]

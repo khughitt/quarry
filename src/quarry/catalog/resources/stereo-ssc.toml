@@ -1,0 +1,28 @@
+id = "stereo-ssc"
+name = "STEREO Science Center data tree"
+roles = ["repository"]
+prefixes = ["stereo-ssc"]
+adapter = "quarry.adapters.stereo_ssc"
+
+[[routes]]
+kind = "bulk"
+url = "https://stereo-ssc.nascom.nasa.gov/data/ins_data"
+min_interval = 1.0
+service = "stereo-ssc"
+auth = "none"
+reports_total = false
+
+[[pitfalls]]
+summary = "the all-days parent listing times out at 120 s"
+handling = "list by day; never the parent"
+evidence = "sun phase-1 survey probes/stereo-ssc/07"
+
+[[pitfalls]]
+summary = "file names are observation times to the second; a guessed name is 404"
+handling = "list the day, then match"
+evidence = "probes/stereo-ssc/01, 02"
+
+[[pitfalls]]
+summary = "files carry no checksums"
+handling = "expected omitted; size and Last-Modified recorded from HEAD"
+evidence = "probes/stereo-ssc/06"

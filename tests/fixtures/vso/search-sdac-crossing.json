@@ -1,0 +1,19 @@
+[
+ {
+  "request": {
+   "body": "<soap-env:Envelope xmlns:soap-env=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:VSO=\"http://virtualsolar.org/VSO/VSOi\"><soap-env:Body><VSO:Query><body><block><time><start>20250115000010</start><end>20250115000020</end></time><instrument>LASCO</instrument><source>SOHO</source></block></body></VSO:Query></soap-env:Body></soap-env:Envelope>",
+   "method": "POST",
+   "query": [],
+   "soap_action": "http://virtualsolar.org/VSO/VSOi#Query",
+   "url": "http://vso.nso.edu/cgi-bin/VSO/PROD/vsoi_wsdl.cgi"
+  },
+  "response": {
+   "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><soap:Envelope xmlns:VSO=\"http://virtualsolar.org/VSO/VSOi\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><soap:Body><VSO:QueryResponse><body><provideritem><no_of_records_returned>1</no_of_records_returned><record><recorditem><size>2059</size><source>SOHO</source><extent><width xsi:nil=\"true\" /><length xsi:nil=\"true\" /><y xsi:nil=\"true\" /><type>CORONA</type><x xsi:nil=\"true\" /></extent><instrument>LASCO</instrument><time><end>20250115000031</end><start>20250115000006</start></time><provider>SDAC</provider><physobs>intensity</physobs><wave><waveunit xsi:nil=\"true\" /><wavemin xsi:nil=\"true\" /><wavemax xsi:nil=\"true\" /></wave><fileid>/archive/soho/private/data/processed/lasco/level_05/250115/c2/22975939.fts</fileid></recorditem></record><provider>SDAC</provider><version>1</version><no_of_records_found>1</no_of_records_found></provideritem></body></VSO:QueryResponse></soap:Body></soap:Envelope>",
+   "headers": {
+    "content-length": "1049",
+    "content-type": "text/xml; charset=utf-8"
+   },
+   "status": 200
+  }
+ }
+]

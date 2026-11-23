@@ -1,0 +1,24 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "idPattern",
+     "^OMNI_HRO2_1MIN$"
+    ]
+   ],
+   "url": "https://cdaweb.gsfc.nasa.gov/WS/cdasr/1/dataviews/sp_phys/datasets"
+  },
+  "response": {
+   "body": "{\"DatasetDescription\":[{\"Id\":\"OMNI_HRO2_1MIN\",\"Doi\":\"10.48322/mj0k-fq60\",\"SpaseResourceId\":\"spase://NASA/NumericalData/OMNI/HighResolutionObservations/Version2/PT1M\",\"Observatory\":[\"OMNI (1AU IP Data)\"],\"Instrument\":[\"IMF and Plasma data\"],\"ObservatoryGroup\":[\"OMNI (Combined 1AU IP Data; Magnetic and Solar Indices)\",\"ACE\",\"Wind\",\"IMP (All)\"],\"InstrumentType\":[\"Plasma and Solar Wind\",\"Activity Indices\",\"Magnetic Fields (space)\",\"Electric Fields (space)\"],\"Label\":\"OMNI Combined, Definitive 1-minute IMF and Definitive Plasma Data Time-Shifted to the Nose of the Earth's Bow Shock, plus Magnetic Indices - J.H. King, N. Papatashvilli (AdnetSystems, NASA GSFC)\",\"TimeInterval\":{\"Start\":\"1995-01-01T00:00:00.000Z\",\"End\":\"2026-10-31T23:59:00.000Z\"},\"PiName\":\"J.H. King, N. Papatashvilli\",\"PiAffiliation\":\"AdnetSystems, NASA GSFC\",\"Notes\":\"https://cdaweb.gsfc.nasa.gov/misc/NotesO.html#OMNI_HRO2_1MIN\",\"DatasetLink\":[{\"Title\":\"OMNI Data documentation\",\"Text\":\"Additional information for all parameters are available from \",\"Url\":\"https://omniweb.gsfc.nasa.gov/html/HROdocum.html\"},{\"Title\":\"SPDF's OMNIWeb Service\",\"Text\":\"Additional data access options available at\",\"Url\":\"https://omniweb.gsfc.nasa.gov/ow_min.html\"},{\"Title\":\"Release Notes\",\"Text\":\"Recent omni high resolution updates \",\"Url\":\"https://omniweb.gsfc.nasa.gov/html/hro_news.html\"}],\"AdditionalMetadata\":[{\"Type\":\"SPASE\",\"value\":\"https://heliophysicsdata.gsfc.nasa.gov/WS/hdp/1/Spase?ResourceID=spase://NASA/NumericalData/OMNI/HighResolutionObservations/Version2/PT1M\"},{\"Type\":\"SPDF_SKT_CDF\",\"value\":\"https://cdaweb.gsfc.nasa.gov/pub/software/cdawlib/0JSONS/omni_hro2_1min_00000000_v01.json\"}]}]}",
+   "headers": {
+    "content-length": "1661",
+    "content-type": "application/json",
+    "last-modified": "Fri, 20 Nov 2026 14:12:15 GMT"
+   },
+   "status": 200
+  }
+ }
+]

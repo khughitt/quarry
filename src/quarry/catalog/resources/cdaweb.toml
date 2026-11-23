@@ -1,0 +1,62 @@
+id = "cdaweb"
+name = "Coordinated Data Analysis Web (SPDF)"
+roles = ["repository"]
+prefixes = ["cdaweb"]
+adapter = "quarry.adapters.cdaweb"
+
+[[routes]]
+kind = "rest"
+url = "https://cdaweb.gsfc.nasa.gov/WS/cdasr/1/dataviews/sp_phys"
+min_interval = 1.0
+service = "spdf"
+auth = "none"
+reports_total = false
+
+[[routes]]
+kind = "rest"
+url = "https://cdaweb.gsfc.nasa.gov/hapi"
+min_interval = 1.0
+service = "spdf"
+auth = "none"
+reports_total = false
+
+[[routes]]
+kind = "bulk"
+url = "https://cdaweb.gsfc.nasa.gov/sp_phys/data"
+min_interval = 1.0
+service = "spdf"
+auth = "none"
+reports_total = false
+
+[[routes]]
+kind = "local-tool"
+url = "sunpy.net.cdaweb"
+min_interval = 0.0
+service = "spdf"
+auth = "none"
+reports_total = false
+
+[[pitfalls]]
+summary = "a time cut becomes a file only through a service-side job, at a temporary URL that differs per request"
+handling = "bare cdaweb:<dataset> ids carry no interval or variables, so files returns an empty inventory without issuing orig_data, data or HAPI cut requests"
+evidence = "sun phase-1 survey probes/cdaweb/05, 19; heliophysics delivery amendment"
+
+[[pitfalls]]
+summary = "orig_data returns whole period granules overlapping the interval (a month for a day)"
+handling = "every file carries its own coverage beside the asked interval"
+evidence = "probes/cdaweb/04"
+
+[[pitfalls]]
+summary = "HAPI /data is one stable GET URL per cut (id, parameters, time.min, time.max, format), streamed with a header; the only CDAWeb route whose cut URL is reproducible"
+handling = "a cut is emitted as a HAPI URL, never as the REST job's temporary URL"
+evidence = "probes/cdaweb/09, 10, 16"
+
+[[pitfalls]]
+summary = "no checksums on any route; LastModified and ETag only"
+handling = "expected omitted; size and LastModified recorded"
+evidence = "probes/cdaweb/14, 15"
+
+[[pitfalls]]
+summary = "the terms-of-use path the documentation implies is 404"
+handling = "terms are read: open; the resource is used under SPDF's general rules"
+evidence = "probes/cdaweb/12, 17"

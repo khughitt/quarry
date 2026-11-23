@@ -1,0 +1,41 @@
+id = "vso"
+name = "Virtual Solar Observatory"
+roles = ["repository"]
+prefixes = ["vso.file"]
+adapter = "quarry.adapters.vso"
+
+[[routes]]
+kind = "query-endpoint"
+url = "http://vso.nso.edu/cgi-bin/VSO/PROD/vsoi_wsdl.cgi"
+min_interval = 1.0
+service = "vso"
+auth = "none"
+reports_total = true
+
+[[routes]]
+kind = "local-tool"
+url = "sunpy.net.vso"
+min_interval = 0.0
+service = "vso"
+auth = "none"
+reports_total = true
+
+[[pitfalls]]
+summary = "SOAPAction must be 'http://virtualsolar.org/VSO/VSOi#Query' or '#GetData'; a bare method name is a soap:Fault"
+handling = "set by the adapter on every SOAP request"
+evidence = "sun phase-1 survey probes/vso/07, 10"
+
+[[pitfalls]]
+summary = "fileids are minted by providers (JSOC, SDAC) and may contain colons or slashes; VSO owns the canonical vso.file locator encoding provider and opaque fileid"
+handling = "records encode vso.file:<provider>/~<unpadded Base64url of UTF-8 fileid>; show and files validate a round trip and send provider and fileid unchanged to link-only GetData"
+evidence = "probes/vso/11, 12; heliophysics delivery amendment"
+
+[[pitfalls]]
+summary = "the API documentation wiki pages are gone; the WSDL is the only description"
+handling = "the adapter is written against the WSDL"
+evidence = "probes/vso/01, 03, 08"
+
+[[pitfalls]]
+summary = "VSO time/near requires time/start and time/end and cannot answer an unbounded --at instant query"
+handling = "VSO declares --during (overlap) only and refuses --at before transport"
+evidence = "X-25 live probe (VSO-V400 Missing TIME:START)"

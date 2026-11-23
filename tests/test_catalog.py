@@ -183,3 +183,60 @@ def test_the_shipped_catalog_loads():
     cat = catalog.load()
     assert set(cat.domains) >= {"core", "biology"}
     assert cat.domains["biology"].beliefs_contract == "biology"
+
+
+ADS_ROUTE = """
+[[routes]]
+kind = "rest"
+url = "https://api.adsabs.harvard.edu/v1"
+min_interval = 1.0
+service = "ads"
+auth = "required-key"
+key_env = "ADS_DEV_KEY"
+key_header = "Authorization"
+key_scheme = "bearer"
+reports_total = true
+"""
+
+
+def _with_route(route_block: str, *, extra_resource: str = "") -> str:
+    head = ENA[:ENA.index("[[routes]]")]
+    tail = ENA[ENA.index("[[pitfalls]]"):]
+    return head + extra_resource + route_block + "\n" + tail
+
+
+def test_load_reads_key_scheme_and_bare_normalize(tmp_path):
+    root = write(tmp_path, {"ena": _with_route(ADS_ROUTE, extra_resource="bare_normalize = false\n")}, {"core": CORE})
+    cat = catalog.load(root)
+    assert cat.resources["ena"].bare_normalize is False
+    assert cat.resources["ena"].routes[0].key_scheme == "bearer"
+    assert check(root) == []
+
+
+def test_loader_defaults_bare_normalize_true_and_key_scheme_none(good):
+    cat = catalog.load(good)
+    assert cat.resources["ena"].bare_normalize is True
+    assert cat.resources["ena"].routes[0].key_scheme is None
+
+
+@pytest.mark.parametrize("text, detail", [
+    (_with_route(ADS_ROUTE.replace('key_scheme = "bearer"', "key_scheme = 1")), "'key_scheme' must be str"),
+    (ENA.replace('id = "ena"\n', 'id = "ena"\nbare_normalize = "no"\n'), "'bare_normalize' must be bool"),
+])
+def test_loader_refuses_mistyped_key_scheme_and_bare_normalize(tmp_path, text, detail):
+    root = write(tmp_path, {"ena": text}, {"core": CORE})
+    with pytest.raises(CatalogError) as caught:
+        catalog.load(root)
+    assert caught.value.kind == "catalog_invalid" and detail in caught.value.detail
+
+
+@pytest.mark.parametrize("route_block, kind", [
+    (ADS_ROUTE.replace('key_scheme = "bearer"', 'key_scheme = "basic"'), "unknown_key_scheme"),
+    (ADS_ROUTE.replace('auth = "required-key"', 'auth = "none"').replace('key_env = "ADS_DEV_KEY"\n', ""), "invalid_key_scheme"),
+    (ADS_ROUTE.replace('key_header = "Authorization"', 'key_header = "X-Api-Key"'), "invalid_key_scheme"),
+    (ADS_ROUTE.replace('key_header = "Authorization"\n', 'key_param = "token"\n'), "invalid_key_scheme"),
+    (ADS_ROUTE + 'key_param = "token"\n', "invalid_key_scheme"),
+])
+def test_check_validates_key_scheme(tmp_path, route_block, kind):
+    root = write(tmp_path, {"ena": _with_route(route_block)}, {"core": CORE})
+    assert kind in [f.kind for f in check(root)]

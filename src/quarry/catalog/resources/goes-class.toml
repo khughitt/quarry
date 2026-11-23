@@ -1,0 +1,18 @@
+id = "goes-class"
+name = "GOES soft X-ray flare class"
+roles = ["vocabulary"]
+prefixes = ["goes-class"]
+adapter = "quarry.adapters.goes_class"
+
+[[routes]]
+kind = "bulk"
+url = "https://www.swpc.noaa.gov/phenomena/solar-flares-radio-blackouts"
+min_interval = 1.0
+service = "swpc"
+auth = "none"
+reports_total = false
+
+[[pitfalls]]
+summary = "a class is a letter (A B C M X, decades of 0.1–0.8 nm peak flux from 1e-8 W/m2) plus an optional decimal multiplier, and the measuring satellite differs between lists"
+handling = "pattern ^[ABCMX]([0-9]+(\\.[0-9]+)?)?$; the satellite stays with the record that carries the class"
+evidence = "sun phase-1 survey probes/goes-class/01; probes/goes-xrs/05"

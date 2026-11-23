@@ -1,0 +1,19 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "HEAD",
+   "query": [],
+   "url": "https://data.ngdc.noaa.gov/platforms/solar-space-observing-satellites/goes/goes18/l2/data/xrsf-l2-avg1m_science/2025/01/sci_xrsf-l2-avg1m_g18_d20250115_v2-2-2.nc"
+  },
+  "response": {
+   "body": "",
+   "headers": {
+    "content-length": "299310",
+    "content-type": "application/x-netcdf",
+    "last-modified": "Thu, 08 Oct 2026 22:45:36 GMT"
+   },
+   "status": 200
+  }
+ }
+]

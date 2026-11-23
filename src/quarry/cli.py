@@ -230,8 +230,10 @@ def id_check(ctx: click.Context, ids: tuple[str, ...]) -> None:
 def id_normalize(ctx: click.Context, id: str) -> None:
     """Print an identifier as a canonical CURIE."""
     env = context.open_env()
-    # Term-only prefixes stay out: a bare word or number is not a term id (ncbitaxon's pattern takes any word).
-    owned = [p for r in env.catalog.resources.values() if set(r.roles) & DATA_ROLES for p in r.owned_prefixes()]
+    # Term-only prefixes and bare_normalize=false resources stay out: a bare word or number is not a term id
+    # (ncbitaxon's pattern takes any word), and opted-out resources require a qualified <prefix>:<id>.
+    owned = [p for r in env.catalog.resources.values() if set(r.roles) & DATA_ROLES and r.bare_normalize
+             for p in r.owned_prefixes()]
     try:
         curie = idmod.normalize(id, env.registry, owned)
     except QuarryError as error:
@@ -296,6 +298,9 @@ def _pretty_search(report: dict) -> str:
                                             "a date END includes its day), where a domain declares it.")
 @click.option("--at", "at", type=INSTANT_TIME, help="The record observed nearest this UTC datetime (ending in Z), "
                                                     "where a domain declares it.")
+@click.option("--instrument", help="Instrument name or source selector, where a domain declares it.")
+@click.option("--observatory", help="Observatory or mission name, where a domain declares it.")
+@click.option("--measurement", help="SPASE measurement type, where a domain declares it.")
 @click.option("--exact", is_flag=True, help="Require exact phrase matching from every resource searched.")
 @click.option("--native", help="One resource's own query, sent unchanged; needs exactly one --in.")
 @click.option("--allow-partial", is_flag=True, help="Report a failed resource in coverage instead of failing.")
@@ -304,12 +309,19 @@ def _pretty_search(report: dict) -> str:
 @click.option("-n", "--limit", type=int, help="At most this many records from each resource.")
 @click.pass_context
 @reports_errors
-def search_command(ctx, phrases, in_, domain, organism, during, at, exact, native, allow_partial, since, until, limit):
+def search_command(ctx, phrases, in_, domain, organism, during, at, instrument, observatory, measurement,
+                   exact, native, allow_partial, since, until, limit):
     """Search records across data-holding resources."""
     if native is not None and len(in_) != 1:
         raise click.UsageError("--native needs exactly one --in", ctx)
+    filters = {name: value for name, value in (
+        ("organism", organism),
+        ("instrument", instrument),
+        ("observatory", observatory),
+        ("measurement", measurement),
+    ) if value is not None}
     try:
-        query = Query(phrases=tuple(phrases), filters={"organism": organism} if organism is not None else {}, since=since,
+        query = Query(phrases=tuple(phrases), filters=filters, since=since,
                       until=until, limit=limit, exact=exact, native=native, during=during, at=at)
     except ValueError as error:
         raise click.UsageError(str(error), ctx) from None
@@ -509,7 +521,7 @@ def term_search(ctx: click.Context, words: tuple[str, ...], in_: tuple[str, ...]
                         if set(env.catalog.resources[rid].roles) & terms_mod.TERM_ROLES]
         if not resource_ids:
             raise QuarryError("nothing_to_search", f"the {chosen} domain has no ontology or vocabulary resources; "
-                                                   f"name one with --in or use --domain biology")
+                                                   f"name one with --in or pick a domain from `quarry domains list`")
     adapters = [(rid, _term_adapter(env.catalog.resources[rid], terms_mod.TERM_ROLES)) for rid in resource_ids]
     text = " ".join(words)
     coverage, found, warnings = [], [], []

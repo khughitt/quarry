@@ -1,0 +1,18 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [],
+   "url": "https://www.sidc.be/SILSO/DATA/manifest-paired.sha256"
+  },
+  "response": {
+   "body": "9aca5a059fd645bd0e5d14c20d63345df4ff20f9a895a79a5d7a7bd24595a8a1  /home/wds/sidc/archive/SN_d_hem_V2.0.csv\nf3ba43ea4ffd9254ebca496769687e1e2555f926364103250721b4e5408a3a15  /home/wds/sidc/archive/SN_d_hem_V2.0.txt\n28525cc0adeb43200dc8b5fd858d184cd56f669834a3701b6c34b588ae12fe51  /home/wds/sidc/archive/SN_d_tot_V2.0.csv\n2dc1553d71b0b3ce34b716c6920e4d44a1e6d65db592d210c4b03183f6c29ddc  /home/wds/sidc/archive/SN_d_tot_V2.0.txt\ne9b22ced597dbae580bb8a78503ca092856eba50b77161155437e2ee33778117  /home/wds/sidc/archive/SN_m_hem_V2.0.csv\n77385d3ad416f37e4d1c42183fca449d2cf291f3c2a20a3b89bcb088eeaafc42  /home/wds/sidc/archive/SN_m_hem_V2.0.txt\n157e7aaa07afcda676e735512e1543f5232a2b288a17953bb37bb4dd48602395  /home/wds/sidc/archive/SN_ms_hem_V2.0.csv\ncc95ad0ac12389fc6c5cd3c6b9c9318d4a50aea9a35e1ab854739797a1e4f28e  /home/wds/sidc/archive/SN_ms_hem_V2.0.txt\n6556ec0b65f608a27d7c559feb0177c91c6340ca4b7b31d016dacbbeaca176e3  /home/wds/sidc/archive/SN_ms_tot_V2.0.csv\nc735c79921abfc68095dba842f306bb5eebf705617747615a34d44c003e80aa5  /home/wds/sidc/archive/SN_ms_tot_V2.0.txt\n1cf8a1f6f28ff9ee479783d72fa323eb70a824056450ccf60d0152fa28abd72f  /home/wds/sidc/archive/SN_m_tot_V2.0.csv\na34b6b671e6465b266f080d4b87ac13c04aab6aab45a158dd5352ceab9e5304c  /home/wds/sidc/archive/SN_m_tot_V2.0.txt\n0ccb2104b03f2f0c4ad151c97f8721139414cae288a039cdeb37ee36c9e35b6d  /home/wds/sidc/archive/SN_y_tot_V2.0.csv\n7093eb8f5582a2d8e76580f32e6311ec758f0c1b969cadf99bcaba9f99726353  /home/wds/sidc/archive/SN_y_tot_V2.0.txt\n",
+   "headers": {
+    "content-length": "1502",
+    "last-modified": "Sun, 01 Nov 2026 09:45:38 GMT"
+   },
+   "status": 200
+  }
+ }
+]

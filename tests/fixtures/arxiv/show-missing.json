@@ -1,0 +1,61 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "id_list",
+     "9999.99999"
+    ],
+    [
+     "max_results",
+     "2"
+    ],
+    [
+     "start",
+     "0"
+    ]
+   ],
+   "url": "http://export.arxiv.org/api/query"
+  },
+  "response": {
+   "body": "",
+   "headers": {
+    "content-length": "0",
+    "location": "https://export.arxiv.org/api/query?id_list=9999.99999&start=0&max_results=2",
+    "retry-after": "0"
+   },
+   "status": 301
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "id_list",
+     "9999.99999"
+    ],
+    [
+     "max_results",
+     "2"
+    ],
+    [
+     "start",
+     "0"
+    ]
+   ],
+   "url": "https://export.arxiv.org/api/query"
+  },
+  "response": {
+   "body": "<?xml version='1.0' encoding='UTF-8'?>\n<feed xmlns:opensearch=\"http://a9.com/-/spec/opensearch/1.1/\" xmlns:arxiv=\"http://arxiv.org/schemas/atom\" xmlns=\"http://www.w3.org/2005/Atom\">\n  <id>https://arxiv.org/api//U5MIiApZlqSdbRCx/T8m5M2yuI</id>\n  <title>arXiv Query: search_query=&amp;id_list=9999.99999&amp;start=0&amp;max_results=2</title>\n  <updated>2026-11-22T23:16:05Z</updated>\n  <link href=\"https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=2&amp;id_list=9999.99999\" type=\"application/atom+xml\"/>\n  <opensearch:itemsPerPage>2</opensearch:itemsPerPage>\n  <opensearch:totalResults>0</opensearch:totalResults>\n  <opensearch:startIndex>0</opensearch:startIndex>\n</feed>\n",
+   "headers": {
+    "content-length": "691",
+    "content-type": "application/atom+xml; charset=utf-8"
+   },
+   "status": 200
+  }
+ }
+]

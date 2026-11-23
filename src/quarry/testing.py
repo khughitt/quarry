@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 import httpx
@@ -14,7 +14,7 @@ import httpx
 from quarry.catalog import Catalog
 from quarry.http import REDACTED, Client, Throttle, _scrub, _with_key_param
 
-KEPT_HEADERS = ("content-type", "retry-after", "location")
+KEPT_HEADERS = ("content-type", "retry-after", "location", "last-modified")
 
 
 class VirtualClock:
@@ -42,18 +42,26 @@ def secret_params(catalog: Catalog) -> frozenset[str]:
 def exchange_key(request: httpx.Request, secrets: frozenset[str]) -> dict:
     url = request.url
     query = sorted([k, v] for k, v in url.params.multi_items() if k not in secrets)
-    body = request.content.decode() if request.content else None
+    body = request.content.decode("utf-8") if request.content else None
     path = url.raw_path.split(b"?", 1)[0].decode("ascii")
     # shortcut: catalog routes use default ports; include the port when one needs otherwise.
-    return {"method": request.method, "url": f"{url.scheme}://{url.host}{path}", "query": query, "body": body}
+    key = {"method": request.method, "url": f"{url.scheme}://{url.host}{path}", "query": query, "body": body}
+    soap_action = request.headers.get("soapaction")
+    if soap_action is not None:
+        key["soap_action"] = soap_action
+    return key
 
 
 def exchange(method: str, url: str, params: dict | None = None, *, status: int = 200, body: str = "",
-             content_type: str = "application/json", headers: dict | None = None, json_body: object = None,
-             form: dict | None = None) -> dict:
+             content_type: str = "application/json", headers: dict | None = None,
+             request_headers: Mapping[str, str] | None = None, request_content: bytes | None = None,
+             json_body: object = None, form: dict | None = None) -> dict:
     """A hand-made exchange, keyed exactly as a live request with these arguments would be.
-    `body` is the response body; `json_body` and `form` are the request's."""
-    request = httpx.Request(method, url, params=params, json=json_body, data=form)
+    `body` is the response body; `request_content`, `json_body` and `form` are the request's."""
+    if sum(item is not None for item in (request_content, json_body, form)) > 1:
+        raise ValueError("pass at most one of request_content, json_body and form")
+    request = httpx.Request(method, url, params=params, headers=request_headers,
+                            content=request_content, json=json_body, data=form)
     return {"request": exchange_key(request, frozenset()),
             "response": {"status": status, "headers": {"content-type": content_type, **(headers or {})}, "body": body}}
 
@@ -73,7 +81,7 @@ class ReplayTransport(httpx.BaseTransport):
             if ex["request"] == key:
                 del self.pending[index]
                 r = ex["response"]
-                return httpx.Response(r["status"], headers=r["headers"], content=r["body"].encode(), request=request)
+                return httpx.Response(r["status"], headers=r["headers"], content=r["body"].encode("utf-8"), request=request)
         raise LookupError(f"no recorded exchange left for {json.dumps(key)}")
 
 
@@ -121,16 +129,30 @@ class RecordingTransport(httpx.BaseTransport):
         content = response.read()
         recorded_request = self._scrub_request(exchange_key(request, self.secrets))
         if request.content:
-            recorded_request["body"] = self._scrub_body(request.content.decode())
+            recorded_request["body"] = self._scrub_body(request.content.decode("utf-8"))
+        recorded_body = self._scrub_body(content.decode(errors="replace"))
+        recorded_headers = {h: (self._scrub_url if h == "location" else self._scrub)(response.headers[h])
+                            for h in KEPT_HEADERS if h in response.headers}
+        raw_length = response.headers.get("content-length")
+        if raw_length is not None:
+            stripped = raw_length.strip()
+            if request.method == "HEAD":
+                recorded_headers["content-length"] = self._scrub(stripped)
+            elif stripped.isdigit() and int(stripped) == len(recorded_body.encode("utf-8")):
+                recorded_headers["content-length"] = stripped
         self.exchanges.append({
             "request": recorded_request,
-            "response": {"status": response.status_code,
-                         "headers": {h: (self._scrub_url if h == "location" else self._scrub)(response.headers[h])
-                                     for h in KEPT_HEADERS if h in response.headers},
-                         "body": self._scrub_body(content.decode(errors="replace"))},
+            "response": {"status": response.status_code, "headers": recorded_headers, "body": recorded_body},
         })
-        # `content` is already decoded; keeping the encoding headers would make the client decode it again.
-        headers = [(k, v) for k, v in response.headers.multi_items() if k.lower() not in ("content-encoding", "content-length")]
+        # `content` is already decoded; keeping content-encoding would make the client decode it again.
+        # For HEAD preserve Content-Length as the remote representation length; for body-bearing responses
+        # keep it only when it agrees with the decoded bytes.
+        drop = {"content-encoding"}
+        if request.method != "HEAD" and not (
+            raw_length is not None and raw_length.strip().isdigit() and int(raw_length.strip()) == len(content)
+        ):
+            drop.add("content-length")
+        headers = [(k, v) for k, v in response.headers.multi_items() if k.lower() not in drop]
         return httpx.Response(response.status_code, headers=headers, content=content, request=request)
 
     def close(self) -> None:

@@ -1,0 +1,34 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "FORMAT",
+     "json"
+    ],
+    [
+     "LANG",
+     "ADQL"
+    ],
+    [
+     "QUERY",
+     "SELECT COUNT(*) FROM v_sc_data_item WHERE begin_time < '2025-01-15T00:00:15.208' AND (end_time > '2025-01-15T00:00:00' OR begin_time >= '2025-01-15T00:00:00') AND UPPER(instrument) = UPPER('EUI')"
+    ],
+    [
+     "REQUEST",
+     "doQuery"
+    ]
+   ],
+   "url": "https://soar.esac.esa.int/soar-sl-tap/tap/sync"
+  },
+  "response": {
+   "body": "{\"metadata\":\n[\n{\"name\": \"COUNT_ALL\", \"datatype\": \"long\", \"xtype\": null, \"arraysize\": null, \"description\": null, \"unit\": null, \"ucd\": null, \"utype\": null}\n],\n\"data\":\n[\n[0]\n]\n}\n",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "status": 200
+  }
+ }
+]

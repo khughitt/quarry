@@ -75,6 +75,7 @@ an invalid catalog and point to this check.
 | catalog_invalid | Repair TOML syntax, required fields, types, unknown keys or file/id mismatch. |
 | unknown_role, unknown_route_kind, unknown_auth | Use catalog-supported role, route and auth values. |
 | missing_key_env, missing_key_location | Declare the route's credential variable and query/header placement. |
+| unknown_key_scheme, invalid_key_scheme | Use a supported key_scheme (`bearer`) only on an authenticated route with `key_env`, `key_header = "Authorization"` and no `key_param`. |
 | missing_adapter, orphan_adapter | Make the resource's module importable and name every shipped adapter. |
 | unknown_prefix, noncanonical_prefix | Use canonical registry spelling and lowercase local declarations. |
 | local_pattern_unsupported | Express the pattern in refs' portable dialect. |

@@ -1,0 +1,44 @@
+id = "swpc-events"
+name = "NOAA SWPC edited event lists and Solar Region Summaries"
+roles = ["knowledgebase"]
+prefixes = ["noaa-ar", "swpc-events"]
+adapter = "quarry.adapters.swpc_events"
+
+[[routes]]
+kind = "bulk"
+url = "https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports"
+min_interval = 1.0
+service = "ncei"
+auth = "none"
+reports_total = false
+
+[[routes]]
+kind = "rest"
+url = "https://services.swpc.noaa.gov/text"
+min_interval = 1.0
+service = "swpc"
+auth = "none"
+reports_total = false
+
+[[routes]]
+kind = "local-tool"
+url = "sunpy.net.dataretriever.sources.noaa"
+min_interval = 0.0
+service = "swpc"
+auth = "none"
+reports_total = false
+
+[[pitfalls]]
+summary = "the SWPC archive (ftp://ftp.swpc.noaa.gov/pub) is FTP only (https resets) and past days live inside yearly tarballs; the kernel's acquisition speaks HTTP(S)"
+handling = "acquisition uses NCEI's HTTPS mirror, one file per day (solar_region_summaries/YYYY/MM/YYYYMMDDSRS.txt, solar_event_reports/YYYY/MM/YYYYMMDDevents.txt); the FTP warehouse is documented here and not shipped as an executable route"
+evidence = "sun phase-1 survey probes/swpc-events/05, 09, 11, 14, 15, 17, 18"
+
+[[pitfalls]]
+summary = "the last three days' lists are regenerated nightly and current SWPC text products overwrite in place"
+handling = "downloads under 3 days old are provisional; current SWPC text is not an archive"
+evidence = "probes/swpc-events/02, 12, 13"
+
+[[pitfalls]]
+summary = "NOAA active region numbers (noaa-ar:) have no stable per-region lookup endpoint"
+handling = "show and files on noaa-ar: refuse with unsupported_id before I/O and direct callers to the Solar Region Summary resolver (https://www.swpc.noaa.gov/products/solar-region-summary)"
+evidence = "probes/swpc-events/03; probes/noaa-ar/03, 04"

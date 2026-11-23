@@ -1,0 +1,18 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "HEAD",
+   "query": [],
+   "url": "https://umbra.nascom.nasa.gov/pub/eit/lz/2025/01/efz20250115.130013"
+  },
+  "response": {
+   "body": "",
+   "headers": {
+    "content-length": "2108160",
+    "last-modified": "Wed, 16 Apr 2025 16:45:03 GMT"
+   },
+   "status": 200
+  }
+ }
+]

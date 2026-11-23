@@ -37,4 +37,41 @@ def test_empty_show_first_fails_clearly():
         show_first(ENA, client)
 
 
+@pytest.mark.parametrize("resource_id, module_suffix", [
+    ("go", "go"),
+    ("uberon", "uberon"),
+    ("ncbitaxon", "ncbitaxon"),
+    ("stereo-ssc", "stereo_ssc"),
+])
+def test_recorder_dispatches_module_name_and_keeps_resource_id_paths(tmp_path, monkeypatch, capsys, resource_id, module_suffix):
+    fixture_root = tmp_path / "recordings"
+    fixture_root.mkdir()
+    monkeypatch.setattr(recordings, "__file__", str(fixture_root / "__main__.py"))
+    monkeypatch.setattr(recordings, "Client", lambda transport: replay_client(transport))
+    monkeypatch.setattr("quarry.testing.httpx.HTTPTransport", lambda: ReplayTransport([
+        exchange("GET", f"https://{resource_id}.example/ping", body="ok", content_type="text/plain"),
+    ]))
+
+    from quarry.catalog import Catalog, Resource, Route
+    fake_route = Route("rest", f"https://{resource_id}.example", 0.0, resource_id, "none", False)
+    fake_resource = Resource(resource_id, resource_id, ("repository",), "tests.fake_adapter", (fake_route,))
+    monkeypatch.setattr(recordings.catalog_mod, "load", lambda: Catalog({resource_id: fake_resource}, {}))
+
+    imported = []
+
+    def fake_import(name):
+        imported.append(name)
+        return SimpleNamespace(SCENARIOS={"probe": lambda adapter, client: client.request(fake_route, "GET", "ping")})
+
+    monkeypatch.setattr(recordings, "importlib", SimpleNamespace(import_module=fake_import))
+    monkeypatch.setattr(recordings.base, "make", lambda resource: SimpleNamespace(resource=resource))
+
+    recordings.main(resource_id)
+
+    assert imported == [f"tests.recordings.{module_suffix}"]
+    saved = json.loads((tmp_path / "fixtures" / resource_id / "probe.json").read_text())
+    assert len(saved) == 1 and saved[0]["response"]["body"] == "ok"
+    assert capsys.readouterr().err == f"recorded {resource_id}/probe: 1 exchanges\n"
+
+
 NATIVE_QUERY = Query(native='study_title="x"')

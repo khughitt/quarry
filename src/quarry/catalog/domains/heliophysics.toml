@@ -1,0 +1,12 @@
+id = "heliophysics"
+summary = "The Sun and the solar wind: image and in-situ archives, index series, event knowledgebases, SPASE"
+includes = ["core"]
+resources = [
+  "jsoc", "vso", "cdaweb", "soar", "soho", "stereo-ssc", "helioviewer",
+  "goes-xrs", "silso", "omniweb",
+  "hek", "donki", "swpc-events", "cdaw-cme",
+  "hpde", "spase", "goes-class",
+  "ads", "arxiv",
+]
+search_default = ["vso", "cdaweb", "hek"]   # one index over archives, one in-situ repository, one event knowledgebase
+filters = ["during", "at", "instrument", "observatory", "measurement"]
