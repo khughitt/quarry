@@ -1,0 +1,12 @@
+#!/bin/sh
+# The quarry command from any directory: runs this checkout's .venv entry point.
+# `just install` links it into ~/.local/bin; the link is followed to find the checkout.
+set -eu
+self=$(readlink -f "$0")
+root=$(dirname "$(dirname "$self")")
+entry="$root/.venv/bin/quarry"
+if [ ! -x "$entry" ]; then
+    echo "quarry: $entry not found; run just setup in $root" >&2
+    exit 127
+fi
+exec "$entry" "$@"

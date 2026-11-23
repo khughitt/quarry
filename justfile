@@ -148,6 +148,34 @@ work-link *names:
 setup:
     {{tt}} setup -- sh -c '{{setup_cmd}}'
 
+# Link bin/quarry to ~/.local/bin/quarry so `quarry ...` runs from any directory, as the
+# quarry skill writes it. Idempotent. Main checkout only: a link into a worktree breaks
+# when the worktree is removed and runs unmerged code until then.
+install:
+    {{tt}} install -- just _install
+
+[private]
+_install:
+    #!/bin/sh
+    set -eu
+    # Judge the directory just runs in, not a repository a calling hook exported.
+    unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE
+    git_dir=$(git rev-parse --path-format=absolute --git-dir)
+    common=$(git rev-parse --path-format=absolute --git-common-dir)
+    if [ "$git_dir" != "$common" ]; then
+        main=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+        echo "install: refusing to link from a worktree; run just install in the main checkout, $main" >&2
+        exit 1
+    fi
+    link="$HOME/.local/bin/quarry"
+    if [ -e "$link" ] && [ ! -L "$link" ]; then
+        echo "install: $link exists and is not a symlink; move it aside first" >&2
+        exit 1
+    fi
+    mkdir -p "$(dirname "$link")"
+    ln -sfn "$(pwd)/bin/quarry" "$link"
+    echo "install: $link -> $(pwd)/bin/quarry"
+
 # What the pre-commit hook runs: `check-hygiene`'s command under its own hook target.
 hook-pre-commit:
     {{tt}} hook-pre-commit -- sh -c '{{check_hygiene_cmd}}'

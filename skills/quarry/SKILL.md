@@ -6,7 +6,8 @@ description: Use when you need to reach a scientific resource from the command l
 # quarry
 
 One CLI over scientific resources. Add `--json` for one JSON value on stdout; a failure then
-prints `{"error": {"kind", "detail"}}` on stderr. Run `quarry <command> --help` for options.
+prints `{"error": {"kind", "detail"}}` on stderr. Run `quarry <command> --help` for options. If `quarry` is not found, run `just install` in the
+quarry main checkout and report the gap; do not substitute another source silently.
 
 ## Verbs
 
