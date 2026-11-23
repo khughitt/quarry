@@ -1,6 +1,6 @@
 ---
 name: quarry-heliophysics
-description: Use with the quarry skill when searching solar and solar-wind resources: image and in-situ archives, index series, event knowledgebases, SPASE vocabularies, or heliophysics literature. Says which resource answers which question, how to filter by observation time, and what to check before acquisition.
+description: "Use with the quarry skill when searching solar and solar-wind resources: image and in-situ archives, index series, event knowledgebases, SPASE vocabularies, or heliophysics literature. Says which resource answers which question, how to filter by observation time, and what to check before acquisition."
 ---
 
 # quarry: heliophysics

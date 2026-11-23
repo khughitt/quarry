@@ -1,6 +1,6 @@
 ---
 name: quarry-biology
-description: Use with the quarry skill when searching life-science resources: deposited expression and sequencing data, studies, taxa, anatomy and gene-function terms, or biomedical literature. Says which resource answers which question and how to filter by organism.
+description: "Use with the quarry skill when searching life-science resources: deposited expression and sequencing data, studies, taxa, anatomy and gene-function terms, or biomedical literature. Says which resource answers which question and how to filter by organism."
 ---
 
 # quarry: biology

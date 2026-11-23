@@ -1,6 +1,6 @@
 ---
 name: quarry
-description: Use when you need to reach a scientific resource from the command line: finding a dataset, record, publication, ontology term or identifier, listing a record's files, or normalizing an id. quarry is one CLI over many resources, with domains as lenses.
+description: "Use when you need to reach a scientific resource from the command line: finding a dataset, record, publication, ontology term or identifier, listing a record's files, or normalizing an id. quarry is one CLI over many resources, with domains as lenses."
 ---
 
 # quarry
