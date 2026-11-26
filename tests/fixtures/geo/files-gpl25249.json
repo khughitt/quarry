@@ -1,0 +1,77 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "db",
+     "gds"
+    ],
+    [
+     "id",
+     "100025249"
+    ],
+    [
+     "retmode",
+     "json"
+    ]
+   ],
+   "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+  },
+  "response": {
+   "body": "{\"header\":{\"type\":\"esummary\",\"version\":\"0.3\"},\"result\":{\"uids\":[\"100025249\"],\"100025249\":{\"uid\":\"100025249\",\"accession\":\"GPL25249\",\"gds\":\"\",\"title\":\"[HuGene-2_0-st] Affymetrix Human Gene 2.0 ST Array [Gene2.0st.lncrna.ENSG.v21.cdf]\",\"summary\":\"The linked tar.gz archive is the library installation package for running analysis in R software The linked cdf file contains 35458 entries [coding genes + non-coding lncRNA] Protocol: see manufacturer's website\",\"gpl\":\"25249\",\"gse\":\"116294;184489\",\"taxon\":\"Homo sapiens\",\"entrytype\":\"GPL\",\"gdstype\":\"\",\"ptechtype\":\"in situ oligonucleotide\",\"valtype\":\"\",\"ssinfo\":\"\",\"subsetinfo\":\"\",\"pdat\":\"2019/06/18\",\"suppfile\":\"CDF, TAR\",\"samples\":[],\"relations\":[],\"extrelations\":[],\"n_samples\":73,\"seriestitle\":\"\",\"platformtitle\":\"\",\"platformtaxa\":\"\",\"samplestaxa\":\"\",\"pubmedids\":[],\"projects\":[],\"ftplink\":\"ftp://ftp.ncbi.nlm.nih.gov/geo/platforms/GPL25nnn/GPL25249/\",\"geo2r\":\"\",\"bioproject\":\"\"}}}\n",
+   "headers": {
+    "content-type": "application/json; charset=UTF-8"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "acc",
+     "GPL25249"
+    ],
+    [
+     "form",
+     "xml"
+    ],
+    [
+     "targ",
+     "self"
+    ],
+    [
+     "view",
+     "quick"
+    ]
+   ],
+   "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi"
+  },
+  "response": {
+   "body": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n\n<MINiML\n   xmlns=\"http://www.ncbi.nlm.nih.gov/geo/info/MINiML\"\n   xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n   xsi:schemaLocation=\"http://www.ncbi.nlm.nih.gov/geo/info/MINiML http://www.ncbi.nlm.nih.gov/geo/info/MINiML.xsd\"\n   version=\"0.5.0\" >\n\n  <Contributor iid=\"contrib1\">\n    <Person><First>Luca</First><Last>Agnelli</Last></Person>\n    <Email>luca.agnelli@istitutotumori.mi.it, luca.agnelli@gmail.com</Email>\n    <Phone>+390223903581</Phone>\n    <Department>Department of Advanced Diagnostics</Department>\n    <Organization>IRCCS Istituto Nazionale dei Tumori</Organization>\n    <Address>\n      <Line>Venezian 1</Line>\n      <City>MILAN</City>\n      <Zip-Code>20133</Zip-Code>\n      <Country>Italy</Country>\n    </Address>\n  </Contributor>\n\n  <Database iid=\"GEO\">\n    <Name>Gene Expression Omnibus (GEO)</Name>\n    <Public-ID>GEO</Public-ID>\n    <Organization>NCBI NLM NIH</Organization>\n    <Web-Link>http://www.ncbi.nlm.nih.gov/geo</Web-Link>\n    <Email>geo@ncbi.nlm.nih.gov</Email>\n  </Database>\n\n  <Platform iid=\"GPL25249\">\n    <Status database=\"GEO\">\n      <Submission-Date>2018-06-26</Submission-Date>\n      <Release-Date>2019-06-18</Release-Date>\n      <Last-Update-Date>2019-06-18</Last-Update-Date>\n    </Status>\n    <Title>[HuGene-2_0-st] Affymetrix Human Gene 2.0 ST Array [Gene2.0st.lncrna.ENSG.v21.cdf]</Title>\n    <Accession database=\"GEO\">GPL25249</Accession>\n    <Technology>in situ oligonucleotide</Technology>\n    <Distribution>custom-commercial</Distribution>\n    <Organism taxid=\"9606\">Homo sapiens</Organism>\n    <Manufacturer>Affymetrix</Manufacturer>\n    <Manufacture-Protocol>\nsee manufacturer's website\n    </Manufacture-Protocol>\n    <Description>\nThe linked tar.gz archive is the library installation package for running analysis in R software\nThe linked cdf file contains 35458 entries [coding genes + non-coding lncRNA]\n    </Description>\n    <Contact-Ref ref=\"contrib1\" />\n    <Supplementary-Data type=\"CDF\">\nftp://ftp.ncbi.nlm.nih.gov/geo/platforms/GPL25nnn/GPL25249/suppl/GPL25249_Gene2.0st.lncrna.ENSG.v21.cdf.gz\n    </Supplementary-Data>\n    <Supplementary-Data type=\"TAR\">\nftp://ftp.ncbi.nlm.nih.gov/geo/platforms/GPL25nnn/GPL25249/suppl/GPL25249_gene2.0st.lncrna.ensg.v21cdf_1.50.0.tar.gz\n    </Supplementary-Data>\n    <Data-Table>\n      <Column position=\"1\">\n        <Name>ID</Name>\n      </Column>\n      <Column position=\"2\">\n        <Name>SPOT_ID</Name>\n      </Column>\n    <Internal-Data rows=\"20\">\nENSG00000000003.14\tENSG00000000003\nENSG00000000005.5\tENSG00000000005\nENSG00000000419.12\tENSG00000000419\nENSG00000000457.13\tENSG00000000457\nENSG00000000460.16\tENSG00000000460\nENSG00000000938.12\tENSG00000000938\nENSG00000000971.15\tENSG00000000971\nENSG00000001036.13\tENSG00000001036\nENSG00000001084.10\tENSG00000001084\nENSG00000001167.14\tENSG00000001167\nENSG00000001460.17\tENSG00000001460\nENSG00000001461.16\tENSG00000001461\nENSG00000001497.16\tENSG00000001497\nENSG00000001561.6\tENSG00000001561\nENSG00000001617.11\tENSG00000001617\nENSG00000001626.14\tENSG00000001626\nENSG00000001629.9\tENSG00000001629\nENSG00000001630.15\tENSG00000001630\nENSG00000001631.15\tENSG00000001631\nENSG00000002016.17\tENSG00000002016\n    </Internal-Data>\n    </Data-Table>\n  </Platform>\n\n</MINiML>\n",
+   "headers": {
+    "content-type": "geo/text"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "HEAD",
+   "query": [],
+   "url": "https://ftp.ncbi.nlm.nih.gov/geo/platforms/GPL25nnn/GPL25249/annot/GPL25249.annot.gz"
+  },
+  "response": {
+   "body": "",
+   "headers": {
+    "content-type": "text/html; charset=utf-8"
+   },
+   "status": 404
+  }
+ }
+]

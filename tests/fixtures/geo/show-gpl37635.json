@@ -1,0 +1,62 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "db",
+     "gds"
+    ],
+    [
+     "id",
+     "100037635"
+    ],
+    [
+     "retmode",
+     "json"
+    ]
+   ],
+   "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+  },
+  "response": {
+   "body": "{\"header\":{\"type\":\"esummary\",\"version\":\"0.3\"},\"result\":{\"uids\":[\"100037635\"],\"100037635\":{\"uid\":\"100037635\",\"accession\":\"GPL37635\",\"gds\":\"\",\"title\":\"NextSeq 500 (Homo sapiens; Mus musculus)\",\"summary\":\"\",\"gpl\":\"37635\",\"gse\":\"350046\",\"taxon\":\"Homo sapiens; Mus musculus\",\"entrytype\":\"GPL\",\"gdstype\":\"\",\"ptechtype\":\"high-throughput sequencing\",\"valtype\":\"\",\"ssinfo\":\"\",\"subsetinfo\":\"\",\"pdat\":\"2026/10/08\",\"suppfile\":\"\",\"samples\":[],\"relations\":[],\"extrelations\":[],\"n_samples\":72,\"seriestitle\":\"\",\"platformtitle\":\"\",\"platformtaxa\":\"\",\"samplestaxa\":\"\",\"pubmedids\":[],\"projects\":[],\"ftplink\":\"ftp://ftp.ncbi.nlm.nih.gov/geo/platforms/GPL37nnn/GPL37635/\",\"geo2r\":\"\",\"bioproject\":\"\"}}}\n",
+   "headers": {
+    "content-type": "application/json; charset=UTF-8"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "acc",
+     "GPL37635"
+    ],
+    [
+     "form",
+     "xml"
+    ],
+    [
+     "targ",
+     "self"
+    ],
+    [
+     "view",
+     "quick"
+    ]
+   ],
+   "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi"
+  },
+  "response": {
+   "body": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n\n<MINiML\n   xmlns=\"http://www.ncbi.nlm.nih.gov/geo/info/MINiML\"\n   xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n   xsi:schemaLocation=\"http://www.ncbi.nlm.nih.gov/geo/info/MINiML http://www.ncbi.nlm.nih.gov/geo/info/MINiML.xsd\"\n   version=\"0.5.0\" >\n\n  <Contributor iid=\"contrib1\">\n    <Organization>GEO</Organization>\n    <Address>\n      <City></City>\n      <Country>USA</Country>\n    </Address>\n  </Contributor>\n\n  <Database iid=\"GEO\">\n    <Name>Gene Expression Omnibus (GEO)</Name>\n    <Public-ID>GEO</Public-ID>\n    <Organization>NCBI NLM NIH</Organization>\n    <Web-Link>http://www.ncbi.nlm.nih.gov/geo</Web-Link>\n    <Email>geo@ncbi.nlm.nih.gov</Email>\n  </Database>\n\n  <Platform iid=\"GPL37635\">\n    <Status database=\"GEO\">\n      <Submission-Date>2026-10-08</Submission-Date>\n      <Release-Date>2026-10-08</Release-Date>\n      <Last-Update-Date>2026-10-08</Last-Update-Date>\n    </Status>\n    <Title>NextSeq 500 (Homo sapiens; Mus musculus)</Title>\n    <Accession database=\"GEO\">GPL37635</Accession>\n    <Technology>high-throughput sequencing</Technology>\n    <Distribution>virtual</Distribution>\n    <Organism taxid=\"9606\">Homo sapiens</Organism>\n    <Organism taxid=\"10090\">Mus musculus</Organism>\n    <Manufacturer></Manufacturer>\n    <Manufacture-Protocol>\n    </Manufacture-Protocol>\n    <Contact-Ref ref=\"contrib1\" />\n  </Platform>\n\n</MINiML>\n",
+   "headers": {
+    "content-type": "geo/text"
+   },
+   "status": 200
+  }
+ }
+]

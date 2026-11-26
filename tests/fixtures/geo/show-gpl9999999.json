@@ -1,0 +1,30 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "db",
+     "gds"
+    ],
+    [
+     "id",
+     "109999999"
+    ],
+    [
+     "retmode",
+     "json"
+    ]
+   ],
+   "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+  },
+  "response": {
+   "body": "{\"header\":{\"type\":\"esummary\",\"version\":\"0.3\"},\"result\":{\"uids\":[\"109999999\"],\"109999999\":{\"uid\":\"109999999\",\"error\":\"cannot get document summary\"}}}\n",
+   "headers": {
+    "content-type": "application/json; charset=UTF-8"
+   },
+   "status": 200
+  }
+ }
+]

@@ -559,3 +559,34 @@ def test_ads_and_arxiv_probes_offline():
     live.PROBES[("arxiv", "http://export.arxiv.org/api/query")](arxiv_adapter, replay_client(arxiv_t))
     assert arxiv_t.pending == []
 
+
+def test_geo_platform_ftp_probe_is_head_only_with_content_length_offline():
+    from quarry.adapters import geo
+    from quarry.testing import ReplayTransport, exchange, replay_client
+
+    adapter = geo.make(catalog_mod.load().resources["geo"])
+    ftp_url = "https://ftp.ncbi.nlm.nih.gov/geo/platforms"
+    head_url = f"{ftp_url}/GPLnnn/GPL570/annot/GPL570.annot.gz"
+
+    ok_t = ReplayTransport([
+        exchange("HEAD", head_url, status=200, body="", content_type="application/x-gzip",
+                 headers={"content-length": "21254875"}),
+    ])
+    live.PROBES[("geo", ftp_url)](adapter, replay_client(ok_t))
+    assert ok_t.pending == []
+
+    empty_len_t = ReplayTransport([
+        exchange("HEAD", head_url, status=200, body="", content_type="application/x-gzip",
+                 headers={"content-length": ""}),
+    ])
+    with pytest.raises(QuarryError) as caught:
+        live.PROBES[("geo", ftp_url)](adapter, replay_client(empty_len_t))
+    assert caught.value.kind == "upstream_failed"
+
+    missing_len_t = ReplayTransport([
+        exchange("HEAD", head_url, status=200, body="", content_type="application/x-gzip"),
+    ])
+    with pytest.raises(QuarryError) as caught:
+        live.PROBES[("geo", ftp_url)](adapter, replay_client(missing_len_t))
+    assert caught.value.kind == "upstream_failed"
+

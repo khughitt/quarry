@@ -281,6 +281,13 @@ def goes_class_docs_head(adapter, client: Client) -> None:
         raise QuarryError("upstream_failed", f"NOAA GOES class docs HEAD returned unexpected content-type {ct!r}")
 
 
+def geo_platform_annot_head(adapter, client: Client) -> None:
+    """Metadata-only HEAD on GPL570.annot.gz (zero payload bytes)."""
+    resp = client.request(adapter.ftp, "HEAD", "GPLnnn/GPL570/annot/GPL570.annot.gz")
+    if resp.status_code != 200 or not (resp.headers.get("content-length") or "").strip():
+        raise QuarryError("upstream_failed", "GEO platform FTP HEAD on GPL570.annot.gz returned no Content-Length")
+
+
 def terms(curie: Curie, words: str) -> Probe:
     """One OLS route's three paths: the term (through ancestors), its ancestors, and search."""
     def probe(adapter, client):
@@ -294,6 +301,7 @@ def terms(curie: Curie, words: str) -> Probe:
 PROBES: dict[tuple[str, str], Probe] = {
     ("geo", "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"): search_one(MYELOMA_SINCE),
     ("geo", "https://www.ncbi.nlm.nih.gov/geo/query"): files(Curie("geo", "GSE24080")),
+    ("geo", "https://ftp.ncbi.nlm.nih.gov/geo/platforms"): geo_platform_annot_head,
     ("ena", "https://www.ebi.ac.uk/ena/portal/api"): search_one(MYELOMA_SINCE),
     # the taxonomy service answers an organism name before the portal search runs
     ("ena", "https://www.ebi.ac.uk/ena/taxonomy/rest"):

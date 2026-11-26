@@ -16,11 +16,19 @@ keyed_min_interval = 0.1
 reports_total = true
 page_cap = 10000
 
-[[routes]]                             # the accession display: brief SOFT text with files and relations
+[[routes]]                             # the accession display: series brief SOFT text and platform quick MINiML / table data
 kind = "rest"
 url = "https://www.ncbi.nlm.nih.gov/geo/query"
 min_interval = 0.34
 service = "ncbi-geo"
+auth = "none"
+reports_total = false
+
+[[routes]]                             # platform FTP mirror: HEAD-verified .annot.gz probe-annotation tables
+kind = "bulk"
+url = "https://ftp.ncbi.nlm.nih.gov/geo/platforms"
+min_interval = 0.34
+service = "ncbi-geo-ftp"
 auth = "none"
 reports_total = false
 
@@ -53,3 +61,28 @@ evidence = "probe 2026-10-11: an unknown quoted phrase or [ORGN] term is named i
 summary = "a supplementary file line may name a URL outside ftp.ncbi.nlm.nih.gov or one quarry cannot read"
 handling = "files fails the whole call with upstream_failed naming the URL (or saying a line could not be read) rather than listing the rest; no file is silently dropped"
 evidence = "the brief text's !Series_supplementary_file lines are free text; every recorded series lists ftp.ncbi.nlm.nih.gov paths"
+
+[[pitfalls]]
+summary = "GPL<n>[ACCN] AND gpl[ETYP] matches alternative-CDF platforms, newly public platforms lag Entrez db=gds indexing by 24-48 h, and acc.cgi answers HTTP 200 HTML banners on missing or private platforms"
+handling = "show and files look up geo:GPL<n> directly by GDS uid 100000000 + n through esummary_one and fail not_found before acc.cgi when absent or mismatched; canonical ^GSE[1-9][0-9]*$ and ^GPL[1-9][0-9]*$ refuse 0 and leading zeros as malformed"
+evidence = "probe 2026-11-26 across 323 public platforms (GPL80..GPL37857) and 13 negative/syntax controls: 323/323 matched uid 100000000 + n, GPL5175[ACCN] ranked GPL5175 at 34/36, newly public GPL37858 lacked a GDS summary while acc.cgi served MINiML, and GPL0570 aliased to GPL570 on acc.cgi"
+
+[[pitfalls]]
+summary = "platform acc.cgi SOFT view=brief and view=quick stream every sample and series id before header fields, and MINiML <Relation> splits on colons inside comments"
+handling = "platform show and files read acc.cgi form=xml&view=quick for single-species taxon, manufacturer, supplementary files and <Internal-Data> table presence, take platform xrefs from esummary relations rather than MINiML <Relation>, and omit data_row_count"
+evidence = "probe 2026-11-26: GPL24676 SOFT brief/quick streamed 41.2 MB (1.21M GSM lines) versus 1.4 KB quick MINiML; GPL5175 MINiML <Relation> split inside '(Alternative CDF [CDF: ...])' while esummary relations preserved targetobject GPL15974 and GPL20149"
+
+[[pitfalls]]
+summary = "platform annot/GPL<n>.annot.gz returns HTTP 404 on most platforms while older non-GDS platforms still publish curated .annot.gz tables"
+handling = "files verifies {subdir}/GPL<n>/annot/GPL<n>.annot.gz via HEAD on ncbi-geo-ftp (accepting 404) and records Content-Length as size without downloading payload bytes; show makes no FTP HEAD call"
+evidence = "probe 2026-11-26 across 323 public platforms: 54 answered HTTP 200 and 269 answered HTTP 404, including 16 platforms with empty esummary gds (such as GPL1899, GPL4091 and GPL4540 from 2007-2008) that publish 21-column NCBI .annot.gz tables"
+
+[[pitfalls]]
+summary = "soft/GPL<n>_family.soft.gz bundles every sample ever deposited on the platform into a multi-gigabyte archive"
+handling = "files never advertises soft/GPL<n>_family.soft.gz or miniml/GPL<n>_family.xml*.tgz"
+evidence = "probe 2026-11-26: GPL570_family.soft.gz is 72.3 GB, GPL13534_family.soft.gz is 230.2 GB, and GPL17586_family.soft.gz is 7.6 GB"
+
+[[pitfalls]]
+summary = "many non-GDS microarrays publish probe tables only inside GEO's internal platform table while sequencing and external-CSV platforms answer a 22-byte view=data stub"
+handling = "files advertises GPL<n>.soft (acc.cgi form=text&view=data) only when quick MINiML <Platform><Data-Table><Internal-Data> carries integer rows > 0"
+evidence = "probe 2026-11-26: GPL5175, GPL16686, GPL17586 and GPL23126 have 404 annot.gz and empty suppl/ with full probe tables in view=data, whereas zero-row GPL24676 and external-CSV GPL18637 omit <Data-Table> and return '^PLATFORM = GPL<n>' stubs"

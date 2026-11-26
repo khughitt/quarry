@@ -29,10 +29,13 @@ to the reporting adapter. Literature availability keys live under
 `domain_fields.core`.
 
 Biology metadata uses `domain_fields.biology`. Its optional `organism` is
-provider organism-name text, and optional `taxon` is an ncbitaxon CURIE.
-GEO and ENA can supply both. BioStudies supplies the organism label.
-Unavailable biology values are omitted. When none is available, the biology
-entry is omitted as well.
+provider organism-name text, optional `taxon` is an ncbitaxon CURIE, and
+optional `technology` and `manufacturer` are provider platform-technology
+and manufacturer strings. GEO and ENA can supply `organism` and `taxon`
+(GEO platform records can also supply `technology` and `manufacturer`,
+omitting `taxon` on multi-species platforms). BioStudies supplies the
+organism label. Unavailable biology values are omitted. When none is
+available, the biology entry is omitted as well.
 
 Heliophysics metadata uses `domain_fields.heliophysics`. Whenever a
 heliophysics resource supplies observation time, its records carry ISO 8601

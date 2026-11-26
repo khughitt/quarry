@@ -38,6 +38,7 @@ Routes:
 
 - rest `https://eutils.ncbi.nlm.nih.gov/entrez/eutils`: every 0.34 s (0.1 s with a key); key NCBI_API_KEY (optional-key); page cap 10000; reports a total
 - rest `https://www.ncbi.nlm.nih.gov/geo/query`: every 0.34 s; no total
+- bulk `https://ftp.ncbi.nlm.nih.gov/geo/platforms`: every 0.34 s; no total
 
 Pitfalls:
 
@@ -47,6 +48,11 @@ Pitfalls:
 - a series names several papers. Handling: the first PubMed id is the publication, the rest are xrefs, and the search report warns.
 - Entrez drops a term it has no records for (or a field tag it does not know) and answers for the rest, never widening the query. Handling: esearch reads errorlist and warninglist; each term Entrez found nothing for or ignored becomes a warning in the search report, in NCBI's spelling.
 - a supplementary file line may name a URL outside ftp.ncbi.nlm.nih.gov or one quarry cannot read. Handling: files fails the whole call with upstream_failed naming the URL (or saying a line could not be read) rather than listing the rest; no file is silently dropped.
+- GPL<n>[ACCN] AND gpl[ETYP] matches alternative-CDF platforms, newly public platforms lag Entrez db=gds indexing by 24-48 h, and acc.cgi answers HTTP 200 HTML banners on missing or private platforms. Handling: show and files look up geo:GPL<n> directly by GDS uid 100000000 + n through esummary_one and fail not_found before acc.cgi when absent or mismatched; canonical ^GSE[1-9][0-9]*$ and ^GPL[1-9][0-9]*$ refuse 0 and leading zeros as malformed.
+- platform acc.cgi SOFT view=brief and view=quick stream every sample and series id before header fields, and MINiML <Relation> splits on colons inside comments. Handling: platform show and files read acc.cgi form=xml&view=quick for single-species taxon, manufacturer, supplementary files and <Internal-Data> table presence, take platform xrefs from esummary relations rather than MINiML <Relation>, and omit data_row_count.
+- platform annot/GPL<n>.annot.gz returns HTTP 404 on most platforms while older non-GDS platforms still publish curated .annot.gz tables. Handling: files verifies {subdir}/GPL<n>/annot/GPL<n>.annot.gz via HEAD on ncbi-geo-ftp (accepting 404) and records Content-Length as size without downloading payload bytes; show makes no FTP HEAD call.
+- soft/GPL<n>_family.soft.gz bundles every sample ever deposited on the platform into a multi-gigabyte archive. Handling: files never advertises soft/GPL<n>_family.soft.gz or miniml/GPL<n>_family.xml*.tgz.
+- many non-GDS microarrays publish probe tables only inside GEO's internal platform table while sequencing and external-CSV platforms answer a 22-byte view=data stub. Handling: files advertises GPL<n>.soft (acc.cgi form=text&view=data) only when quick MINiML <Platform><Data-Table><Internal-Data> carries integer rows > 0.
 
 ### European Nucleotide Archive (`ena`)
 

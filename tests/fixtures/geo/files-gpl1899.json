@@ -1,0 +1,79 @@
+[
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "db",
+     "gds"
+    ],
+    [
+     "id",
+     "100001899"
+    ],
+    [
+     "retmode",
+     "json"
+    ]
+   ],
+   "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+  },
+  "response": {
+   "body": "{\"header\":{\"type\":\"esummary\",\"version\":\"0.3\"},\"result\":{\"uids\":[\"100001899\"],\"100001899\":{\"uid\":\"100001899\",\"accession\":\"GPL1899\",\"gds\":\"\",\"title\":\"Human-mouse microRNA array v8.0\",\"summary\":\"Oligonucleotide probes to 191 human microRNA genes and 198 mouse microRNA genes were designed, antisense to the mature sequence as reported in the Sanger microRNA registry (4/1/04). Probes were spotted at 40 uM on Corning GAPS-II slides in 3X SSC, dried, and crosslinked by 600mJ UV. Slides were prehybridized in 3x SSC, 0.1% SDS, 0.2% BSA for 45 minutes, hybridized for 2h at 37C in 400mM Na2HPO4 pH 7.0, 0.8% BSA, 5% SDS, 12% formamide.\",\"gpl\":\"1899\",\"gse\":\"2399\",\"taxon\":\"Homo sapiens; Mus musculus\",\"entrytype\":\"GPL\",\"gdstype\":\"\",\"ptechtype\":\"spotted oligonucleotide\",\"valtype\":\"\",\"ssinfo\":\"\",\"subsetinfo\":\"\",\"pdat\":\"2005/03/31\",\"suppfile\":\"\",\"samples\":[],\"relations\":[],\"extrelations\":[],\"n_samples\":40,\"seriestitle\":\"\",\"platformtitle\":\"\",\"platformtaxa\":\"\",\"samplestaxa\":\"\",\"pubmedids\":[],\"projects\":[],\"ftplink\":\"ftp://ftp.ncbi.nlm.nih.gov/geo/platforms/GPL1nnn/GPL1899/\",\"geo2r\":\"\",\"bioproject\":\"\"}}}\n",
+   "headers": {
+    "content-type": "application/json; charset=UTF-8"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "GET",
+   "query": [
+    [
+     "acc",
+     "GPL1899"
+    ],
+    [
+     "form",
+     "xml"
+    ],
+    [
+     "targ",
+     "self"
+    ],
+    [
+     "view",
+     "quick"
+    ]
+   ],
+   "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi"
+  },
+  "response": {
+   "body": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n\n<MINiML\n   xmlns=\"http://www.ncbi.nlm.nih.gov/geo/info/MINiML\"\n   xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n   xsi:schemaLocation=\"http://www.ncbi.nlm.nih.gov/geo/info/MINiML http://www.ncbi.nlm.nih.gov/geo/info/MINiML.xsd\"\n   version=\"0.5.0\" >\n\n  <Contributor iid=\"contrib1\">\n    <Person><First>Scott</First><Middle>M</Middle><Last>Hammond</Last></Person>\n    <Email>hammond@med.unc.edu</Email>\n    <Phone>919-843-2366</Phone>\n    <Fax>919-966-1856</Fax>\n    <Department>Dept Cell and Developmental Biology</Department>\n    <Organization>University of North Carolina</Organization>\n    <Address>\n      <City>Chapel Hill</City>\n      <State>NC</State>\n      <Zip-Code>27599</Zip-Code>\n      <Country>USA</Country>\n    </Address>\n  </Contributor>\n\n  <Contributor iid=\"contrib2\">\n    <Person><First>Michael</First><Middle>J</Middle><Last>Thomson</Last></Person>\n  </Contributor>\n\n  <Contributor iid=\"contrib3\">\n    <Person><First>Lin</First><Last>He</Last></Person>\n  </Contributor>\n\n  <Contributor iid=\"contrib4\">\n    <Person><First>Gregory</First><Middle>J</Middle><Last>Hannon</Last></Person>\n  </Contributor>\n\n  <Database iid=\"GEO\">\n    <Name>Gene Expression Omnibus (GEO)</Name>\n    <Public-ID>GEO</Public-ID>\n    <Organization>NCBI NLM NIH</Organization>\n    <Web-Link>http://www.ncbi.nlm.nih.gov/geo</Web-Link>\n    <Email>geo@ncbi.nlm.nih.gov</Email>\n  </Database>\n\n  <Platform iid=\"GPL1899\">\n    <Status database=\"GEO\">\n      <Submission-Date>2005-03-09</Submission-Date>\n      <Release-Date>2005-03-31</Release-Date>\n      <Last-Update-Date>2006-09-13</Last-Update-Date>\n    </Status>\n    <Title>Human-mouse microRNA array v8.0</Title>\n    <Accession database=\"GEO\">GPL1899</Accession>\n    <Technology>spotted oligonucleotide</Technology>\n    <Distribution>non-commercial</Distribution>\n    <Organism taxid=\"9606\">Homo sapiens</Organism>\n    <Organism taxid=\"10090\">Mus musculus</Organism>\n    <Manufacturer></Manufacturer>\n    <Manufacture-Protocol>\n    </Manufacture-Protocol>\n    <Description>\nOligonucleotide probes to 191 human microRNA genes and 198 mouse microRNA genes were designed, antisense to the mature sequence as reported in the Sanger microRNA registry (4/1/04). Probes were spotted at 40 uM on Corning GAPS-II slides in 3X SSC, dried, and crosslinked by 600mJ UV. Slides were prehybridized in 3x SSC, 0.1% SDS, 0.2% BSA for 45 minutes, hybridized for 2h at 37C in 400mM Na2HPO4 pH 7.0, 0.8% BSA,\n5% SDS, 12% formamide.\n    </Description>\n    <Contributor-Ref ref=\"contrib1\" position=\"1\" />\n    <Contributor-Ref ref=\"contrib2\" position=\"2\" />\n    <Contributor-Ref ref=\"contrib3\" position=\"3\" />\n    <Contributor-Ref ref=\"contrib4\" position=\"4\" />\n    <Contact-Ref ref=\"contrib1\" />\n    <Data-Table>\n      <Column position=\"1\">\n        <Name>ID</Name>\n      </Column>\n      <Column position=\"2\">\n        <Name>ORF</Name>\n        <Description>MicroRNA gene name</Description>\n      </Column>\n      <Column position=\"3\">\n        <Name>SEQUENCE</Name>\n        <Description>Probe oligonucleotide sequence as spotted</Description>\n      </Column>\n      <Column position=\"4\">\n        <Name>ORGANISM</Name>\n      </Column>\n      <Column position=\"5\">\n        <Name>Present in Mouse</Name>\n        <Description>Presence of microRNA in mouse</Description>\n      </Column>\n      <Column position=\"6\">\n        <Name>Present in Human</Name>\n        <Description>Presence of microRNA in human</Description>\n      </Column>\n    <Internal-Data rows=\"20\">\n1\thsa-let-7a\tAACTATACAACCTACTACCTCA\tHomo sapiens\tyes\tyes\n2\thsa-let-7b\tAACCACACAACCTACTACCTCA\tHomo sapiens\tyes\tyes\n3\thsa-let-7c\tAACCATACAACCTACTACCTCA\tHomo sapiens\tyes\tyes\n4\thsa-let-7d\tACTATGCAACCTACTACCTCT\tHomo sapiens\tyes\tyes\n5\thsa-let-7e\tACTATACAACCTCCTACCTCA\tHomo sapiens\tyes\tyes\n6\thsa-let-7f\tAACTATACAATCTACTACCTCA\tHomo sapiens\tyes\tyes\n7\thsa-let-7g\tACTGTACAAACTACTACCTCA\tHomo sapiens\tyes\tyes\n8\thsa-let7i\tAGCACAAACTACTACCTCA\tHomo sapiens\tyes\tyes\n9\thsa-miR-1\tTACATACTTCTTTACATTCCA\tHomo sapiens\tyes\tyes\n10\thsa-miR-100\tCACAAGTTCGGATCTACGGGTT\tHomo sapiens\tyes\tyes\n11\thsa-miR-101\tCTTCAGTTATCACAGTACTGTA\tHomo sapiens\tyes\tyes\n12\thsa-miR-103\tTCATAGCCCTGTACAATGCTGCT\tHomo sapiens\tyes\tyes\n13\thsa-miR-105\tACAGGAGTCTGAGCATTTGA\tHomo sapiens\tno\tyes\n14\thsa-miR-106a\tGCTACCTGCACTGTAAGCACTTTT\tHomo sapiens\tno\tyes\n15\thsa-miR-106b\tATCTGCACTGTCAGCACTTTA\tHomo sapiens\tyes\tyes\n16\thsa-miR-107\tTGATAGCCCTGTACAATGCTGCT\tHomo sapiens\tyes\tyes\n17\thsa-miR-10a\tCACAAATTCGGATCTACAGGGTA\tHomo sapiens\tyes\tyes\n18\thsa-miR-10b\tACAAATTCGGTTCTACAGGGTA\tHomo sapiens\tyes\tyes\n19\thsa-miR-122a\tACAAACACCATTGTCACACTCCA\tHomo sapiens\tyes\tyes\n20\thsa-miR-124a\tTGGCATTCACCGCGTGCCTTAA\tHomo sapiens\tyes\tyes\n    </Internal-Data>\n    </Data-Table>\n  </Platform>\n\n</MINiML>\n",
+   "headers": {
+    "content-type": "geo/text"
+   },
+   "status": 200
+  }
+ },
+ {
+  "request": {
+   "body": null,
+   "method": "HEAD",
+   "query": [],
+   "url": "https://ftp.ncbi.nlm.nih.gov/geo/platforms/GPL1nnn/GPL1899/annot/GPL1899.annot.gz"
+  },
+  "response": {
+   "body": "",
+   "headers": {
+    "content-length": "3034",
+    "content-type": "application/x-gzip",
+    "last-modified": "Tue, 08 Jul 2008 04:00:00 GMT"
+   },
+   "status": 200
+  }
+ }
+]
