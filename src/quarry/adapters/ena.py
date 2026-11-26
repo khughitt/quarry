@@ -20,7 +20,7 @@ from quarry.search import completeness
 
 FIELDS = ("study_accession,secondary_study_accession,study_alias,study_title,study_description,"
           "tax_id,scientific_name,first_public")
-GSE = re.compile(r"^GSE\d+$")
+GSE = re.compile(r"^GSE[1-9][0-9]*$")
 TAXON = re.compile(r"^ncbitaxon:(\d+)$", re.IGNORECASE)
 SHOW_FIELD = {"bioproject": "study_accession", "insdc.sra": "secondary_study_accession"}
 
@@ -111,7 +111,7 @@ def _valid(d: dict) -> dict:
 def _row(d: dict) -> Result:
     d = _valid(d)
     xrefs = [f"insdc.sra:{s}" for s in (d.get("secondary_study_accession") or "").split(";") if s]
-    if GSE.match(d.get("study_alias") or ""):
+    if GSE.fullmatch(d.get("study_alias") or ""):
         xrefs.append(f"geo:{d['study_alias']}")
     biology = {}
     if d.get("scientific_name"):

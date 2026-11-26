@@ -26,9 +26,9 @@ BIOSTUDIES = re.compile(r"^S-[A-Z]{4}[\-\_A-Z\d]+$")          # Bioregistry's bi
 ARRAYEXPRESS = re.compile(r"^[AEP]-\w{4}-\d+$")               # Bioregistry's arrayexpress pattern
 BIOMODELS = re.compile(r"^((BIOMD|MODEL)\d{10})|(BMID\d{12})$")  # Bioregistry's biomodels.db pattern
 EMPIAR = re.compile(r"^EMPIAR-(\d+)$")                         # empiar's local id is the digits
-EGEOD = re.compile(r"^E-GEOD-(\d+)$")
+EGEOD = re.compile(r"^E-GEOD-([1-9][0-9]*)$")
 EPMC = re.compile(r"^S-EPMC(\d+)$")
-GSE = re.compile(r"^GSE\d+$")
+GEO = re.compile(r"^G(?:SE|PL)[1-9][0-9]*$")
 TAXON = re.compile(r"^ncbitaxon:", re.IGNORECASE)
 HIT_STRINGS = ("title", "release_date", "content")
 
@@ -83,7 +83,7 @@ def _row(h: dict, organism: str | None) -> Result:
         if h.get(name) is not None and type(h[name]) is not str:
             raise UpstreamError(f"biostudies search: {name} is not text")
     acc = h["accession"]
-    xrefs = [f"geo:GSE{m.group(1)}" for m in [EGEOD.match(acc)] if m]
+    xrefs = [f"geo:GSE{m.group(1)}" for m in [EGEOD.fullmatch(acc)] if m]
     paper = EPMC.match(acc)
     return Result(id=_id(acc), resource="biostudies", kind="dataset", title=h.get("title") or "",
                   date=h.get("release_date") or None, summary=h.get("content") or None, xrefs=tuple(xrefs),
@@ -229,10 +229,11 @@ class Biostudies:
         if type(doc.get("accno")) is not str or doc["accno"].upper() != curie.local.upper() or type(doc.get("section")) is not dict:
             raise UpstreamError(f"biostudies study: the document for {curie.local} does not name it (accno) with a section")
         attrs = _attributes(doc.get("attributes")) | _attributes(doc["section"].get("attributes"))
-        xrefs = [f"geo:GSE{m.group(1)}" for m in [EGEOD.match(curie.local)] if m]
+        xrefs = [f"geo:GSE{m.group(1)}" for m in [EGEOD.fullmatch(curie.local)] if m]
         xrefs += [f"geo:{link['url']}" for link in _collect(doc, "links")
                   if _attributes(link.get("attributes")).get("Type") == "GEO" and type(link.get("url")) is str
-                  and GSE.match(link["url"]) and f"geo:{link['url']}" not in xrefs]
+                  and GEO.fullmatch(link["url"])]
+        xrefs = list(dict.fromkeys(xrefs))
         paper = EPMC.match(curie.local)
         organism = attrs.get("Organism")
         record = Result(id=str(curie), resource="biostudies", kind="dataset", title=attrs.get("Title") or "",

@@ -162,6 +162,65 @@ def test_show_reads_title_date_organism_and_geo_link():
                                "domain_fields": {"biology": {"organism": "Mus musculus (mouse)"}}}
 
 
+@pytest.mark.parametrize("acc, expected_xrefs", [
+    ("E-GEOD-1", ("geo:GSE1",)),
+    ("E-GEOD-5900", ("geo:GSE5900",)),
+    ("E-GEOD-0", ()),
+    ("E-GEOD-05900", ()),
+    ("E-GEOD-\u0665", ()),
+    ("E-GEOD-\uff15", ()),
+    ("E-GEOD-5900\n", ()),
+])
+def test_search_egeod_xrefs_require_whole_string_canonical_ascii_nonzero_digits(acc, expected_xrefs):
+    q, _ = biostudies.compile_query(Query(phrases=("x",)))
+    client = replay_client(ReplayTransport([page(q, 1, [hit(acc)], 1, True)]))
+    _, rows = BS.search(client, Query(phrases=("x",)))
+    assert rows[0].xrefs == expected_xrefs
+
+
+@pytest.mark.parametrize("acc, expected_xrefs", [
+    ("E-GEOD-1", ("geo:GSE1",)),
+    ("E-GEOD-5900", ("geo:GSE5900",)),
+    ("E-GEOD-0", ()),
+    ("E-GEOD-05900", ()),
+    ("E-GEOD-\u0665", ()),
+    ("E-GEOD-\uff15", ()),
+])
+def test_study_egeod_xrefs_require_canonical_ascii_nonzero_digits(acc, expected_xrefs):
+    doc = {"accno": acc, "section": {"type": "Study"}}
+    shown = BS.show(replay_client(ReplayTransport([study(acc, json.dumps(doc))])), Curie("arrayexpress", acc))
+    assert shown.xrefs == expected_xrefs
+
+
+def test_study_geo_links_emit_canonical_gse_and_gpl_deduplicate_and_reject_malformed():
+    links = [
+        {"url": u, "attributes": [{"name": "Type", "value": "GEO"}]}
+        for u in (
+            "GSE5900",
+            "GPL1",
+            "GPL570",
+            "GPL570",
+            "GSE1",
+            "GSE0",
+            "GPL0",
+            "GSE05900",
+            "GPL0570",
+            "GSE\u0665",
+            "GPL\u0665",
+            "GSE\uff15",
+            "GPL\uff15",
+            "GSE5900\n",
+            "GPL570\n",
+            "GSM1",
+            "GDS1",
+            "",
+        )
+    ]
+    doc = {"accno": "E-GEOD-5900", "section": {"type": "Study", "links": [links]}}
+    shown = BS.show(replay_client(ReplayTransport([study("E-GEOD-5900", json.dumps(doc))])), Curie("arrayexpress", "E-GEOD-5900"))
+    assert shown.xrefs == ("geo:GSE5900", "geo:GPL1", "geo:GPL570", "geo:GSE1")
+
+
 def test_show_404_is_not_found():
     client = replay_client(ReplayTransport([study("S-NOPE1", '{"errorMessage":"Study not found"}', status=404)]))
     with pytest.raises(QuarryError) as caught:
