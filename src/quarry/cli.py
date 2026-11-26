@@ -1,28 +1,22 @@
-"""The `quarry` command."""
-import dataclasses
-import functools
+"""The `quarry` command: global option hoisting, usage-error contract, and dispatch."""
+from __future__ import annotations
+
 import importlib.metadata
-import json
 import os
 import sys
 from pathlib import Path
 
 import click
 
-from quarry import acquisition, context
-from quarry import files as files_mod
-from quarry import ids as idmod
-from quarry import search as search_mod
-from quarry import skills
-from quarry import terms as terms_mod
-from quarry.adapters import base as adapter_base
-from quarry.catalog import DATA_ROLES, ROLES, ROUTE_KINDS, CatalogError, Finding, Resource
-from quarry.errors import QuarryError
-from quarry.lens import resolve_domain
-from quarry.output import CONTEXT, emit, fail, output_options
-from quarry.query import INSTANT_TIME, WHEN, WINDOW, Query
-from quarry.results import Result
+from quarry.commands._state import State
+from quarry.commands.catalog import check_command, domains, resources
+from quarry.commands.id import id_group
+from quarry.commands.records import files_command, search_command, show_command
+from quarry.commands.skills import skills_group
+from quarry.commands.term import term_group
+from quarry.output import CONTEXT, output_options
 
+__all__ = ["Cli", "hoist_globals", "main"]
 
 GLOBAL_VALUED = frozenset({"-C", "--config"})
 GLOBAL_FLAGS = frozenset({"--trace"})
@@ -31,7 +25,7 @@ GLOBAL_FLAGS = frozenset({"--trace"})
 def hoist_globals(args: list[str]) -> list[str]:
     """Move root-only global options to the front, wherever they were written. `--` ends the
     options: nothing after it moves. Local option values remain with their options."""
-    command = main
+    command: click.Command = main
     front, rest, i = [], [], 0
     while i < len(args):
         word = args[i]
@@ -81,27 +75,6 @@ class Cli(click.Group):
         sys.exit(rv or 0)
 
 
-@dataclasses.dataclass(frozen=True)
-class State:
-    config: Path | None
-    trace: bool
-
-
-def reports_errors(f):
-    """A QuarryError becomes the error object (json) or one line (pretty), exit 1."""
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except QuarryError as error:
-            fail(click.get_current_context(), error.kind, error.detail)
-    return wrapper
-
-
-def state(ctx: click.Context) -> State:
-    return ctx.find_object(State)
-
-
 @click.group(cls=Cli, context_settings=CONTEXT)
 @click.version_option(importlib.metadata.version("quarry"), "-V", "--version", prog_name="quarry",
                       message="%(prog)s %(version)s")
@@ -124,7 +97,8 @@ def main(ctx: click.Context, chdir: Path | None, config: Path | None, trace: boo
 @click.pass_context
 def help_command(ctx: click.Context, words: tuple[str, ...]) -> None:
     """Print a command's help: `quarry help resources list`."""
-    command, remaining = main, list(words)
+    command: click.Command = main
+    remaining = list(words)
     while remaining and isinstance(command, click.Group) and remaining[0] in command.commands:
         command = command.commands[remaining.pop(0)]
     if remaining:
@@ -132,432 +106,18 @@ def help_command(ctx: click.Context, words: tuple[str, ...]) -> None:
     click.echo(command.get_help(click.Context(command, info_name=" ".join(["quarry", *words]), **CONTEXT)))
 
 
-def _findings(ctx: click.Context, findings: list[Finding]) -> None:
-    if findings:
-        emit(ctx, {"findings": [f.as_dict() for f in findings]},
-             "\n".join(f"{f.where}: {f.kind}: {f.detail}" for f in findings))
-        ctx.exit(1)
-
-
-@main.group(context_settings=CONTEXT)
-@output_options
-def domains() -> None:
-    """The domains and their resources."""
-
-
-@domains.command("list", context_settings=CONTEXT)
-@output_options
-@click.pass_context
-@reports_errors
-def domains_list(ctx: click.Context) -> None:
-    """List the domains, their resources and beliefs contracts."""
-    env = context.open_env()
-    rows = [{"id": d.id, "summary": d.summary, "includes": list(d.includes),
-             "resources": env.catalog.effective_resources(d.id), "beliefs_contract": d.beliefs_contract,
-             "beliefs_contract_version": d.beliefs_contract_version}
-            for d in sorted(env.catalog.domains.values(), key=lambda d: d.id)]
-    emit(ctx, {"domains": rows},
-         "\n".join(f"{r['id']}\t{', '.join(r['resources']) or '-'}\t{r['beliefs_contract'] or '-'}" for r in rows))
-
-
-@main.group(context_settings=CONTEXT)
-@output_options
-def resources() -> None:
-    """The catalog of resources."""
-
-
-@resources.command("list", context_settings=CONTEXT)
-@output_options
-@click.option("--domain", help="List this domain's resources (also QUARRY_DOMAIN).")
-@click.option("--role", type=click.Choice(ROLES), help="Only resources with this role.")
-@click.option("--route", type=click.Choice(ROUTE_KINDS), help="Only resources with a route of this kind.")
-@click.pass_context
-@reports_errors
-def resources_list(ctx: click.Context, domain: str | None, role: str | None, route: str | None) -> None:
-    """List the resources a domain selects."""
-    env = context.open_env()
-    chosen = resolve_domain(domain, os.environ, state(ctx).config, Path.cwd(), env.catalog)
-    rows = []
-    for rid in env.catalog.effective_resources(chosen):
-        r = env.catalog.resources[rid]
-        if role and role not in r.roles or route and route not in {x.kind for x in r.routes}:
-            continue
-        rows.append({"id": r.id, "name": r.name, "roles": list(r.roles), "prefixes": list(r.owned_prefixes())})
-    emit(ctx, {"domain": chosen, "resources": rows},
-         "\n".join(f"{r['id']}\t{', '.join(r['roles'])}\t{r['name']}" for r in rows) or f"({chosen}: no resources)")
-
-
-@resources.command("show", context_settings=CONTEXT)
-@output_options
-@click.argument("resource")
-@click.pass_context
-@reports_errors
-def resources_show(ctx: click.Context, resource: str) -> None:
-    """Show one resource's roles, routes, limits and pitfalls."""
-    env = context.open_env()
-    r = env.catalog.resources.get(resource)
-    if r is None:
-        raise QuarryError("unknown_resource", f"no resource {resource!r}")
-    report = dataclasses.asdict(r)
-    report["local_prefixes"] = {k: dataclasses.asdict(v) for k, v in r.local_prefixes.items()}
-    lines = [f"{r.name} ({r.id}): {', '.join(r.roles)}"]
-    lines += [f"  route {x.kind} {x.url} (service {x.service}, every {x.min_interval}s)" for x in r.routes]
-    lines += [f"  pitfall: {p.summary} -> {p.handling}" for p in r.pitfalls]
-    emit(ctx, report, "\n".join(lines))
-
-
-@main.group("id", context_settings=CONTEXT)
-@output_options
-def id_group() -> None:
-    """Identifiers."""
-
-
-@id_group.command("check", context_settings=CONTEXT)
-@output_options
-@click.argument("ids", nargs=-1, required=True)
-@click.pass_context
-@reports_errors
-def id_check(ctx: click.Context, ids: tuple[str, ...]) -> None:
-    """Check that identifiers are well formed for their prefixes."""
-    _findings(ctx, idmod.check_ids(ids, context.open_env().registry))
-
-
-@id_group.command("normalize", context_settings=CONTEXT)
-@output_options
-@click.argument("id")
-@click.pass_context
-@reports_errors
-def id_normalize(ctx: click.Context, id: str) -> None:
-    """Print an identifier as a canonical CURIE."""
-    env = context.open_env()
-    # Term-only prefixes and bare_normalize=false resources stay out: a bare word or number is not a term id
-    # (ncbitaxon's pattern takes any word), and opted-out resources require a qualified <prefix>:<id>.
-    owned = [p for r in env.catalog.resources.values() if set(r.roles) & DATA_ROLES and r.bare_normalize
-             for p in r.owned_prefixes()]
-    try:
-        curie = idmod.normalize(id, env.registry, owned)
-    except QuarryError as error:
-        if error.kind != "unknown_id":
-            raise
-        raise QuarryError("unknown_id", f"{id!r} matches no prefix a record-holding resource owns; a term id is "
-                                        f"never read from a bare word: {_term_hint(env, terms_mod.TERM_ROLES)}") from None
-    emit(ctx, {"id": str(curie)}, str(curie))
-
-
-@id_group.command("resolve", context_settings=CONTEXT)
-@output_options
-@click.argument("curie")
-@click.pass_context
-@reports_errors
-def id_resolve(ctx: click.Context, curie: str) -> None:
-    """Print the URLs that resolve a CURIE."""
-    env = context.open_env()
-    parsed = idmod.parse(curie, env.registry)
-    urls = idmod.resolve(parsed, env.registry)
-    if not urls:
-        raise QuarryError("no_resolver", f"no URL format is known for {parsed.prefix}")
-    emit(ctx, {"id": str(parsed), "urls": urls}, "\n".join(urls))
-
-
-@main.command("check", context_settings=CONTEXT)
-@output_options
-@click.pass_context
-@reports_errors
-def check_command(ctx: click.Context) -> None:
-    """Validate the catalog."""
-    from quarry import catalog as catalog_mod
-    try:
-        env = context.load_unchecked()
-    except CatalogError as error:
-        _findings(ctx, [Finding("catalog_invalid", "catalog", error.detail)])
-        return
-    _findings(ctx, catalog_mod.check(env.catalog, env.registry, collisions=env.collisions))
-
-
-def _pretty_coverage(c: dict) -> str:
-    if c["complete"] == "skipped":
-        return f"# {c['resource']}: skipped ({c['reason']})"
-    how = ", ".join([c["complete"], c["match"], *([c["time"]] if "time" in c else [])])
-    return f"# {c['resource']}: {c['returned']} of {c['total'] if c['total'] is not None else '?'} ({how})"
-
-
-def _pretty_search(report: dict) -> str:
-    lines = [f"{r['id']}\t{r.get('date', '-')}\t{r['title']}" for r in report["results"]]
-    lines += [_pretty_coverage(c) for c in report["coverage"]]
-    lines += [f"warning: {w}" for w in report["warnings"]]
-    return "\n".join(lines)
-
-
-@main.command("search", context_settings=CONTEXT)
-@output_options
-@click.argument("phrases", nargs=-1)
-@click.option("--in", "in_", multiple=True, help="Search this resource; repeatable. Replaces the domain's default set.")
-@click.option("--domain", help="Search this domain's default resources (also QUARRY_DOMAIN).")
-@click.option("--organism", help="Biology: a taxon name or an ncbitaxon: CURIE.")
-@click.option("--during", type=WINDOW, help="Records observed during START/END (dates, or UTC datetimes ending in Z; "
-                                            "a date END includes its day), where a domain declares it.")
-@click.option("--at", "at", type=INSTANT_TIME, help="The record observed nearest this UTC datetime (ending in Z), "
-                                                    "where a domain declares it.")
-@click.option("--instrument", help="Instrument name or source selector, where a domain declares it.")
-@click.option("--observatory", help="Observatory or mission name, where a domain declares it.")
-@click.option("--measurement", help="SPASE measurement type, where a domain declares it.")
-@click.option("--exact", is_flag=True, help="Require exact phrase matching from every resource searched.")
-@click.option("--native", help="One resource's own query, sent unchanged; needs exactly one --in.")
-@click.option("--allow-partial", is_flag=True, help="Report a failed resource in coverage instead of failing.")
-@click.option("--since", type=WHEN, help="Records released on or after this date (YYYY-MM-DD, <n>d, <n>w).")
-@click.option("--until", type=WHEN, help="Records released on or before this date.")
-@click.option("-n", "--limit", type=int, help="At most this many records from each resource.")
-@click.pass_context
-@reports_errors
-def search_command(ctx, phrases, in_, domain, organism, during, at, instrument, observatory, measurement,
-                   exact, native, allow_partial, since, until, limit):
-    """Search records across data-holding resources."""
-    if native is not None and len(in_) != 1:
-        raise click.UsageError("--native needs exactly one --in", ctx)
-    filters = {name: value for name, value in (
-        ("organism", organism),
-        ("instrument", instrument),
-        ("observatory", observatory),
-        ("measurement", measurement),
-    ) if value is not None}
-    try:
-        query = Query(phrases=tuple(phrases), filters=filters, since=since,
-                      until=until, limit=limit, exact=exact, native=native, during=during, at=at)
-    except ValueError as error:
-        raise click.UsageError(str(error), ctx) from None
-    env = context.open_env()
-    chosen = resolve_domain(domain, os.environ, state(ctx).config, Path.cwd(), env.catalog)
-    for name in sorted(query.filter_names()):
-        if name not in env.catalog.domain_filters(chosen):
-            raise QuarryError("unsupported_filter", f"--{name} is not a filter of the {chosen} domain")
-    resource_ids = list(dict.fromkeys(in_)) or env.catalog.search_set(chosen)
-    if not resource_ids:
-        raise QuarryError("nothing_to_search", f"the {chosen} domain searches nothing by default; name resources with --in")
-    with context.make_client(state(ctx).trace) as client:
-        report = search_mod.run(catalog=env.catalog, client=client, query=query, resource_ids=resource_ids,
-                                domain=chosen, allow_partial=allow_partial, from_defaults=not in_)
-    emit(ctx, report, _pretty_search(report))
-
-
-def _owned(env: context.Env, text: str) -> tuple[idmod.Curie, Resource]:
-    """The CURIE and the data-holding resource that owns its prefix."""
-    parsed = idmod.parse(text, env.registry)
-    owner = env.catalog.owner(parsed.prefix)
-    if owner is None:
-        raise QuarryError("no_owner", f"no catalog resource owns {parsed.prefix}: ids under it are cross-references only")
-    if not set(owner.roles) & DATA_ROLES:
-        hint = f"; {parsed} is a term: `quarry term show {parsed}`" if set(owner.roles) & terms_mod.TERM_ROLES else ""
-        raise QuarryError("unsupported_role", f"{owner.id} holds no records{hint}")
-    return parsed, owner
-
-
-@main.command("show", context_settings=CONTEXT)
-@output_options
-@click.argument("curie")
-@click.pass_context
-@reports_errors
-def show_command(ctx: click.Context, curie: str) -> None:
-    """Show one record."""
-    env = context.open_env()
-    parsed, owner = _owned(env, curie)
-    with context.make_client(state(ctx).trace) as client:
-        result = adapter_base.make(owner).show(client, parsed)
-    emit(ctx, result.as_dict(), _pretty_record(result))
-
-
-def _pretty_record(result: Result) -> str:
-    lines = [f"{result.id}\t{result.date or '-'}\t{result.title}"]
-    core = result.domain_fields.get("core", {})
-    lines += [f"{key}: {core[key]}" for key in ("open_access", "in_epmc", "in_pmc", "license") if key in core]
-    return "\n".join(lines)
-
-
-def _pretty_files(listed: list[files_mod.File]) -> str:
-    lines = []
-    for f in listed:
-        lines.append(f"{f.name}\t{f.size if f.size is not None else '-'}\t{f.urls[0] if f.urls else '-'}")
-        if f.license is not None:
-            lines.append(f"  license: {f.license}")
-    return "\n".join([*lines, f"# {len(listed)} files"])
-
-
-@main.command("files", context_settings=CONTEXT)
-@output_options
-@click.argument("curie")
-@click.option("--file", "globs", multiple=True, help="Only files whose name matches this glob; repeatable, widening.")
-@click.option("--acquisition", "as_request", is_flag=True, help="Emit a request for a consumer to retrieve the selected files.")
-@click.pass_context
-@reports_errors
-def files_command(ctx: click.Context, curie: str, globs: tuple[str, ...], as_request: bool) -> None:
-    """List a record's files, or the acquisition request the kernel takes for them."""
-    env = context.open_env()
-    parsed, owner = _owned(env, curie)
-    with context.make_client(state(ctx).trace) as client:
-        record, listed = adapter_base.make(owner).files(client, parsed)
-    listed = files_mod.select(listed, globs)
-    if as_request:
-        request = acquisition.build(record, listed)
-        emit(ctx, request, json.dumps(request, indent=1))
-        return
-    emit(ctx, {"id": record.id, "resource": owner.id, "files": [f.as_dict() for f in listed]}, _pretty_files(listed))
-
-
-@main.group("term", context_settings=CONTEXT)
-@output_options
-def term_group() -> None:
-    """Terms in vocabularies and ontologies."""
-
-
-def _term_adapter(resource: Resource, roles: frozenset[str]) -> terms_mod.TermAdapter:
-    if not set(resource.roles) & roles:
-        raise QuarryError("unsupported_role", f"{resource.id} is not a {' or '.join(sorted(roles))} resource")
-    adapter = adapter_base.make(resource)
-    if not isinstance(adapter, terms_mod.TermAdapter):
-        raise QuarryError("unsupported_role", f"{resource.id} has no term adapter")
-    return adapter
-
-
-def _term_hint(env: context.Env, roles: frozenset[str]) -> str:
-    prefixes = sorted(p for r in env.catalog.resources.values() if set(r.roles) & roles for p in r.owned_prefixes())
-    return (f"write it as <prefix>:<id> ({', '.join(f'{p}:' for p in prefixes)}), "
-            f"or find a term by name with `quarry term search <words>`")
-
-
-def _term_owner(env: context.Env, text: str, roles: frozenset[str]) -> tuple[idmod.Curie, terms_mod.TermAdapter]:
-    """The CURIE and the term adapter of the resource that owns its prefix."""
-    try:
-        parsed = idmod.parse(text, env.registry)
-    except QuarryError as error:
-        if error.kind not in ("ambiguous_id", "not_a_curie"):
-            raise
-        # ids.parse points at `id normalize`, which reads no term ids
-        raise QuarryError(error.kind, f"{text!r} needs a prefix; {_term_hint(env, roles)}") from None
-    owner = env.catalog.owner(parsed.prefix)
-    if owner is None:
-        raise QuarryError("no_owner", f"no catalog resource owns {parsed.prefix}: ids under it are cross-references only")
-    return parsed, _term_adapter(owner, roles)
-
-
-def _version(release: terms_mod.Release) -> str:
-    return f"{release.resource} {release.version or '?'}"
-
-
-def _warning_lines(warnings: list[str]) -> list[str]:
-    return [f"warning: {w}" for w in warnings]
-
-
-def _pretty_term(term: terms_mod.Term, release: terms_mod.Release, warnings: list[str]) -> str:
-    lines = [f"{term.id}\t{term.label}"]
-    if term.definition is not None:
-        lines.append(f"definition: {term.definition}")
-    if term.synonyms:
-        lines.append(f"synonyms: {'; '.join(s.text for s in term.synonyms)}")
-    if term.obsolete:
-        lines.append("obsolete")
-    if term.replaced_by is not None:
-        lines.append(f"replaced by: {term.replaced_by}")
-    if term.consider:
-        lines.append(f"consider: {'; '.join(term.consider)}")
-    lines.append(f"release: {_version(release)}")
-    return "\n".join(lines + _warning_lines(warnings))
-
-
-@term_group.command("show", context_settings=CONTEXT)
-@output_options
-@click.argument("curie")
-@click.pass_context
-@reports_errors
-def term_show(ctx: click.Context, curie: str) -> None:
-    """Show one term."""
-    env = context.open_env()
-    parsed, adapter = _term_owner(env, curie, terms_mod.TERM_ROLES)
-    with context.make_client(state(ctx).trace) as client:
-        term, release, warnings = adapter.show(client, env.registry, parsed)
-    emit(ctx, {"term": term.as_dict(), "release": release.as_dict(), "warnings": warnings},
-         _pretty_term(term, release, warnings))
-
-
-@term_group.command("ancestors", context_settings=CONTEXT)
-@output_options
-@click.argument("curie")
-@click.pass_context
-@reports_errors
-def term_ancestors(ctx: click.Context, curie: str) -> None:
-    """List a term's is_a ancestors."""
-    env = context.open_env()
-    parsed, adapter = _term_owner(env, curie, frozenset({"ontology"}))
-    with context.make_client(state(ctx).trace) as client:
-        term, found, release, warnings = adapter.ancestors(client, env.registry, parsed)
-    listed = [{"id": t.id, "label": t.label} for t in found]
-    report = {"term": {"id": term.id, "label": term.label}, "relation": "is_a", "ancestors": listed,
-              "release": release.as_dict(), "warnings": warnings}
-    lines = [f"{a['id']}\t{a['label']}" for a in listed]
-    lines.append(f"# {len(listed)} is_a ancestors ({_version(release)})")
-    emit(ctx, report, "\n".join(lines + _warning_lines(warnings)))
-
-
-@term_group.command("search", context_settings=CONTEXT)
-@output_options
-@click.argument("words", nargs=-1, required=True)
-@click.option("--in", "in_", multiple=True, help="Search this resource; repeatable. Replaces the domain's ontologies.")
-@click.option("--domain", help="Search this domain's ontologies and vocabularies (also QUARRY_DOMAIN).")
-@click.option("--exact", is_flag=True, help="Match the words as a whole label or synonym.")
-@click.option("-n", "--limit", type=click.IntRange(min=1), default=10, show_default=True,
-              help="At most this many terms from each resource.")
-@click.pass_context
-@reports_errors
-def term_search(ctx: click.Context, words: tuple[str, ...], in_: tuple[str, ...], domain: str | None,
-                exact: bool, limit: int) -> None:
-    """Search terms by label and synonym."""
-    env = context.open_env()
-    chosen = resolve_domain(domain, os.environ, state(ctx).config, Path.cwd(), env.catalog)
-    if in_:
-        resource_ids = list(dict.fromkeys(in_))
-        for rid in resource_ids:
-            if rid not in env.catalog.resources:
-                raise QuarryError("unknown_resource", f"no resource {rid!r}")
-    else:
-        resource_ids = [rid for rid in env.catalog.effective_resources(chosen)
-                        if set(env.catalog.resources[rid].roles) & terms_mod.TERM_ROLES]
-        if not resource_ids:
-            raise QuarryError("nothing_to_search", f"the {chosen} domain has no ontology or vocabulary resources; "
-                                                   f"name one with --in or pick a domain from `quarry domains list`")
-    adapters = [(rid, _term_adapter(env.catalog.resources[rid], terms_mod.TERM_ROLES)) for rid in resource_ids]
-    text = " ".join(words)
-    coverage, found, warnings = [], [], []
-    with context.make_client(state(ctx).trace) as client:
-        for rid, adapter in adapters:
-            cov, rows, release, notes = adapter.search(client, env.registry, text, exact=exact, limit=limit)
-            coverage.append({**cov.as_dict(), "release": release.as_dict()})
-            found += rows
-            warnings += notes
-    report = {"domain": chosen, "coverage": coverage, "terms": [t.as_dict() for t in found], "warnings": warnings}
-    lines = [f"{t.id}\t{t.label}" for t in found]
-    lines += [f"# {c['resource']} {c['release']['version'] or '?'}: {c['returned']} of {c['total']} ({c['complete']})"
-              for c in coverage]
-    emit(ctx, report, "\n".join(lines + _warning_lines(warnings)))
-
-
-@main.group("skills", context_settings=CONTEXT)
-@output_options
-def skills_group() -> None:
-    """The agent skills this checkout ships."""
-
-
-@skills_group.command("build", context_settings=CONTEXT)
-@output_options
-@click.pass_context
-@reports_errors
-def skills_build(ctx: click.Context) -> None:
-    """Regenerate the skills' resource notes from the catalog."""
-    root = skills.SKILLS_ROOT        # read at call time
-    changed, unchanged = skills.build(context.open_env().catalog, root)
-
-    def shown(paths: list[Path]) -> list[str]:
-        return [str(p.relative_to(root.parent)) for p in paths]
-
-    emit(ctx, {"written": shown(changed), "unchanged": shown(unchanged)},
-         "\n".join(f"wrote {p}" for p in shown(changed)) or "skills are current")
+for _subcommand in (
+    domains,
+    resources,
+    id_group,
+    check_command,
+    search_command,
+    show_command,
+    files_command,
+    term_group,
+    skills_group,
+):
+    main.add_command(_subcommand)
 
 
 if __name__ == "__main__":

@@ -17,8 +17,7 @@ from quarry.files import File
 from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.results import Coverage, Result
-from quarry.search import completeness, distinct
+from quarry.results import Coverage, Result, completeness, distinct
 
 PAGE_SIZE = 200
 FIELDS = "bibcode,title,pubdate,pub,doi,identifier"

@@ -63,7 +63,7 @@ jobs:
             printf 'refs %s\n' "$(git -C "${GITHUB_WORKSPACE}/refs" rev-parse HEAD)"
             printf 'nodes %s\n' "$(git -C "${GITHUB_WORKSPACE}/nodes" rev-parse HEAD)"
             printf '\n[test modules]\n'
-            find tests -maxdepth 2 -name 'test_*.py' | sort
+            find tests -name 'test_*.py' | sort
           } > "${evidence}/module-inventory.txt"
       - name: Install Python dependencies
         run: uv sync --frozen --group dev

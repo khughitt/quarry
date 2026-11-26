@@ -15,8 +15,7 @@ from quarry.files import File
 from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.results import Coverage, Result
-from quarry.search import completeness, distinct, trimmed
+from quarry.results import Coverage, Result, completeness, distinct, trimmed
 
 SERIES_RE = re.compile(r"^[a-z_]+\.[A-Za-z0-9_]+$")
 ISO_UTC_RE = re.compile(

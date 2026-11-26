@@ -20,8 +20,7 @@ from quarry.files import File
 from quarry.http import Client
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.results import Coverage, Result
-from quarry.search import distinct, trimmed
+from quarry.results import Coverage, Result, distinct, trimmed
 
 MONTHLY_SUBPATH = "high_res_omni/monthly_1min"
 MONTHLY_FILE_RE = re.compile(r"^omni_min([0-9]{4})([0-9]{2})\.asc$")

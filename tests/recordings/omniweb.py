@@ -1,4 +1,4 @@
-"""The OMNIWeb / SPDF bulk-tree exchanges tests/test_omniweb.py replays (strictly inside X-25; zero CGI or data-file GETs)."""
+"""The OMNIWeb / SPDF bulk-tree exchanges tests/adapters/test_omniweb.py replays (strictly inside X-25; zero CGI or data-file GETs)."""
 from datetime import datetime, timezone
 
 from quarry.ids import Curie

@@ -1,4 +1,4 @@
-"""The GEO exchanges tests/test_geo.py replays."""
+"""The GEO exchanges tests/adapters/test_geo.py replays."""
 from datetime import date
 
 from quarry.errors import QuarryError

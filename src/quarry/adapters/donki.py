@@ -17,8 +17,7 @@ from quarry.files import File
 from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.results import Coverage, Result
-from quarry.search import completeness, distinct, trimmed
+from quarry.results import Coverage, Result, completeness, distinct, trimmed
 
 EVENT_KINDS: tuple[str, ...] = ("FLR", "CME", "SEP", "IPS", "MPC", "GST", "RBE", "HSS")
 ID_FIELD: dict[str, str] = {

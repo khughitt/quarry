@@ -3,7 +3,7 @@ import pytest
 
 from quarry import catalog as catalog_mod
 from quarry.errors import QuarryError
-from tests import live
+from scripts import live
 
 
 def test_every_route_has_a_probe():
@@ -468,7 +468,7 @@ def test_hpde_rest_and_github_probes_offline():
 def test_spase_and_goes_class_probes_offline():
     from quarry.adapters import goes_class, spase
     from quarry.testing import ReplayTransport, exchange, replay_client
-    from tests.test_spase import MINI_XSD, SCHEMA_URL
+    from tests.adapters.test_spase import MINI_XSD, SCHEMA_URL
 
     cat = catalog_mod.load()
     spase_adapter = spase.make(cat.resources["spase"])
@@ -507,7 +507,7 @@ def test_ads_and_arxiv_probes_offline():
     import json
     from quarry.adapters import ads, arxiv
     from quarry.testing import ReplayTransport, exchange, replay_client
-    from tests.test_arxiv import ENTRY_MODERN, atom_feed
+    from tests.adapters.test_arxiv import ENTRY_MODERN, atom_feed
 
     cat = catalog_mod.load()
 

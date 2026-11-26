@@ -22,8 +22,7 @@ from quarry.files import File
 from quarry.http import Client
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.results import Coverage, Result
-from quarry.search import distinct, trimmed
+from quarry.results import Coverage, Result, distinct, trimmed
 
 SPACECRAFT: dict[str, tuple[str, str]] = {
     "stereo-a": ("a", "STEREO-A"),

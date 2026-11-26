@@ -1,4 +1,4 @@
-"""The CDAWeb exchanges tests/test_cdaweb.py replays (all strictly inside sun exploration epoch X-25)."""
+"""The CDAWeb exchanges tests/adapters/test_cdaweb.py replays (all strictly inside sun exploration epoch X-25)."""
 from datetime import datetime, timezone
 
 from quarry.errors import QuarryError

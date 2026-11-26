@@ -24,5 +24,6 @@ build-backend = "hatchling.build"
 packages = ["src/quarry"]
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-q"

@@ -1,4 +1,4 @@
-"""The BioStudies exchanges tests/test_biostudies.py replays."""
+"""The BioStudies exchanges tests/adapters/test_biostudies.py replays."""
 from datetime import date
 
 from quarry.ids import Curie

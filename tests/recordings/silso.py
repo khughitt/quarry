@@ -1,4 +1,4 @@
-"""The WDC-SILSO exchanges tests/test_silso.py replays (manifest + HEAD only; zero .txt/.csv GETs)."""
+"""The WDC-SILSO exchanges tests/adapters/test_silso.py replays (manifest + HEAD only; zero .txt/.csv GETs)."""
 from datetime import datetime, timezone
 
 from quarry.ids import Curie

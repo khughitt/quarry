@@ -1,4 +1,4 @@
-"""The CDAW CME exchanges tests/test_cdaw_cme.py replays (strictly inside X-25; directory listing + HEAD only)."""
+"""The CDAW CME exchanges tests/adapters/test_cdaw_cme.py replays (strictly inside X-25; directory listing + HEAD only)."""
 from datetime import datetime, timezone
 
 from quarry.ids import Curie

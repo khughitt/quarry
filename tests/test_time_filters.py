@@ -10,7 +10,7 @@ from quarry import context, search
 from quarry.cli import main
 from quarry.query import Query, parse_window
 from quarry.testing import ReplayTransport, replay_client
-from tests.fake_adapter import Fake, Timed
+from tests.fixtures.fake_adapter import Fake, Timed
 from tests.test_search import FAKE
 
 HELIO = '''id = "helio"

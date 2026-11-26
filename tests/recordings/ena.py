@@ -1,4 +1,4 @@
-"""The ENA exchanges tests/test_ena.py replays."""
+"""The ENA exchanges tests/adapters/test_ena.py replays."""
 from datetime import date
 
 from quarry.errors import QuarryError
@@ -33,7 +33,7 @@ def show_first(adapter, client):
 
 
 def files_first(adapter, client):
-    """The first myeloma study that has read files; tests/test_ena.py mirrors this walk."""
+    """The first myeloma study that has read files; tests/adapters/test_ena.py mirrors this walk."""
     _, rows = adapter.search(client, MYELOMA)
     for row in rows:
         prefix, local = row.id.split(":", 1)

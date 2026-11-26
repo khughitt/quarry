@@ -5,8 +5,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from quarry.query import Query, Window, parse_instant, parse_when, parse_window
-from quarry.results import Result
-from quarry.search import completeness, distinct, trimmed
+from quarry.results import Result, completeness, distinct, trimmed
 from quarry.errors import QuarryError
 
 UTC = timezone.utc

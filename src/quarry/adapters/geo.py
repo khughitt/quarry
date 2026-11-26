@@ -15,8 +15,7 @@ from quarry.files import File
 from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.results import Coverage, Result
-from quarry.search import completeness
+from quarry.results import Coverage, Result, completeness
 
 TAXON = re.compile(r"^ncbitaxon:(\d+)$", re.IGNORECASE)
 GSE = re.compile(r"^GSE([1-9][0-9]*)$")

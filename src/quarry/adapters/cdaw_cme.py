@@ -20,8 +20,7 @@ from quarry.files import File
 from quarry.http import Client
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.results import Coverage, Result
-from quarry.search import distinct, trimmed
+from quarry.results import Coverage, Result, distinct, trimmed
 
 MONTHLY_FILE_RE = re.compile(r"^univ([0-9]{4})_([0-9]{2})\.txt$")
 

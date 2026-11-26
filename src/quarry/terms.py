@@ -9,8 +9,20 @@ from typing import Protocol, runtime_checkable
 
 from refs import Registry
 
+from quarry.catalog import Catalog
 from quarry.http import Client
 from quarry.ids import Curie
+
+__all__ = [
+    "Release",
+    "Synonym",
+    "TERM_ROLES",
+    "Term",
+    "TermAdapter",
+    "TermCoverage",
+    "obo_text",
+    "term_hint",
+]
 
 TERM_ROLES = frozenset({"ontology", "vocabulary"})
 
@@ -85,7 +97,7 @@ class TermCoverage:
     exact: bool
     total: int
     returned: int
-    complete: str                   # total | limited, from search.completeness
+    complete: str                   # total | limited, from results.completeness
 
     def as_dict(self) -> dict:
         return {"resource": self.resource, "native": self.native, "exact": self.exact,
@@ -105,3 +117,10 @@ class TermAdapter(Protocol):
 
     def search(self, client: Client, registry: Registry, text: str, *, exact: bool,
                limit: int) -> tuple[TermCoverage, list[Term], Release, list[str]]: ...
+
+
+def term_hint(catalog: Catalog, roles: frozenset[str] = TERM_ROLES) -> str:
+    """Guidance naming the prefixes owned by term-holding resources."""
+    prefixes = sorted(p for r in catalog.resources.values() if set(r.roles) & roles for p in r.owned_prefixes())
+    return (f"write it as <prefix>:<id> ({', '.join(f'{p}:' for p in prefixes)}), "
+            f"or find a term by name with `quarry term search <words>`")

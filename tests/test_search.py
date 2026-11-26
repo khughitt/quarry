@@ -8,13 +8,13 @@ from quarry import context
 from quarry.adapters.base import Prepared
 from quarry.cli import main
 from quarry.errors import QuarryError
-from tests.fake_adapter import Fake
+from tests.fixtures.fake_adapter import Fake
 
 FAKE = """
 id = "{id}"
 name = "{id}"
 roles = ["{role}"]
-adapter = "tests.fake_adapter"
+adapter = "tests.fixtures.fake_adapter"
 {prefix}
 [[routes]]
 kind = "rest"

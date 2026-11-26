@@ -1,4 +1,4 @@
-"""The Helioviewer exchanges tests/test_helioviewer.py replays (all strictly inside sun exploration epoch X-25;
+"""The Helioviewer exchanges tests/adapters/test_helioviewer.py replays (all strictly inside sun exploration epoch X-25;
 metadata-only, zero image bytes downloaded)."""
 from datetime import datetime, timezone
 

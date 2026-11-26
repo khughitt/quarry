@@ -10,7 +10,7 @@ from quarry.cli import main
 from quarry.errors import QuarryError
 from quarry.files import File
 from quarry.results import Result
-from tests import fake_adapter
+from tests.fixtures import fake_adapter
 
 A = File("a.txt", urls=("https://alpha.example/a.txt", "ftp://alpha.example/a.txt"), size=3,
          checksums={"sha256": "ab" * 32}, media_type="text/plain")

@@ -1,4 +1,4 @@
-"""The SWPC events exchanges tests/test_swpc_events.py replays (strictly inside X-25; NCEI mirror listings + HEAD only)."""
+"""The SWPC events exchanges tests/adapters/test_swpc_events.py replays (strictly inside X-25; NCEI mirror listings + HEAD only)."""
 from datetime import datetime, timezone
 
 from quarry.ids import Curie

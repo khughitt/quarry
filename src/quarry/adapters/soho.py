@@ -22,8 +22,7 @@ from quarry.files import File
 from quarry.http import Client
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.results import Coverage, Result
-from quarry.search import distinct, trimmed
+from quarry.results import Coverage, Result, distinct, trimmed
 
 EIT_FILE_RE = re.compile(r"^efz([0-9]{4})([0-9]{2})([0-9]{2})\.([0-9]{2})([0-9]{2})([0-9]{2})$")
 EIT_PATH_RE = re.compile(r"^eit/lz/([0-9]{4})/([0-9]{2})/(efz[0-9]{8}\.[0-9]{6})$")

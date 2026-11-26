@@ -1,4 +1,4 @@
-"""The figshare exchanges tests/test_figshare.py replays."""
+"""The figshare exchanges tests/adapters/test_figshare.py replays."""
 from quarry.ids import Curie
 from tests.recordings.common import CORE_MYELOMA
 

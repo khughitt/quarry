@@ -13,8 +13,7 @@ from quarry.files import File
 from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.results import Coverage, Result
-from quarry.search import completeness, distinct
+from quarry.results import Coverage, Result, completeness, distinct
 
 CAP = 25
 WINDOW = 10_000

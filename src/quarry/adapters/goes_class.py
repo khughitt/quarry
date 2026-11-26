@@ -15,7 +15,7 @@ from quarry.catalog import Resource, Route
 from quarry.errors import QuarryError
 from quarry.http import Client
 from quarry.ids import Curie, parse
-from quarry.search import completeness
+from quarry.results import completeness
 from quarry.terms import Release, Term, TermCoverage
 
 SCALE_VERSION = "NOAA-SWPC"

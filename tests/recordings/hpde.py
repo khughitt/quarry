@@ -1,4 +1,4 @@
-"""The HPDE SPASE registry exchanges tests/test_hpde.py replays (pure registry metadata;
+"""The HPDE SPASE registry exchanges tests/adapters/test_hpde.py replays (pure registry metadata;
 both spase-metadata.org REST JSON and raw.githubusercontent.com/hpde XML routes)."""
 from quarry.errors import QuarryError
 from quarry.ids import Curie

@@ -24,8 +24,7 @@ from quarry.files import File
 from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.results import Coverage, Result
-from quarry.search import completeness, distinct, trimmed
+from quarry.results import Coverage, Result, completeness, distinct, trimmed
 
 SOAP_NS = "http://schemas.xmlsoap.org/soap/envelope/"
 VSO_NS = "http://virtualsolar.org/VSO/VSOi"

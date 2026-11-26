@@ -1,4 +1,4 @@
-"""The STEREO SSC exchanges tests/test_stereo_ssc.py replays (strictly inside sun exploration epoch X-25)."""
+"""The STEREO SSC exchanges tests/adapters/test_stereo_ssc.py replays (strictly inside sun exploration epoch X-25)."""
 from datetime import datetime, timezone
 
 from quarry.ids import Curie

@@ -15,8 +15,7 @@ from quarry.files import File
 from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.results import Coverage, Result
-from quarry.search import completeness, distinct, trimmed
+from quarry.results import Coverage, Result, completeness, distinct, trimmed
 
 CAP = 200
 MAX_PAGES = 100

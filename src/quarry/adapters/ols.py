@@ -13,7 +13,7 @@ from quarry.catalog import Resource, Route
 from quarry.errors import QuarryError
 from quarry.http import Client, UpstreamError
 from quarry.ids import Curie, parse
-from quarry.search import completeness, distinct
+from quarry.results import completeness, distinct
 from quarry.terms import Release, Synonym, Term, TermCoverage, obo_text
 
 ROUTE_PATH = re.compile(r"(.+)/ontologies/([^/]+)")

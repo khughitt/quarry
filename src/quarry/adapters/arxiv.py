@@ -16,8 +16,7 @@ from quarry.files import File
 from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query, parse_instant
-from quarry.results import Coverage, Result
-from quarry.search import completeness, distinct
+from quarry.results import Coverage, Result, completeness, distinct
 
 PAGE_SIZE = 100
 DEFAULT_CATEGORY = "astro-ph.SR"

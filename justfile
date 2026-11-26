@@ -196,9 +196,9 @@ hook-pre-push-fast:
 
 # Refresh one resource's recorded exchanges against the live service.
 record resource:
-    {{tt}} record -- uv run python -m tests.recordings {{resource}}
+    {{tt}} record -- uv run python scripts/record.py {{resource}}
 
 # Probe every catalog route with its smallest real request and report each one. Contacts
 # the live services; opt-in, never part of `test`.
 live:
-    {{tt}} live -- uv run python -m tests.live
+    {{tt}} live -- uv run python scripts/live.py

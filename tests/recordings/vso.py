@@ -1,4 +1,4 @@
-"""The VSO exchanges tests/test_vso.py replays (all strictly inside sun exploration epoch X-25)."""
+"""The VSO exchanges tests/adapters/test_vso.py replays (all strictly inside sun exploration epoch X-25)."""
 import base64
 from datetime import datetime, timezone
 

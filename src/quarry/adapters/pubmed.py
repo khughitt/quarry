@@ -19,8 +19,7 @@ from quarry.files import File
 from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.results import Coverage, Result
-from quarry.search import completeness
+from quarry.results import Coverage, Result, completeness
 
 STRINGS = ("title", "sortpubdate", "fulljournalname")
 UNVERSIONED_PMC = re.compile(r"PMC([0-9]+)")

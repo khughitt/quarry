@@ -18,6 +18,31 @@ from refs.registry import Collision
 
 from quarry.errors import QuarryError
 
+__all__ = [
+    "ADAPTERS_ROOT",
+    "AUTH",
+    "CATALOG_ROOT",
+    "Catalog",
+    "CatalogError",
+    "DATA_ROLES",
+    "DOMAIN_KEYS",
+    "Domain",
+    "Finding",
+    "KEY_SCHEMES",
+    "LocalPrefix",
+    "NOT_ADAPTERS",
+    "PrefixLookup",
+    "RESOURCE_KEYS",
+    "ROLES",
+    "ROUTE_KEYS",
+    "ROUTE_KINDS",
+    "Resource",
+    "Route",
+    "adapter_modules",
+    "check",
+    "load",
+]
+
 ROLES = ("identifier-scheme", "vocabulary", "ontology", "data-model",
          "repository", "knowledgebase", "literature-index")
 DATA_ROLES = frozenset({"repository", "knowledgebase", "literature-index"})
@@ -25,6 +50,7 @@ ROUTE_KINDS = ("rest", "query-endpoint", "bulk", "local-tool")
 AUTH = ("none", "optional-key", "required-key")
 KEY_SCHEMES = ("bearer",)
 CATALOG_ROOT = Path(__file__).parent / "catalog"
+ADAPTERS_ROOT = Path(__file__).parent / "adapters"
 NOT_ADAPTERS = frozenset({"base", "eutils"})
 _REQUIRED = object()
 
@@ -273,8 +299,7 @@ def _adapter_exists(name: str) -> bool:
 
 def adapter_modules() -> list[str]:
     """Every adapter module the package ships."""
-    import quarry.adapters
-    return [f"quarry.adapters.{m.name}" for m in pkgutil.iter_modules(quarry.adapters.__path__)
+    return [f"quarry.adapters.{m.name}" for m in pkgutil.iter_modules([str(ADAPTERS_ROOT)])
             if m.name not in NOT_ADAPTERS]
 
 

@@ -15,8 +15,7 @@ from quarry.files import File
 from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.results import Coverage, Result
-from quarry.search import completeness
+from quarry.results import Coverage, Result, completeness
 
 FIELDS = ("study_accession,secondary_study_accession,study_alias,study_title,study_description,"
           "tax_id,scientific_name,first_public")

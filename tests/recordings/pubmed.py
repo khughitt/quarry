@@ -1,4 +1,4 @@
-"""The PubMed exchanges tests/test_pubmed.py replays."""
+"""The PubMed exchanges tests/adapters/test_pubmed.py replays."""
 from datetime import date
 
 from quarry.errors import QuarryError

@@ -1,4 +1,4 @@
-"""SPASE 2.7.2 XSD schema recording for tests/test_spase.py and tests/test_cli_terms.py."""
+"""SPASE 2.7.2 XSD schema recording for tests/adapters/test_spase.py and tests/adapters/test_cli_terms.py."""
 from quarry import catalog as catalog_mod, ids
 from quarry.ids import Curie
 

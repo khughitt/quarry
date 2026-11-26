@@ -1,4 +1,4 @@
-"""The DONKI exchanges tests/test_donki.py replays (strictly inside sun exploration epoch X-25:
+"""The DONKI exchanges tests/adapters/test_donki.py replays (strictly inside sun exploration epoch X-25:
 2025-01-03 and 2025-01-04 UTC)."""
 from datetime import datetime, timezone
 

@@ -48,11 +48,11 @@ Agent instructions and catalog-generated resource notes live in
 
 ## Layout
 
-- `src/quarry/` holds the CLI, adapters and TOML catalog.
-- `tests/fixtures/` contains recorded responses for offline tests.
-- `tests/recordings/` defines the opt-in fixture-refresh scenarios.
+- `src/quarry/` holds the CLI, command modules, adapters and TOML catalog.
+- `tests/` mirrors the package, with recorded responses in `tests/fixtures/` and shared recording scenarios in `tests/recordings/`.
+- `scripts/` holds the opt-in live route probes (`scripts/live.py`) and fixture recorder (`scripts/record.py`).
 - `skills/` holds agent guidance with generated resource notes.
-- `tools/` contains source-owned shared tooling.
+- `tools/` contains source-owned shared tooling and contracts.
 
 ## Consumers
 

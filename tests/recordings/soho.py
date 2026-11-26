@@ -1,4 +1,4 @@
-"""The SOHO SDAC exchanges tests/test_soho.py replays (strictly inside sun exploration epoch X-25)."""
+"""The SOHO SDAC exchanges tests/adapters/test_soho.py replays (strictly inside sun exploration epoch X-25)."""
 from datetime import datetime, timezone
 
 from quarry.ids import Curie

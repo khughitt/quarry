@@ -53,7 +53,7 @@ def test_resource_outside_shipped_lenses_coexists_with_exact_inventories(tmp_pat
     cat_root = tmp_path / "catalog"
     shutil.copytree(catalog_mod.CATALOG_ROOT, cat_root)
     (cat_root / "resources" / "extra.toml").write_text(
-        'id = "extra"\nname = "Extra"\nroles = ["repository"]\nadapter = "tests.fake_adapter"\n'
+        'id = "extra"\nname = "Extra"\nroles = ["repository"]\nadapter = "tests.fixtures.fake_adapter"\n'
         '[[routes]]\nkind = "rest"\nurl = "https://extra.example"\nmin_interval = 0\n'
         'service = "extra"\nauth = "none"\nreports_total = false\n'
     )
@@ -73,7 +73,7 @@ def test_bare_normalize_opt_out_preserves_existing_bare_ids_and_routes_qualified
     shutil.copytree(catalog_mod.CATALOG_ROOT, cat_root)
     (cat_root / "resources" / "arxiv.toml").write_text(
         'id = "arxiv"\nname = "arXiv"\nroles = ["literature-index"]\nprefixes = ["arxiv"]\n'
-        'bare_normalize = false\nadapter = "tests.fake_adapter"\n'
+        'bare_normalize = false\nadapter = "tests.fixtures.fake_adapter"\n'
         '[[routes]]\nkind = "rest"\nurl = "https://export.arxiv.org/api/query"\nmin_interval = 3.0\n'
         'service = "arxiv"\nauth = "none"\nreports_total = true\n'
     )
@@ -105,7 +105,7 @@ def test_bare_normalize_opt_out_preserves_existing_bare_ids_and_routes_qualified
 
     (cat_root / "resources" / "ads.toml").write_text(
         'id = "ads"\nname = "ADS"\nroles = ["literature-index"]\nprefixes = ["bibcode"]\n'
-        'adapter = "tests.fake_adapter"\n'
+        'adapter = "tests.fixtures.fake_adapter"\n'
         '[[routes]]\nkind = "rest"\nurl = "https://api.adsabs.harvard.edu/v1"\nmin_interval = 1.0\n'
         'service = "ads"\nauth = "required-key"\nkey_env = "ADS_DEV_KEY"\nkey_header = "Authorization"\n'
         'key_scheme = "bearer"\nreports_total = true\n'

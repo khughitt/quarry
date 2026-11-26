@@ -7,15 +7,13 @@ import pytest
 from quarry.adapters.ena import FIELDS as ENA_FIELDS
 from quarry.query import Query
 from quarry.testing import ReplayTransport, exchange, replay_client
-from tests.recordings import __main__ as recordings
+from scripts import record as recordings
+from tests.adapters.test_ena import BASE, ENA, synthetic
 from tests.recordings.ena import MYELOMA, show_first
-from tests.test_ena import BASE, ENA, synthetic
 
 
 def test_recorder_saves_scenario_exchanges(tmp_path, monkeypatch, capsys):
-    fixture_root = tmp_path / "recordings"
-    fixture_root.mkdir()
-    monkeypatch.setattr(recordings, "__file__", str(fixture_root / "__main__.py"))
+    monkeypatch.setattr(recordings, "FIXTURES_ROOT", tmp_path / "fixtures")
     monkeypatch.setattr(recordings, "Client", lambda transport: replay_client(transport))
     monkeypatch.setattr("quarry.testing.httpx.HTTPTransport", lambda: ReplayTransport([
         exchange("GET", f"{BASE}/count", {"result": "study", "query": 'study_title="x"'},
@@ -44,9 +42,7 @@ def test_empty_show_first_fails_clearly():
     ("stereo-ssc", "stereo_ssc"),
 ])
 def test_recorder_dispatches_module_name_and_keeps_resource_id_paths(tmp_path, monkeypatch, capsys, resource_id, module_suffix):
-    fixture_root = tmp_path / "recordings"
-    fixture_root.mkdir()
-    monkeypatch.setattr(recordings, "__file__", str(fixture_root / "__main__.py"))
+    monkeypatch.setattr(recordings, "FIXTURES_ROOT", tmp_path / "fixtures")
     monkeypatch.setattr(recordings, "Client", lambda transport: replay_client(transport))
     monkeypatch.setattr("quarry.testing.httpx.HTTPTransport", lambda: ReplayTransport([
         exchange("GET", f"https://{resource_id}.example/ping", body="ok", content_type="text/plain"),
@@ -54,7 +50,7 @@ def test_recorder_dispatches_module_name_and_keeps_resource_id_paths(tmp_path, m
 
     from quarry.catalog import Catalog, Resource, Route
     fake_route = Route("rest", f"https://{resource_id}.example", 0.0, resource_id, "none", False)
-    fake_resource = Resource(resource_id, resource_id, ("repository",), "tests.fake_adapter", (fake_route,))
+    fake_resource = Resource(resource_id, resource_id, ("repository",), "tests.fixtures.fake_adapter", (fake_route,))
     monkeypatch.setattr(recordings.catalog_mod, "load", lambda: Catalog({resource_id: fake_resource}, {}))
 
     imported = []

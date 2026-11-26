@@ -1,4 +1,4 @@
-"""The SOAR exchanges tests/test_soar.py replays (all strictly inside sun exploration epoch X-25)."""
+"""The SOAR exchanges tests/adapters/test_soar.py replays (all strictly inside sun exploration epoch X-25)."""
 from datetime import datetime, timezone
 
 from quarry.ids import Curie

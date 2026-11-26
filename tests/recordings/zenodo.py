@@ -1,4 +1,4 @@
-"""The Zenodo exchanges tests/test_zenodo.py replays."""
+"""The Zenodo exchanges tests/adapters/test_zenodo.py replays."""
 from quarry.ids import Curie
 from tests.recordings.common import CORE_MYELOMA
 

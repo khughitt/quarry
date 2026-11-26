@@ -1,4 +1,4 @@
-"""The HEK exchanges tests/test_hek.py replays (strictly inside sun exploration epoch X-25,
+"""The HEK exchanges tests/adapters/test_hek.py replays (strictly inside sun exploration epoch X-25,
 requesting structural metadata columns only via return=RETURN_FIELDS)."""
 from datetime import datetime, timezone
 

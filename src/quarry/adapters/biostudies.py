@@ -17,8 +17,7 @@ from quarry.files import File
 from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.results import Coverage, Result
-from quarry.search import completeness, distinct
+from quarry.results import Coverage, Result, completeness, distinct
 
 CAP = 100
 FILE_LIST_WINDOW = 10_000   # a study with more files than this keeps them in lists of hundreds of MB
