@@ -213,7 +213,7 @@ def test_scripts_and_mirrored_tests_layout() -> None:
 
     shipped_adapters = {
         m.removeprefix("quarry.adapters.") for m in catalog_mod.adapter_modules()
-    } | {"eutils", "ols"}
+    } | {"eutils"}
     adapter_tests = {p.stem.removeprefix("test_") for p in (TESTS / "adapters").glob("test_*.py")}
     assert adapter_tests == shipped_adapters
 
