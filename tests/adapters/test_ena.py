@@ -278,6 +278,33 @@ def test_row_cross_references():
     assert rows[0].xrefs == ("insdc.sra:SRP1", "insdc.sra:SRP2", "geo:GSE7")
 
 
+@pytest.mark.parametrize("alias, expected_geo", [
+    ("GSE1", ("geo:GSE1",)),
+    ("GSE24080", ("geo:GSE24080",)),
+    ("GSE0", ()),
+    ("GSE07", ()),
+    ("GSE024080", ()),
+    ("GSE\u0667", ()),
+    ("GSE\uff17", ()),
+    ("GSE7\n", ()),
+    ("GPL570", ()),
+    ("GSM1", ()),
+    ("GDS1", ()),
+    ("PRJNA1", ()),
+    ("", ()),
+    (None, ()),
+])
+def test_study_alias_emits_only_canonical_ascii_nonzero_gse_xrefs(alias, expected_geo):
+    row_doc = {**STUDY, "study_alias": alias}
+    expected = ("insdc.sra:SRP1", "insdc.sra:SRP2", *expected_geo)
+    with synthetic(1, json.dumps([row_doc])) as client:
+        _, rows = ENA.search(client, Query(phrases=("x",)))
+    assert rows[0].xrefs == expected
+    with replay_client(ReplayTransport([shown("study_accession", "PRJNA1", body=json.dumps([row_doc]))])) as client:
+        record = ENA.show(client, Curie("bioproject", "PRJNA1"))
+    assert record.xrefs == expected
+
+
 def test_cli_search_through_replay(monkeypatch):
     monkeypatch.setattr(context, "make_client", lambda trace: replay("search-myeloma"))
     args = ["--json", "search", "--domain", "biology", "--in", "ena"]
